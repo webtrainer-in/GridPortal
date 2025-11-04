@@ -23,6 +23,14 @@
     margin-left: 60px;
   }
   
+  &.secondary-panel-open {
+    margin-left: 530px; // sidebar (250px) + secondary panel (280px)
+    
+    &.sidebar-closed {
+      margin-left: 340px; // sidebar collapsed (60px) + secondary panel (280px)
+    }
+  }
+  
   .content-area {
     flex: 1;
     padding: 1.5rem;
@@ -37,6 +45,14 @@
     
     &.sidebar-closed {
       margin-left: 0;
+    }
+    
+    &.secondary-panel-open {
+      margin-left: 0;
+      
+      &.sidebar-closed {
+        margin-left: 0;
+      }
     }
   }
   

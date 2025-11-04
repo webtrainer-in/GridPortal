@@ -5,6 +5,7 @@ import { HeaderComponent } from '../header/header';
 import { SidebarComponent } from '../sidebar/sidebar';
 import { FooterComponent } from '../footer/footer';
 import { TopMenuComponent } from '../top-menu/top-menu';
+import { SecondaryPanelComponent } from '../secondary-panel/secondary-panel';
 
 @Component({
   selector: 'app-main-layout',
@@ -15,13 +16,16 @@ import { TopMenuComponent } from '../top-menu/top-menu';
     HeaderComponent,
     SidebarComponent,
     FooterComponent,
-    TopMenuComponent
+    TopMenuComponent,
+    SecondaryPanelComponent
   ],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss'
 })
 export class MainLayoutComponent {
   isSidebarOpen = true;
+  isSecondaryPanelOpen = false;
+  selectedMenuItem: string | null = null;
 
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
@@ -29,5 +33,10 @@ export class MainLayoutComponent {
 
   onSidebarToggle() {
     this.toggleSidebar();
+  }
+
+  onSecondaryPanelToggle(event: {isOpen: boolean, menuId: string | null}) {
+    this.isSecondaryPanelOpen = event.isOpen;
+    this.selectedMenuItem = event.menuId;
   }
 }

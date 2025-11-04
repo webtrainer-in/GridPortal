@@ -15,8 +15,9 @@
             [routerLink]="item.routerLink" 
             routerLinkActive="active"
             class="menu-link"
+            [class.selected]="selectedMenuItem === item.id"
             [title]="!isOpen ? item.label : ''"
-            (click)="onMenuItemClick()">
+            (click)="onMenuItemSelect(item.id, $event)">
             <i [class]="item.icon" class="menu-icon"></i>
             <span class="menu-text" [class.hidden]="!isOpen">{{ item.label }}</span>
           </a>

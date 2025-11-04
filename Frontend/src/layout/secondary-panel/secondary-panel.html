@@ -1,0 +1,32 @@
+<div class="secondary-panel" [class.open]="isOpen">
+  <div class="panel-header">
+    <h3 class="panel-title">
+      <i class="pi pi-folder-open panel-icon"></i>
+      {{ getMenuTitle() }}
+    </h3>
+  </div>
+  
+  <div class="panel-content" *ngIf="isOpen">
+    <div class="tree-view">
+      <ul class="tree-list">
+        <li *ngFor="let item of getMenuContent()" class="tree-item">
+          <div class="tree-node" [class.folder]="item.type === 'folder'">
+            <i [class]="item.icon" class="tree-icon"></i>
+            <span class="tree-label">{{ item.label }}</span>
+            <i *ngIf="item.type === 'folder'" class="pi pi-chevron-right tree-chevron"></i>
+          </div>
+          
+          <!-- Nested items (for demo purposes, showing as expanded) -->
+          <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
+            <li *ngFor="let child of item.children" class="tree-child-item">
+              <div class="tree-node child">
+                <i [class]="child.icon" class="tree-icon"></i>
+                <span class="tree-label">{{ child.label }}</span>
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

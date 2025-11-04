@@ -6,9 +6,17 @@
     <app-sidebar 
       [isOpen]="isSidebarOpen" 
       (toggleSidebar)="onSidebarToggle()"
+      (secondaryPanelToggle)="onSecondaryPanelToggle($event)"
     ></app-sidebar>
     
-    <div class="main-content" [class.sidebar-closed]="!isSidebarOpen">
+    <app-secondary-panel
+      [isOpen]="isSecondaryPanelOpen"
+      [selectedMenuItem]="selectedMenuItem"
+    ></app-secondary-panel>
+    
+    <div class="main-content" 
+         [class.sidebar-closed]="!isSidebarOpen"
+         [class.secondary-panel-open]="isSecondaryPanelOpen">
       <div class="content-area">
         <router-outlet></router-outlet>
       </div>
