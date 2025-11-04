@@ -1,0 +1,61 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>GridPortal Dashboard</h1>
+    <p-button 
+      label="Logout" 
+      icon="pi pi-sign-out"
+      severity="danger"
+      (onClick)="logout()"
+      size="small"
+    ></p-button>
+  </div>
+  
+  <main class="dashboard-content">
+    <p-card 
+      header="Welcome to GridPortal!" 
+      class="mb-4"
+    >
+      <p class="m-0">
+        You have successfully logged in. This is your dashboard where you can manage your data and applications.
+      </p>
+    </p-card>
+    
+    <div class="grid">
+      <div class="col-12 md:col-6 lg:col-3">
+        <p-card 
+          header="Users" 
+          class="h-full cursor-pointer hover:shadow-4 transition-all transition-duration-300"
+        >
+          <p class="m-0">Manage user accounts and permissions</p>
+        </p-card>
+      </div>
+      
+      <div class="col-12 md:col-6 lg:col-3">
+        <p-card 
+          header="Settings" 
+          class="h-full cursor-pointer hover:shadow-4 transition-all transition-duration-300"
+        >
+          <p class="m-0">Configure system settings and preferences</p>
+        </p-card>
+      </div>
+      
+      <div class="col-12 md:col-6 lg:col-3">
+        <p-card 
+          header="Analytics" 
+          class="h-full cursor-pointer hover:shadow-4 transition-all transition-duration-300"
+        >
+          <p class="m-0">View reports and analytics</p>
+        </p-card>
+      </div>
+      
+      <div class="col-12 md:col-6 lg:col-3">
+        <p-card 
+          header="Support" 
+          class="h-full cursor-pointer hover:shadow-4 transition-all transition-duration-300"
+        >
+          <p class="m-0">Get help and contact support</p>
+        </p-card>
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,78 @@
+/* Professional login component styles */
+.login-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+  }
+}
+
+.login-card {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+}
+
+/* Clean form styling */
+.login-form {
+  .field {
+    position: relative;
+    
+    input[pInputText],
+    p-password,
+    .p-password {
+      width: 100% !important;
+      display: block !important;
+    }
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 0.75rem;
+    
+    p-button {
+      flex: 1;
+      
+      .p-button {
+        width: 100% !important;
+        justify-content: center !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+    }
+  }
+  
+  p-message {
+    width: 100%;
+    margin: 1rem 0;
+  }
+}
+
+/* Remove any conflicting styles */
+::ng-deep {
+  .login-form {
+    .p-inputtext,
+    .p-password .p-inputtext,
+    .p-password input {
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    
+    .p-password {
+      width: 100% !important;
+      display: block !important;
+    }
+    
+    .p-button {
+      width: 100% !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+    }
+  }
+}

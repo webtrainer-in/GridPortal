@@ -1,0 +1,67 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h2>Please sign in to continue</h2>
+    </div>
+    
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      
+      <!-- Username Field -->
+      <div class="field">
+        <label for="email">Username:</label>
+        <input 
+          pInputText 
+          id="email" 
+          type="email"
+          formControlName="email"
+          placeholder="Enter your username"
+        />
+        @if (getFieldError('email')) {
+          <small class="error-text">{{ getFieldError('email') }}</small>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="field">
+        <label for="password">Password:</label>
+        <p-password 
+          formControlName="password"
+          placeholder="Enter your password"
+          [toggleMask]="true"
+          [feedback]="false"
+        ></p-password>
+        @if (getFieldError('password')) {
+          <small class="error-text">{{ getFieldError('password') }}</small>
+        }
+      </div>
+
+      <!-- Error Message -->
+      @if (errorMessage()) {
+        <p-message 
+          severity="error" 
+          [text]="errorMessage()"
+        ></p-message>
+      }
+
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <p-button 
+          type="submit" 
+          label="Sign In"
+          icon="pi pi-sign-in"
+          [loading]="isLoading()"
+          [disabled]="isLoading()"
+          severity="success"
+        ></p-button>
+        
+        <p-button 
+          type="button" 
+          label="Clear"
+          icon="pi pi-times"
+          (onClick)="clearForm()"
+          severity="secondary"
+        ></p-button>
+      </div>
+    </form>
+  </div>
+</div>
