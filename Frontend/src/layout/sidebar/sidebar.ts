@@ -1,20 +1,19 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { MenuModule } from 'primeng/menu';
-import { PanelMenuModule } from 'primeng/panelmenu';
-import { MenuItem } from 'primeng/api';
+
+interface CustomMenuItem {
+  label: string;
+  icon: string;
+  routerLink: string;
+}
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule,
-    ButtonModule,
-    MenuModule,
-    PanelMenuModule
+    RouterModule
   ],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss'
@@ -23,36 +22,31 @@ export class SidebarComponent {
   @Input() isOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
 
-  menuItems: MenuItem[] = [
+  menuItems: CustomMenuItem[] = [
     {
       label: 'Dashboard',
       icon: 'pi pi-home',
-      routerLink: '/dashboard',
-      command: () => this.onMenuItemClick()
+      routerLink: '/dashboard'
     },
     {
       label: 'Users',
       icon: 'pi pi-users',
-      routerLink: '/users',
-      command: () => this.onMenuItemClick()
+      routerLink: '/users'
     },
     {
       label: 'Settings',
       icon: 'pi pi-cog',
-      routerLink: '/settings',
-      command: () => this.onMenuItemClick()
+      routerLink: '/settings'
     },
     {
       label: 'Analytics',
       icon: 'pi pi-chart-bar',
-      routerLink: '/analytics',
-      command: () => this.onMenuItemClick()
+      routerLink: '/analytics'
     },
     {
       label: 'Reports',
       icon: 'pi pi-file-pdf',
-      routerLink: '/reports',
-      command: () => this.onMenuItemClick()
+      routerLink: '/reports'
     }
   ];
 

@@ -1,4 +1,4 @@
-<div class="primeng-sidebar" [class.sidebar-closed]="!isOpen">
+<div class="sidebar" [class.collapsed]="!isOpen">
   <div class="sidebar-header">
     <h3 *ngIf="isOpen" class="sidebar-title">
       <i class="pi pi-th-large"></i>
@@ -8,10 +8,20 @@
   </div>
   
   <div class="sidebar-content">
-    <p-panelMenu 
-      [model]="menuItems" 
-      [style]="{'width': '100%', 'border': 'none'}"
-      styleClass="custom-panel-menu"
-    ></p-panelMenu>
+    <nav class="sidebar-nav">
+      <ul class="menu-list">
+        <li *ngFor="let item of menuItems" class="menu-item">
+          <a 
+            [routerLink]="item.routerLink" 
+            routerLinkActive="active"
+            class="menu-link"
+            [title]="!isOpen ? item.label : ''"
+            (click)="onMenuItemClick()">
+            <i [class]="item.icon" class="menu-icon"></i>
+            <span class="menu-text" [class.hidden]="!isOpen">{{ item.label }}</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </div>
