@@ -1,0 +1,58 @@
+<div class="top-menu-container">
+  <!-- Top Menu Bar -->
+  <nav class="top-menu-bar">
+    <ul class="menu-list">
+      <li 
+        *ngFor="let menuItem of topMenuItems" 
+        class="menu-item"
+        [class.active]="selectedMenu === menuItem.id">
+        <button 
+          class="menu-button"
+          (click)="onMenuClick(menuItem.id)"
+          [class.selected]="selectedMenu === menuItem.id">
+          <i [class]="menuItem.icon" class="menu-icon"></i>
+          <span class="menu-label">{{ menuItem.label }}</span>
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Ribbon Sub-menu -->
+  <div 
+    class="ribbon-container" 
+    [class.show]="selectedMenu"
+    *ngIf="selectedMenu">
+    <div class="ribbon-content">
+      <div class="ribbon-group" *ngFor="let menuItem of topMenuItems">
+        <div *ngIf="selectedMenu === menuItem.id" class="sub-menu-items">
+          <h4 class="ribbon-title">{{ menuItem.label }}</h4>
+          <div class="sub-items-grid">
+            <a 
+              *ngFor="let subItem of menuItem.subItems"
+              [routerLink]="subItem.routerLink"
+              class="sub-item"
+              (click)="onSubItemClick()">
+              <i [class]="subItem.icon" class="sub-item-icon"></i>
+              <span class="sub-item-label">{{ subItem.label }}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Close button -->
+    <button 
+      class="ribbon-close"
+      (click)="closeRibbon()"
+      title="Close">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Overlay to close ribbon when clicking outside -->
+<div 
+  class="ribbon-overlay" 
+  *ngIf="selectedMenu"
+  (click)="closeRibbon()">
+</div>

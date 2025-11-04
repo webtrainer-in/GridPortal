@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../header/header';
 import { SidebarComponent } from '../sidebar/sidebar';
 import { FooterComponent } from '../footer/footer';
+import { TopMenuComponent } from '../top-menu/top-menu';
 
 @Component({
   selector: 'app-main-layout',
@@ -13,7 +14,8 @@ import { FooterComponent } from '../footer/footer';
     RouterOutlet,
     HeaderComponent,
     SidebarComponent,
-    FooterComponent
+    FooterComponent,
+    TopMenuComponent
   ],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss'

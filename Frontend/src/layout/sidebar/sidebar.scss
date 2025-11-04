@@ -18,6 +18,27 @@
     .sidebar-title span {
       display: none;
     }
+    
+    .sidebar-header {
+      padding: 0;
+      margin: 16px 8px 4px 8px;
+      border-bottom: none;
+      
+      .sidebar-icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: auto;
+        padding: 12px 8px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background-color: #f3f4f6;
+        }
+      }
+    }
   }
 }
 
@@ -35,13 +56,13 @@
     gap: 8px;
     
     i {
-      font-size: 1.5rem;
+      font-size: 1.2rem; // Match menu icon size
       color: #10b981;
     }
   }
   
   .sidebar-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem; // Match menu icon size
     color: #10b981;
   }
 }
