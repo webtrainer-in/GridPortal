@@ -1,6 +1,36 @@
-// Custom styles for dashboard using PrimeNG and PrimeFlex
+.dashboard-page {
+  h2 {
+    color: #2d3748;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  p-card {
+    .p-card {
+      height: 100%;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+}
 
-// Additional custom styling for specific elements
-.transition-all {
-  transition: all 0.3s ease;
+@media (max-width: 768px) {
+  .dashboard-page {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
 }

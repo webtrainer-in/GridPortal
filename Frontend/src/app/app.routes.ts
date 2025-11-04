@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/login',
+    redirectTo: '/dashboard',
     pathMatch: 'full'
   },
   {
@@ -11,11 +11,33 @@ export const routes: Routes = [
     loadComponent: () => import('../features/auth/pages/login/login').then(m => m.LoginComponent)
   },
   {
-    path: 'dashboard',
-    loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent)
+    path: '',
+    loadComponent: () => import('../layout/main-layout/main-layout').then(m => m.MainLayoutComponent),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('../features/users/pages/users/users').then(m => m.UsersComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('../features/settings/pages/settings/settings').then(m => m.SettingsComponent)
+      },
+      {
+        path: 'analytics',
+        loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder
+      }
+    ]
   },
   {
     path: '**',
-    redirectTo: '/login'
+    redirectTo: '/dashboard'
   }
 ];

@@ -1,0 +1,46 @@
+.app-header {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem 1.5rem;
+  
+  .sidebar-toggle {
+    margin-right: 1rem;
+  }
+  
+  .app-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+  }
+  
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    .notification-btn,
+    .profile-btn {
+      color: #4a5568;
+      
+      &:hover {
+        color: #2d3748;
+        background: #f7fafc;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0.5rem 1rem;
+    
+    .app-title {
+      font-size: 1.125rem;
+    }
+    
+    .header-actions .notification-btn,
+    .header-actions .profile-btn {
+      display: none;
+    }
+  }
+}

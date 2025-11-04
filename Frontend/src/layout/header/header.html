@@ -1,0 +1,36 @@
+<p-toolbar class="app-header">
+  <ng-template pTemplate="start">
+    <p-button 
+      icon="pi pi-bars"
+      severity="secondary"
+      [text]="true"
+      (onClick)="toggleSidebar()"
+      class="sidebar-toggle"
+    ></p-button>
+    <span class="app-title">GridPortal</span>
+  </ng-template>
+  
+  <ng-template pTemplate="end">
+    <div class="header-actions">
+      <p-button 
+        icon="pi pi-bell" 
+        severity="secondary"
+        [text]="true"
+        class="notification-btn"
+      ></p-button>
+      <p-button 
+        icon="pi pi-user" 
+        severity="secondary"
+        [text]="true"
+        class="profile-btn"
+      ></p-button>
+      <p-button 
+        label="Logout"
+        icon="pi pi-sign-out"
+        severity="danger"
+        size="small"
+        (onClick)="logout()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-toolbar>

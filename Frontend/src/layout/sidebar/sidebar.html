@@ -1,0 +1,17 @@
+<div class="primeng-sidebar" [class.sidebar-closed]="!isOpen">
+  <div class="sidebar-header">
+    <h3 *ngIf="isOpen" class="sidebar-title">
+      <i class="pi pi-th-large"></i>
+      <span>Menu</span>
+    </h3>
+    <i *ngIf="!isOpen" class="pi pi-th-large sidebar-icon"></i>
+  </div>
+  
+  <div class="sidebar-content">
+    <p-panelMenu 
+      [model]="menuItems" 
+      [style]="{'width': '100%', 'border': 'none'}"
+      styleClass="custom-panel-menu"
+    ></p-panelMenu>
+  </div>
+</div>

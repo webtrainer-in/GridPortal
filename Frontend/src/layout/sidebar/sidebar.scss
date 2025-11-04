@@ -1,0 +1,137 @@
+.primeng-sidebar {
+  width: 250px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  
+  &.sidebar-closed {
+    width: 60px;
+  }
+  
+  .sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    
+    .sidebar-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      
+      i {
+        font-size: 1.25rem;
+        color: #4299e1;
+      }
+    }
+    
+    .sidebar-icon {
+      font-size: 1.25rem;
+      color: #4299e1;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+  }
+  
+  .sidebar-content {
+    flex: 1;
+    padding: 0.5rem 0;
+    overflow-y: auto;
+  }
+}
+
+// Custom styling for PrimeNG PanelMenu
+::ng-deep {
+  .custom-panel-menu {
+    border: none !important;
+    
+    .p-panelmenu-panel {
+      border: none !important;
+      margin-bottom: 0 !important;
+    }
+    
+    .p-panelmenu-header {
+      border: none !important;
+      background: transparent !important;
+      
+      .p-panelmenu-header-content {
+        border: none !important;
+        background: transparent !important;
+        padding: 0.75rem 1rem !important;
+        color: #4a5568 !important;
+        border-radius: 6px !important;
+        margin: 0.25rem 0.5rem !important;
+        transition: all 0.2s ease !important;
+        
+        &:hover {
+          background: #f7fafc !important;
+          color: #2d3748 !important;
+        }
+        
+        .p-menuitem-icon {
+          color: #4299e1 !important;
+          margin-right: 0.75rem !important;
+          font-size: 1.125rem !important;
+        }
+        
+        .p-menuitem-text {
+          font-weight: 500 !important;
+          font-size: 0.95rem !important;
+        }
+      }
+      
+      &.p-highlight .p-panelmenu-header-content {
+        background: #4299e1 !important;
+        color: white !important;
+        
+        .p-menuitem-icon {
+          color: white !important;
+        }
+      }
+    }
+    
+    .p-toggleable-content {
+      border: none !important;
+      background: transparent !important;
+    }
+  }
+  
+  // Collapsed sidebar styling
+  .sidebar-closed .custom-panel-menu {
+    .p-panelmenu-header-content {
+      justify-content: center !important;
+      padding: 0.75rem !important;
+      margin: 0.25rem !important;
+      
+      .p-menuitem-text {
+        display: none !important;
+      }
+      
+      .p-menuitem-icon {
+        margin-right: 0 !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .primeng-sidebar {
+    position: absolute;
+    z-index: 1000;
+    height: 100vh;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    
+    &.sidebar-closed {
+      width: 0;
+      overflow: hidden;
+    }
+  }
+}
