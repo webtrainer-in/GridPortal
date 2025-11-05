@@ -4,6 +4,7 @@
   border-right: 1px solid #e0e6ed;
   transition: all 0.3s ease;
   overflow: hidden;
+  margin-top: 8px; /* Added margin to move sidebar down slightly */
   
   &.collapsed {
     .menu-text {

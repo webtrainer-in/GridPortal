@@ -20,12 +20,10 @@
   <!-- Ribbon Sub-menu -->
   <div 
     class="ribbon-container" 
-    [class.show]="selectedMenu"
-    *ngIf="selectedMenu">
+    [class.show]="selectedMenu">
     <div class="ribbon-content">
       <div class="ribbon-group" *ngFor="let menuItem of topMenuItems">
         <div *ngIf="selectedMenu === menuItem.id" class="sub-menu-items">
-          <h4 class="ribbon-title">{{ menuItem.label }}</h4>
           <div class="sub-items-grid">
             <a 
               *ngFor="let subItem of menuItem.subItems"
@@ -39,20 +37,5 @@
         </div>
       </div>
     </div>
-    
-    <!-- Close button -->
-    <button 
-      class="ribbon-close"
-      (click)="closeRibbon()"
-      title="Close">
-      <i class="pi pi-times"></i>
-    </button>
   </div>
-</div>
-
-<!-- Overlay to close ribbon when clicking outside -->
-<div 
-  class="ribbon-overlay" 
-  *ngIf="selectedMenu"
-  (click)="closeRibbon()">
 </div>

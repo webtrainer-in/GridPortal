@@ -20,7 +20,7 @@ import { MenuItem } from 'primeng/api';
   styleUrl: './top-menu.scss'
 })
 export class TopMenuComponent {
-  selectedMenu: string | null = null;
+  selectedMenu: string | null = 'file'; // Default to 'file' menu being visible
   
   topMenuItems: any[] = [
     {
@@ -85,10 +85,6 @@ export class TopMenuComponent {
   }
 
   onSubItemClick() {
-    this.selectedMenu = null; // Close ribbon when sub-item is clicked
-  }
-
-  closeRibbon() {
-    this.selectedMenu = null;
+    // Keep ribbon open when sub-item is clicked - removed auto-close behavior
   }
 }
