@@ -1,5 +1,8 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-secondary-panel',
@@ -8,9 +11,44 @@ import { CommonModule } from '@angular/common';
   templateUrl: './secondary-panel.html',
   styleUrl: './secondary-panel.scss'
 })
-export class SecondaryPanelComponent {
+export class SecondaryPanelComponent implements OnInit, OnDestroy {
   @Input() isOpen = false;
   @Input() selectedMenuItem: string | null = null;
+  @Output() panelClose = new EventEmitter<void>();
+  
+  panelPosition: PanelPosition = 'next-to-sidebar';
+  private subscription = new Subscription();
+  
+  constructor(private panelDragService: PanelDragService, private router: Router) {}
+  
+  ngOnInit(): void {
+    this.subscription.add(
+      this.panelDragService.position$.subscribe(position => {
+        this.panelPosition = position;
+      })
+    );
+  }
+  
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+  
+  togglePosition(): void {
+    this.panelDragService.togglePosition();
+  }
+  
+  closePanel(): void {
+    this.panelClose.emit();
+  }
+
+  onMenuItemClick(item: any): void {
+    // Handle navigation for specific items
+    if (this.selectedMenuItem === 'settings' && item.label === 'Backup') {
+      this.router.navigate(['/settings/backup']);
+      //this.closePanel(); // Close panel after navigation
+    }
+    // Add more navigation cases as needed
+  }
 
   getMenuTitle(): string {
     switch (this.selectedMenuItem) {

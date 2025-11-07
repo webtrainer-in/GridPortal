@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MenuModule } from 'primeng/menu';
 import { MenubarModule } from 'primeng/menubar';
 import { ButtonModule } from 'primeng/button';
-import { MenuItem } from 'primeng/api';
+import { TopBarModeService, TopBarMode, MenuItem } from '../../core/services/top-bar-mode.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-top-menu',
@@ -19,72 +20,66 @@ import { MenuItem } from 'primeng/api';
   templateUrl: './top-menu.html',
   styleUrl: './top-menu.scss'
 })
-export class TopMenuComponent {
-  selectedMenu: string | null = 'file'; // Default to 'file' menu being visible
+export class TopMenuComponent implements OnInit, OnDestroy {
+  currentMode: TopBarMode = 'dropdown';
+  selectedMenu: string | null = null;
+  menuItems: MenuItem[] = [];
+  private subscription = new Subscription();
   
-  topMenuItems: any[] = [
-    {
-      id: 'file',
-      label: 'File',
-      icon: 'pi pi-file',
-      subItems: [
-        { label: 'New', icon: 'pi pi-plus', routerLink: '/new' },
-        { label: 'Open', icon: 'pi pi-folder-open', routerLink: '/open' },
-        { label: 'Save', icon: 'pi pi-save', routerLink: '/save' },
-        { label: 'Export', icon: 'pi pi-download', routerLink: '/export' }
-      ]
-    },
-    {
-      id: 'edit',
-      label: 'Edit',
-      icon: 'pi pi-pencil',
-      subItems: [
-        { label: 'Copy', icon: 'pi pi-copy', routerLink: '/copy' },
-        { label: 'Paste', icon: 'pi pi-clone', routerLink: '/paste' },
-        { label: 'Delete', icon: 'pi pi-trash', routerLink: '/delete' },
-        { label: 'Undo', icon: 'pi pi-undo', routerLink: '/undo' }
-      ]
-    },
-    {
-      id: 'view',
-      label: 'View',
-      icon: 'pi pi-eye',
-      subItems: [
-        { label: 'Grid View', icon: 'pi pi-th-large', routerLink: '/grid' },
-        { label: 'List View', icon: 'pi pi-list', routerLink: '/list' },
-        { label: 'Card View', icon: 'pi pi-id-card', routerLink: '/cards' },
-        { label: 'Timeline', icon: 'pi pi-calendar', routerLink: '/timeline' }
-      ]
-    },
-    {
-      id: 'tools',
-      label: 'Tools',
-      icon: 'pi pi-wrench',
-      subItems: [
-        { label: 'Import Data', icon: 'pi pi-upload', routerLink: '/import' },
-        { label: 'Export Data', icon: 'pi pi-download', routerLink: '/export-data' },
-        { label: 'Backup', icon: 'pi pi-cloud', routerLink: '/backup' },
-        { label: 'Settings', icon: 'pi pi-cog', routerLink: '/settings' }
-      ]
-    },
-    {
-      id: 'help',
-      label: 'Help',
-      icon: 'pi pi-question-circle',
-      subItems: [
-        { label: 'Documentation', icon: 'pi pi-book', routerLink: '/docs' },
-        { label: 'Tutorials', icon: 'pi pi-video', routerLink: '/tutorials' },
-        { label: 'Support', icon: 'pi pi-phone', routerLink: '/support' },
-        { label: 'About', icon: 'pi pi-info-circle', routerLink: '/about' }
-      ]
-    }
-  ];
-
-  onMenuClick(menuId: string) {
-    this.selectedMenu = this.selectedMenu === menuId ? null : menuId;
+  constructor(private topBarModeService: TopBarModeService) {}
+  
+  ngOnInit(): void {
+    this.menuItems = this.topBarModeService.getMenuItems();
+    
+    this.subscription.add(
+      this.topBarModeService.mode$.subscribe(mode => {
+        this.currentMode = mode;
+        // Close any open menus when switching modes
+        this.selectedMenu = null;
+        
+        // Open File menu by default when switching to ribbon mode
+        if (mode === 'ribbon') {
+          setTimeout(() => {
+            this.selectedMenu = 'file';
+          }, 100);
+        }
+      })
+    );
   }
-
-  onSubItemClick() {
-    // Keep ribbon open when sub-item is clicked - removed auto-close behavior
+  
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+  
+  toggleMode(): void {
+    this.topBarModeService.toggleMode();
+  }
+  
+  onMenuClick(menuId: string): void {
+    if (this.currentMode === 'ribbon') {
+      // In ribbon mode, toggle the selected menu
+      this.selectedMenu = this.selectedMenu === menuId ? null : menuId;
+    } else {
+      // In dropdown mode, handle dropdown behavior
+      this.selectedMenu = this.selectedMenu === menuId ? null : menuId;
+    }
+  }
+  
+  onMenuAction(action: string): void {
+    console.log('Action triggered:', action);
+    // Implement actual actions here
+    
+    // Close ribbon after action in ribbon mode
+    if (this.currentMode === 'ribbon') {
+      this.selectedMenu = null;
+    }
+  }
+  
+  onDropdownAction(action: string): void {
+    console.log('Dropdown action triggered:', action);
+    // Implement actual actions here
+    
+    // Close dropdown after action
+    this.selectedMenu = null;
   }
 }

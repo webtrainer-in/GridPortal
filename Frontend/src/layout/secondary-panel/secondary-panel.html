@@ -1,9 +1,27 @@
-<div class="secondary-panel" [class.open]="isOpen">
+<div class="secondary-panel" 
+     [class.open]="isOpen" 
+     [class.far-right]="panelPosition === 'far-right'">
   <div class="panel-header">
-    <h3 class="panel-title">
-      <i class="pi pi-folder-open panel-icon"></i>
-      {{ getMenuTitle() }}
-    </h3>
+    <div class="header-content">
+      <h3 class="panel-title">
+        <i class="pi pi-folder-open panel-icon"></i>
+        {{ getMenuTitle() }}
+      </h3>
+      <div class="panel-controls">
+        <button 
+          class="position-toggle" 
+          (click)="togglePosition()"
+          title="Toggle position">
+          <i class="pi pi-arrows-h"></i>
+        </button>
+        <button 
+          class="close-button" 
+          (click)="closePanel()"
+          title="Close panel">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </div>
   </div>
   
   <div class="panel-content" *ngIf="isOpen">
@@ -19,7 +37,7 @@
           <!-- Nested items (for demo purposes, showing as expanded) -->
           <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
             <li *ngFor="let child of item.children" class="tree-child-item">
-              <div class="tree-node child">
+              <div class="tree-node child" (click)="onMenuItemClick(child)">
                 <i [class]="child.icon" class="tree-icon"></i>
                 <span class="tree-label">{{ child.label }}</span>
               </div>

@@ -4,9 +4,14 @@
   border-right: 1px solid #e0e6ed;
   transition: all 0.3s ease;
   overflow: hidden;
-  margin-top: 8px; /* Added margin to move sidebar down slightly */
+  margin-top: 8px;
+  width: 250px;
+  flex-shrink: 0;
+  position: relative;
   
   &.collapsed {
+    width: 60px;
+    
     .menu-text {
       display: none !important;
     }
