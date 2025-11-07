@@ -39,4 +39,9 @@ export class MainLayoutComponent {
     this.isSecondaryPanelOpen = event.isOpen;
     this.selectedMenuItem = event.menuId;
   }
+  
+  onSecondaryPanelClose() {
+    this.isSecondaryPanelOpen = false;
+    this.selectedMenuItem = null;
+  }
 }

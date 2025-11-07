@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { Subscription } from 'rxjs';
@@ -13,6 +13,7 @@ import { Subscription } from 'rxjs';
 export class SecondaryPanelComponent implements OnInit, OnDestroy {
   @Input() isOpen = false;
   @Input() selectedMenuItem: string | null = null;
+  @Output() panelClose = new EventEmitter<void>();
   
   panelPosition: PanelPosition = 'next-to-sidebar';
   private subscription = new Subscription();
@@ -33,6 +34,10 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy {
   
   togglePosition(): void {
     this.panelDragService.togglePosition();
+  }
+  
+  closePanel(): void {
+    this.panelClose.emit();
   }
 
   getMenuTitle(): string {

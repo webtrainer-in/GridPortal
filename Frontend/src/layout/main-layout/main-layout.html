@@ -12,6 +12,7 @@
     <app-secondary-panel
       [isOpen]="isSecondaryPanelOpen"
       [selectedMenuItem]="selectedMenuItem"
+      (panelClose)="onSecondaryPanelClose()"
     ></app-secondary-panel>
     
     <div class="main-content">
