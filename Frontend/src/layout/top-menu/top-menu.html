@@ -1,9 +1,9 @@
-<div class="top-menu-container">
+<div class="top-menu-container" [class.ribbon-mode]="currentMode === 'ribbon'" [class.dropdown-mode]="currentMode === 'dropdown'">
   <!-- Top Menu Bar -->
   <nav class="top-menu-bar">
     <ul class="menu-list">
       <li 
-        *ngFor="let menuItem of topMenuItems" 
+        *ngFor="let menuItem of menuItems" 
         class="menu-item"
         [class.active]="selectedMenu === menuItem.id">
         <button 
@@ -12,27 +12,55 @@
           [class.selected]="selectedMenu === menuItem.id">
           <i [class]="menuItem.icon" class="menu-icon"></i>
           <span class="menu-label">{{ menuItem.label }}</span>
+          <i *ngIf="currentMode === 'dropdown'" class="pi pi-chevron-down dropdown-indicator"></i>
         </button>
+        
+        <!-- Dropdown Menu (Standard Mode) -->
+        <div *ngIf="currentMode === 'dropdown' && selectedMenu === menuItem.id" class="dropdown-menu">
+          <ul class="dropdown-list">
+            <li *ngFor="let subItem of menuItem.children" 
+                [class.separator]="subItem.separator" 
+                class="dropdown-item">
+              <button *ngIf="!subItem.separator" 
+                      class="dropdown-button"
+                      (click)="onDropdownAction(subItem.action || '')">
+                <i [class]="subItem.icon" class="dropdown-icon"></i>
+                <span class="dropdown-label">{{ subItem.label }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
       </li>
     </ul>
+    
+    <!-- Mode Toggle Button -->
+    <div class="mode-toggle">
+      <button 
+        class="toggle-button"
+        (click)="toggleMode()"
+        [title]="currentMode === 'dropdown' ? 'Switch to Ribbon Mode' : 'Switch to Dropdown Mode'">
+        <i [class]="currentMode === 'dropdown' ? 'pi pi-window-maximize' : 'pi pi-bars'"></i>
+        <span class="toggle-label">{{ currentMode === 'dropdown' ? 'Ribbon' : 'Menu' }}</span>
+      </button>
+    </div>
   </nav>
 
-  <!-- Ribbon Sub-menu -->
-  <div 
-    class="ribbon-container" 
-    [class.show]="selectedMenu">
+  <!-- Ribbon Panel (Ribbon Mode) -->
+  <div *ngIf="currentMode === 'ribbon'" 
+       class="ribbon-container" 
+       [class.show]="selectedMenu">
     <div class="ribbon-content">
-      <div class="ribbon-group" *ngFor="let menuItem of topMenuItems">
+      <div class="ribbon-panel" *ngFor="let menuItem of menuItems">
         <div *ngIf="selectedMenu === menuItem.id" class="sub-menu-items">
           <div class="sub-items-grid">
-            <a 
-              *ngFor="let subItem of menuItem.subItems"
-              [routerLink]="subItem.routerLink"
+            <button 
+              *ngFor="let item of menuItem.ribbonItems"
               class="sub-item"
-              (click)="onSubItemClick()">
-              <i [class]="subItem.icon" class="sub-item-icon"></i>
-              <span class="sub-item-label">{{ subItem.label }}</span>
-            </a>
+              (click)="onMenuAction(item.action || '')"
+              [title]="item.icon">
+              <i [class]="item.icon" class="sub-item-icon" [attr.data-icon]="item.icon"></i>
+              <span class="sub-item-label">{{ item.label }}</span>
+            </button>
           </div>
         </div>
       </div>
