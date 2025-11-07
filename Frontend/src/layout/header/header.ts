@@ -23,6 +23,10 @@ export class HeaderComponent {
     private authService: AuthService
   ) {}
 
+  openExternalSite() {
+    window.open('https://google.com', '_blank');
+  }
+
   logout() {
     this.authService.logout();
   }
