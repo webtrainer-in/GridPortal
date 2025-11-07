@@ -33,16 +33,11 @@ export class TopMenuComponent implements OnInit, OnDestroy {
     
     this.subscription.add(
       this.topBarModeService.mode$.subscribe(mode => {
+        console.log('Top bar mode changed to:', mode, 'Previous selected menu:', this.selectedMenu);
         this.currentMode = mode;
         // Close any open menus when switching modes
         this.selectedMenu = null;
-        
-        // Open File menu by default when switching to ribbon mode
-        if (mode === 'ribbon') {
-          setTimeout(() => {
-            this.selectedMenu = 'file';
-          }, 100);
-        }
+        console.log('Reset selected menu to null');
       })
     );
   }
@@ -56,12 +51,26 @@ export class TopMenuComponent implements OnInit, OnDestroy {
   }
   
   onMenuClick(menuId: string): void {
+    console.log('Menu clicked:', menuId, 'Current mode:', this.currentMode, 'Currently selected:', this.selectedMenu);
+    
     if (this.currentMode === 'ribbon') {
       // In ribbon mode, toggle the selected menu
-      this.selectedMenu = this.selectedMenu === menuId ? null : menuId;
+      if (this.selectedMenu === menuId) {
+        this.selectedMenu = null;
+        console.log('Closing ribbon menu:', menuId);
+      } else {
+        this.selectedMenu = menuId;
+        console.log('Opening ribbon menu:', menuId);
+      }
     } else {
-      // In dropdown mode, handle dropdown behavior
-      this.selectedMenu = this.selectedMenu === menuId ? null : menuId;
+      // In dropdown mode, toggle the selected menu
+      if (this.selectedMenu === menuId) {
+        this.selectedMenu = null;
+        console.log('Closing dropdown menu:', menuId);
+      } else {
+        this.selectedMenu = menuId;
+        console.log('Opening dropdown menu:', menuId);
+      }
     }
   }
   
