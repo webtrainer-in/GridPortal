@@ -1,5 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-secondary-panel',
@@ -8,9 +10,30 @@ import { CommonModule } from '@angular/common';
   templateUrl: './secondary-panel.html',
   styleUrl: './secondary-panel.scss'
 })
-export class SecondaryPanelComponent {
+export class SecondaryPanelComponent implements OnInit, OnDestroy {
   @Input() isOpen = false;
   @Input() selectedMenuItem: string | null = null;
+  
+  panelPosition: PanelPosition = 'next-to-sidebar';
+  private subscription = new Subscription();
+  
+  constructor(private panelDragService: PanelDragService) {}
+  
+  ngOnInit(): void {
+    this.subscription.add(
+      this.panelDragService.position$.subscribe(position => {
+        this.panelPosition = position;
+      })
+    );
+  }
+  
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+  
+  togglePosition(): void {
+    this.panelDragService.togglePosition();
+  }
 
   getMenuTitle(): string {
     switch (this.selectedMenuItem) {

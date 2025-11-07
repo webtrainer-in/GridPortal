@@ -1,9 +1,21 @@
-<div class="secondary-panel" [class.open]="isOpen">
+<div class="secondary-panel" 
+     [class.open]="isOpen" 
+     [class.far-right]="panelPosition === 'far-right'">
   <div class="panel-header">
-    <h3 class="panel-title">
-      <i class="pi pi-folder-open panel-icon"></i>
-      {{ getMenuTitle() }}
-    </h3>
+    <div class="header-content">
+      <h3 class="panel-title">
+        <i class="pi pi-folder-open panel-icon"></i>
+        {{ getMenuTitle() }}
+      </h3>
+      <div class="panel-controls">
+        <button 
+          class="position-toggle" 
+          (click)="togglePosition()"
+          title="Toggle position">
+          <i class="pi pi-arrows-h"></i>
+        </button>
+      </div>
+    </div>
   </div>
   
   <div class="panel-content" *ngIf="isOpen">

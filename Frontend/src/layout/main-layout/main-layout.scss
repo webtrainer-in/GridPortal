@@ -19,6 +19,7 @@
   margin-top: 8px;
   min-height: 0;
   overflow: hidden;
+  position: relative; // Added for absolute positioned secondary panel
   
   .content-area {
     flex: 1;
