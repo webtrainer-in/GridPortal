@@ -1,10 +1,22 @@
 <div class="sidebar" [class.collapsed]="!isOpen">
   <div class="sidebar-header">
-    <h3 *ngIf="isOpen" class="sidebar-title">
-      <i class="pi pi-th-large"></i>
-      <span>Menu</span>
-    </h3>
-    <i *ngIf="!isOpen" class="pi pi-th-large sidebar-icon"></i>
+    <div *ngIf="isOpen" class="expanded-header">
+      <p-button 
+        icon="pi pi-bars"
+        severity="secondary"
+        [text]="true"
+        (onClick)="onToggleSidebar()"
+        class="sidebar-toggle"
+        [title]="'Collapse Menu'"
+      ></p-button>
+      <h3 class="sidebar-title">
+        <i class="pi pi-th-large"></i>
+        <span>Menu</span>
+      </h3>
+    </div>
+    <div *ngIf="!isOpen" class="collapsed-header" (click)="onToggleSidebar()" title="Expand Menu">
+      <i class="pi pi-bars sidebar-icon"></i>
+    </div>
   </div>
   
   <div class="sidebar-content">
