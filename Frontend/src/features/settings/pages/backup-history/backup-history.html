@@ -1,0 +1,156 @@
+<div class="backup-history-container">
+  <div class="header">
+    <h2>Backup History</h2>
+    <div class="header-actions">
+      <button class="refresh-btn" (click)="reloadData()" title="Refresh backup list">
+        <span class="icon">🔄</span>
+        Refresh
+      </button>
+      <button class="create-backup-btn" (click)="onCreateBackup()">
+        <span class="icon">📁</span>
+        Create New Backup
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div *ngIf="backupRecords.length === 0" class="empty-state">
+      <div class="empty-icon">📦</div>
+      <h3>No Backups Found</h3>
+      <p>No backup records are available. Create your first backup to get started.</p>
+      <button class="create-backup-btn" (click)="onCreateBackup()">
+        Create First Backup
+      </button>
+    </div>
+
+    <div *ngIf="backupRecords.length > 0" class="backup-table">
+      <div class="table-header">
+        <div class="column name">Name</div>
+        <div class="column date">Created</div>
+        <div class="column size">Size</div>
+        <div class="column type">Type</div>
+        <div class="column status">Status</div>
+        <div class="column actions">Actions</div>
+      </div>
+
+      <div class="table-body">
+        <div 
+          *ngFor="let backup of backupRecords" 
+          class="table-row"
+          [class.selected]="selectedBackup?.id === backup.id"
+          (click)="onBackupSelect(backup)"
+        >
+          <div class="column name">
+            <div class="backup-name">{{ backup.name }}</div>
+            <div class="backup-description" *ngIf="backup.description">
+              {{ backup.description }}
+            </div>
+          </div>
+          <div class="column date">
+            {{ formatDate(backup.createdDate) }}
+          </div>
+          <div class="column size">
+            {{ backup.size }}
+          </div>
+          <div class="column type">
+            <span class="type-badge" [ngClass]="getTypeClass(backup.type)">
+              {{ backup.type }}
+            </span>
+          </div>
+          <div class="column status">
+            <span class="status-badge" [ngClass]="getStatusClass(backup.status)">
+              {{ backup.status }}
+            </span>
+          </div>
+          <div class="column actions">
+            <div class="action-buttons">
+              <button 
+                class="action-btn restore"
+                [disabled]="backup.status !== 'Completed'"
+                (click)="onRestore(backup); $event.stopPropagation()"
+                title="Restore this backup"
+              >
+                <span class="icon">🔄</span>
+              </button>
+              <button 
+                class="action-btn download"
+                [disabled]="backup.status !== 'Completed'"
+                (click)="onDownload(backup); $event.stopPropagation()"
+                title="Download this backup"
+              >
+                <span class="icon">⬇️</span>
+              </button>
+              <button 
+                class="action-btn delete"
+                (click)="onDelete(backup); $event.stopPropagation()"
+                title="Delete this backup"
+              >
+                <span class="icon">🗑️</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="selectedBackup" class="backup-details">
+      <h3>Backup Details</h3>
+      <div class="details-grid">
+        <div class="detail-item">
+          <label>Name:</label>
+          <span>{{ selectedBackup.name }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Created:</label>
+          <span>{{ formatDate(selectedBackup.createdDate) }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Size:</label>
+          <span>{{ selectedBackup.size }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Type:</label>
+          <span class="type-badge" [ngClass]="getTypeClass(selectedBackup.type)">
+            {{ selectedBackup.type }}
+          </span>
+        </div>
+        <div class="detail-item">
+          <label>Status:</label>
+          <span class="status-badge" [ngClass]="getStatusClass(selectedBackup.status)">
+            {{ selectedBackup.status }}
+          </span>
+        </div>
+        <div class="detail-item" *ngIf="selectedBackup.description">
+          <label>Description:</label>
+          <span>{{ selectedBackup.description }}</span>
+        </div>
+      </div>
+      
+      <div class="detail-actions">
+        <button 
+          class="action-btn-large restore"
+          [disabled]="selectedBackup.status !== 'Completed'"
+          (click)="onRestore(selectedBackup)"
+        >
+          <span class="icon">🔄</span>
+          Restore Backup
+        </button>
+        <button 
+          class="action-btn-large download"
+          [disabled]="selectedBackup.status !== 'Completed'"
+          (click)="onDownload(selectedBackup)"
+        >
+          <span class="icon">⬇️</span>
+          Download
+        </button>
+        <button 
+          class="action-btn-large delete"
+          (click)="onDelete(selectedBackup)"
+        >
+          <span class="icon">🗑️</span>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

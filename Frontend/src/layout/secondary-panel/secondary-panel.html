@@ -37,7 +37,7 @@
           <!-- Nested items (for demo purposes, showing as expanded) -->
           <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
             <li *ngFor="let child of item.children" class="tree-child-item">
-              <div class="tree-node child">
+              <div class="tree-node child" (click)="onMenuItemClick(child)">
                 <i [class]="child.icon" class="tree-icon"></i>
                 <span class="tree-label">{{ child.label }}</span>
               </div>

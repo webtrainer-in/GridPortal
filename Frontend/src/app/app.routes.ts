@@ -32,6 +32,10 @@ export const routes: Routes = [
         loadComponent: () => import('../features/settings/pages/settings/settings').then(m => m.SettingsComponent)
       },
       {
+        path: 'settings/backup',
+        loadComponent: () => import('../features/settings/pages/backup-history/backup-history').then(m => m.BackupHistoryComponent)
+      },
+      {
         path: 'analytics',
         loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder
       },

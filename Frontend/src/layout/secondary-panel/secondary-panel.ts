@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { Subscription } from 'rxjs';
 
@@ -18,7 +19,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy {
   panelPosition: PanelPosition = 'next-to-sidebar';
   private subscription = new Subscription();
   
-  constructor(private panelDragService: PanelDragService) {}
+  constructor(private panelDragService: PanelDragService, private router: Router) {}
   
   ngOnInit(): void {
     this.subscription.add(
@@ -38,6 +39,15 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy {
   
   closePanel(): void {
     this.panelClose.emit();
+  }
+
+  onMenuItemClick(item: any): void {
+    // Handle navigation for specific items
+    if (this.selectedMenuItem === 'settings' && item.label === 'Backup') {
+      this.router.navigate(['/settings/backup']);
+      //this.closePanel(); // Close panel after navigation
+    }
+    // Add more navigation cases as needed
   }
 
   getMenuTitle(): string {
