@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MessageModule } from 'primeng/message';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -28,7 +29,8 @@ export class LoginComponent {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
       email: ['admin@gridportal.com', [Validators.required, Validators.email]],
@@ -43,19 +45,22 @@ export class LoginComponent {
 
       const { email, password } = this.loginForm.value;
 
-      // Simple validation (replace with actual API call in production)
-      setTimeout(() => {
-        if (email === 'admin@gridportal.com' && password === 'admin123') {
-          // Store login state in localStorage (replace with proper token handling)
-          localStorage.setItem('isLoggedIn', 'true');
-          localStorage.setItem('userEmail', email);
-          
-          this.router.navigate(['/dashboard']);
-        } else {
-          this.errorMessage.set('Invalid email or password. Please try again.');
+      // Use AuthService for authentication
+      this.authService.login(email, password).subscribe({
+        next: (result) => {
+          if (result.success) {
+            this.router.navigate(['/dashboard']);
+          } else {
+            this.errorMessage.set(result.message || 'Login failed. Please try again.');
+          }
+          this.isLoading.set(false);
+        },
+        error: (error) => {
+          console.error('Login error:', error);
+          this.errorMessage.set('An error occurred during login. Please try again.');
+          this.isLoading.set(false);
         }
-        this.isLoading.set(false);
-      }, 1000);
+      });
     } else {
       this.markFormGroupTouched();
     }

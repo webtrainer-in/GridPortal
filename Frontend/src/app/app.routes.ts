@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from '../core/guards/auth.guard';
+import { LoginGuard } from '../core/guards/login.guard';
 
 export const routes: Routes = [
   {
@@ -8,11 +10,14 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () => import('../features/auth/pages/login/login').then(m => m.LoginComponent)
+    loadComponent: () => import('../features/auth/pages/login/login').then(m => m.LoginComponent),
+    canActivate: [LoginGuard] // Prevent access if already logged in
   },
   {
     path: '',
     loadComponent: () => import('../layout/main-layout/main-layout').then(m => m.MainLayoutComponent),
+    canActivate: [AuthGuard], // Protect all child routes
+    canActivateChild: [AuthGuard], // Protect all child routes
     children: [
       {
         path: 'dashboard',
