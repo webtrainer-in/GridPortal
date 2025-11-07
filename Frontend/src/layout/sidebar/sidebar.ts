@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 
 interface CustomMenuItem {
   label: string;
@@ -14,7 +15,8 @@ interface CustomMenuItem {
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule
+    RouterModule,
+    ButtonModule
   ],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss'
@@ -64,6 +66,10 @@ export class SidebarComponent {
     if (window.innerWidth <= 768) {
       this.toggleSidebar.emit();
     }
+  }
+
+  onToggleSidebar() {
+    this.toggleSidebar.emit();
   }
 
   onMenuItemSelect(menuId: string, event: Event) {

@@ -21,29 +21,9 @@
       padding: 12px 8px;
     }
     
-    .sidebar-title span {
-      display: none;
-    }
-    
     .sidebar-header {
-      padding: 0;
-      margin: 16px 8px 4px 8px;
+      padding: 16px 8px;
       border-bottom: none;
-      
-      .sidebar-icon {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: auto;
-        padding: 12px 8px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        
-        &:hover {
-          background-color: #f3f4f6;
-        }
-      }
     }
   }
 }
@@ -52,24 +32,42 @@
   padding: 20px 16px;
   border-bottom: 1px solid #e0e6ed;
   text-align: center;
+  position: relative;
   
-  .sidebar-title {
-    margin: 0;
-    font-size: 1.2rem;
-    color: #333;
+  .expanded-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
     
-    i {
-      font-size: 1.2rem; // Match menu icon size
-      color: #10b981;
+    .sidebar-title {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
     }
   }
   
-  .sidebar-icon {
-    font-size: 1.2rem; // Match menu icon size
-    color: #10b981;
+  .collapsed-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #f3f4f6;
+    }
+    
+    .sidebar-icon {
+      font-size: 1.2rem;
+      color: #10b981;
+    }
   }
 }
 
@@ -156,6 +154,27 @@
     
     &.open {
       transform: translateX(0);
+    }
+  }
+}
+
+// Hamburger toggle button styles
+.sidebar-toggle {
+  ::ng-deep .p-button {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    background-color: #e8f5e8 !important; // Light green background to match collapsed state
+    border: none !important;
+    
+    &:hover {
+      background-color: #d1f2d1 !important; // Slightly darker green on hover
+    }
+    
+    .p-button-icon {
+      font-size: 1.2rem !important; // Match the collapsed state icon size
+      color: #10b981 !important; // Green color to match the collapsed state icon
     }
   }
 }

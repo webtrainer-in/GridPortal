@@ -1,5 +1,5 @@
 <div class="app-layout">
-  <app-header (sidebarToggle)="toggleSidebar()"></app-header>
+  <app-header></app-header>
   <app-top-menu></app-top-menu>
   
   <div class="layout-body">
@@ -19,7 +19,8 @@
       <div class="content-area">
         <router-outlet></router-outlet>
       </div>
-      <app-footer></app-footer>
     </div>
   </div>
+  
+  <app-footer></app-footer>
 </div>
