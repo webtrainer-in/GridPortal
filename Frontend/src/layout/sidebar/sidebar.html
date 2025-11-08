@@ -23,16 +23,39 @@
     <nav class="sidebar-nav">
       <ul class="menu-list">
         <li *ngFor="let item of menuItems" class="menu-item">
+          <!-- Main menu item -->
           <a 
-            [routerLink]="item.routerLink" 
+            [routerLink]="item.children && item.children.length > 0 ? null : item.routerLink" 
             routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.children ? true : false }"
             class="menu-link"
             [class.selected]="selectedMenuItem === item.id"
+            [class.has-children]="item.children && item.children.length > 0"
             [title]="!isOpen ? item.label : ''"
             (click)="onMenuItemSelect(item.id, $event)">
             <i [class]="item.icon" class="menu-icon"></i>
             <span class="menu-text" [class.hidden]="!isOpen">{{ item.label }}</span>
+            <!-- Arrow icon for expandable items -->
+            <i *ngIf="item.children && item.children.length > 0 && isOpen" 
+               class="pi pi-chevron-down submenu-arrow"
+               [class.expanded]="item.isExpanded"></i>
           </a>
+          
+          <!-- Submenu items -->
+          <ul *ngIf="item.children && item.children.length > 0 && item.isExpanded && isOpen" 
+              class="submenu-list">
+            <li *ngFor="let child of item.children" class="submenu-item">
+              <a 
+                [routerLink]="child.routerLink" 
+                routerLinkActive="active"
+                class="submenu-link"
+                [class.selected]="selectedMenuItem === child.id"
+                (click)="onSubmenuItemSelect(child.id, $event)">
+                <i [class]="child.icon" class="submenu-icon"></i>
+                <span class="submenu-text">{{ child.label }}</span>
+              </a>
+            </li>
+          </ul>
         </li>
       </ul>
     </nav>

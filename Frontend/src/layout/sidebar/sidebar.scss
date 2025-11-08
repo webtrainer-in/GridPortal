@@ -98,6 +98,7 @@
   transition: all 0.2s ease;
   border-radius: 8px;
   margin: 0 8px;
+  position: relative;
   
   &:hover {
     background-color: #f3f4f6;
@@ -111,6 +112,10 @@
     .menu-icon {
       color: white;
     }
+    
+    .submenu-arrow {
+      color: white;
+    }
   }
   
   &.selected {
@@ -119,6 +124,18 @@
     border-left: 3px solid #10b981;
     
     .menu-icon {
+      color: #10b981;
+    }
+    
+    .submenu-arrow {
+      color: #10b981;
+    }
+  }
+  
+  &.has-children {
+    cursor: pointer;
+    
+    &:hover .submenu-arrow {
       color: #10b981;
     }
   }
@@ -135,9 +152,97 @@
   margin-left: 12px;
   font-weight: 500;
   transition: all 0.3s ease;
+  flex: 1;
   
   &.hidden {
     display: none;
+  }
+}
+
+.submenu-arrow {
+  font-size: 0.8rem;
+  margin-left: auto;
+  transition: transform 0.2s ease, color 0.2s ease;
+  color: #6b7280;
+  
+  &.expanded {
+    transform: rotate(180deg);
+  }
+}
+
+// Submenu styles
+.submenu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-left: 8px;
+  border-left: 2px solid #e0e6ed;
+  animation: slideDown 0.2s ease-out;
+}
+
+.submenu-item {
+  margin-bottom: 2px;
+}
+
+.submenu-link {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px 8px 24px;
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin: 0 8px;
+  font-size: 0.9rem;
+  
+  &:hover {
+    background-color: #f9fafb;
+    color: #10b981;
+  }
+  
+  &.active {
+    background-color: #dcfce7;
+    color: #10b981;
+    
+    .submenu-icon {
+      color: #10b981;
+    }
+  }
+  
+  &.selected {
+    background-color: #dcfce7;
+    color: #10b981;
+    border-left: 2px solid #10b981;
+    
+    .submenu-icon {
+      color: #10b981;
+    }
+  }
+}
+
+.submenu-icon {
+  font-size: 1rem;
+  min-width: 16px;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.submenu-text {
+  margin-left: 10px;
+  font-weight: 400;
+}
+
+// Animation for submenu expansion
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    transform: translateY(0);
   }
 }
 
