@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
@@ -11,12 +11,13 @@ import { Subscription } from 'rxjs';
   templateUrl: './secondary-panel.html',
   styleUrl: './secondary-panel.scss'
 })
-export class SecondaryPanelComponent implements OnInit, OnDestroy {
+export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isOpen = false;
   @Input() selectedMenuItem: string | null = null;
   @Output() panelClose = new EventEmitter<void>();
   
   panelPosition: PanelPosition = 'next-to-sidebar';
+  activeTab = 'main'; // Default to main tab
   private subscription = new Subscription();
   
   constructor(private panelDragService: PanelDragService, private router: Router) {}
@@ -27,6 +28,13 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy {
         this.panelPosition = position;
       })
     );
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Reset to main tab when selectedMenuItem changes
+    if (changes['selectedMenuItem']) {
+      this.activeTab = 'main';
+    }
   }
   
   ngOnDestroy(): void {
@@ -48,6 +56,33 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy {
       //this.closePanel(); // Close panel after navigation
     }
     // Add more navigation cases as needed
+  }
+
+  setActiveTab(tabId: string): void {
+    this.activeTab = tabId;
+  }
+
+  shouldShowTabs(): boolean {
+    return this.selectedMenuItem === 'users' || this.selectedMenuItem === 'reports';
+  }
+
+  getTabs(): any[] {
+    if (this.selectedMenuItem === 'users') {
+      return [
+        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
+        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'User Permission', icon: 'pi pi-info-circle' }
+      ]};
+
+    if (this.selectedMenuItem === 'reports') {
+      return [
+        { id: 'main', label: 'Report Management', icon: 'pi pi-users' },
+        { id: 'user-info', label: 'Report Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'Report Permission', icon: 'pi pi-info-circle' }
+      ];
+
+    }
+    return [];
   }
 
   getMenuTitle(): string {
