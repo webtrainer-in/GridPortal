@@ -50,13 +50,6 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       this.activeTab = 'main';
     }
   }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    // Reset to main tab when selectedMenuItem changes
-    if (changes['selectedMenuItem']) {
-      this.activeTab = 'main';
-    }
-  }
   
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
