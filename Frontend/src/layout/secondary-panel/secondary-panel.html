@@ -25,20 +25,6 @@
   </div>
   
   <div class="panel-content" *ngIf="isOpen">
-    <!-- Tab Navigation -->
-    <div class="tab-navigation" *ngIf="shouldShowTabs()">
-      <div class="tab-buttons">
-        <button 
-          *ngFor="let tab of getTabs()" 
-          class="tab-button"
-          [class.active]="activeTab === tab.id"
-          (click)="setActiveTab(tab.id)">
-          <i [class]="tab.icon"></i>
-          {{ tab.label }}
-        </button>
-      </div>
-    </div>
-
     <!-- Tab Content -->
     <div class="tab-content-container">
       <!-- Main Content Tab (Tree View) -->
@@ -63,6 +49,97 @@
               </ul>
             </li>
           </ul>
+        </div>
+      </div>
+
+      <!-- User Info Tab -->
+      <div class="tab-content" [class.active]="activeTab === 'user-info'" *ngIf="shouldShowTabs()">
+        <div class="tree-view">
+          <ul class="tree-list">
+            <li *ngFor="let item of getUserInfoContent()" class="tree-item">
+              <div class="tree-node" [class.folder]="item.type === 'folder'">
+                <i [class]="item.icon" class="tree-icon"></i>
+                <span class="tree-label">{{ item.label }}</span>
+                <i *ngIf="item.type === 'folder'" class="pi pi-chevron-right tree-chevron"></i>
+              </div>
+              
+              <!-- Nested items -->
+              <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
+                <li *ngFor="let child of item.children" class="tree-child-item">
+                  <div class="tree-node child" (click)="onMenuItemClick(child)">
+                    <i [class]="child.icon" class="tree-icon"></i>
+                    <span class="tree-label">{{ child.label }}</span>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Permission Tab -->
+      <div class="tab-content" [class.active]="activeTab === 'permission'" *ngIf="shouldShowTabs()">
+        <div class="tree-view">
+          <ul class="tree-list">
+            <li *ngFor="let item of getPermissionContent()" class="tree-item">
+              <div class="tree-node" [class.folder]="item.type === 'folder'">
+                <i [class]="item.icon" class="tree-icon"></i>
+                <span class="tree-label">{{ item.label }}</span>
+                <i *ngIf="item.type === 'folder'" class="pi pi-chevron-right tree-chevron"></i>
+              </div>
+              
+              <!-- Nested items -->
+              <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
+                <li *ngFor="let child of item.children" class="tree-child-item">
+                  <div class="tree-node child" (click)="onMenuItemClick(child)">
+                    <i [class]="child.icon" class="tree-icon"></i>
+                    <span class="tree-label">{{ child.label }}</span>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Non-tabbed content (when tabs are not shown) -->
+      <div class="tab-content" [class.active]="!shouldShowTabs()">
+        <div class="tree-view">
+          <ul class="tree-list">
+            <li *ngFor="let item of getMenuContent()" class="tree-item">
+              <div class="tree-node" [class.folder]="item.type === 'folder'">
+                <i [class]="item.icon" class="tree-icon"></i>
+                <span class="tree-label">{{ item.label }}</span>
+                <i *ngIf="item.type === 'folder'" class="pi pi-chevron-right tree-chevron"></i>
+              </div>
+              
+              <!-- Nested items (for demo purposes, showing as expanded) -->
+              <ul *ngIf="item.children && item.type === 'folder'" class="tree-children">
+                <li *ngFor="let child of item.children" class="tree-child-item">
+                  <div class="tree-node child" (click)="onMenuItemClick(child)">
+                    <i [class]="child.icon" class="tree-icon"></i>
+                    <span class="tree-label">{{ child.label }}</span>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation at bottom -->
+    <div class="tab-navigation tab-navigation-bottom" *ngIf="shouldShowTabs()">
+      <div class="tab-buttons">
+        <button 
+          *ngFor="let tab of getTabs()" 
+          class="tab-button"
+          [class.active]="activeTab === tab.id"
+          (click)="setActiveTab(tab.id)">
+          <i [class]="tab.icon"></i>
+          {{ tab.label }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

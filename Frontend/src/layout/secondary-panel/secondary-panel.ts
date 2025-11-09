@@ -71,17 +71,17 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       return [
         { id: 'main', label: 'User Management', icon: 'pi pi-users' },
         { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'User Permission', icon: 'pi pi-info-circle' }
-      ]};
+        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
+      ];
+    }
 
     if (this.selectedMenuItem === 'reports') {
       return [
-        { id: 'main', label: 'Report Management', icon: 'pi pi-users' },
+        { id: 'main', label: 'Report Management', icon: 'pi pi-file-edit' },
         { id: 'user-info', label: 'Report Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'Report Permission', icon: 'pi pi-info-circle' }
+        { id: 'permission', label: 'Report Permission', icon: 'pi pi-key' }
       ];
-
-    }
+    }    
     return [];
   }
 
@@ -168,5 +168,96 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       default:
         return [];
     }
+  }
+
+  getUserInfoContent(): any[] {
+    if (this.selectedMenuItem === 'users') {
+      return [
+        { label: 'User Profile', icon: 'pi pi-user', type: 'item' },
+        { label: 'Personal Details', icon: 'pi pi-id-card', type: 'folder', children: [
+          { label: 'Basic Information', icon: 'pi pi-info' },
+          { label: 'Contact Details', icon: 'pi pi-phone' },
+          { label: 'Address', icon: 'pi pi-map-marker' }
+        ]},
+        { label: 'Account Settings', icon: 'pi pi-cog', type: 'folder', children: [
+          { label: 'Login Credentials', icon: 'pi pi-key' },
+          { label: 'Security Settings', icon: 'pi pi-shield' },
+          { label: 'Preferences', icon: 'pi pi-sliders-h' }
+        ]},
+        { label: 'Activity Log', icon: 'pi pi-history', type: 'item' },
+        { label: 'Session Management', icon: 'pi pi-clock', type: 'item' }
+      ];
+    }
+
+    if (this.selectedMenuItem === 'reports') {
+      return [
+        { label: 'Report Details', icon: 'pi pi-file-edit', type: 'item' },
+        { label: 'Metadata', icon: 'pi pi-tags', type: 'folder', children: [
+          { label: 'Creation Date', icon: 'pi pi-calendar' },
+          { label: 'Author', icon: 'pi pi-user' },
+          { label: 'Version', icon: 'pi pi-code' }
+        ]},
+        { label: 'Data Sources', icon: 'pi pi-database', type: 'folder', children: [
+          { label: 'Primary Sources', icon: 'pi pi-server' },
+          { label: 'Secondary Sources', icon: 'pi pi-cloud' },
+          { label: 'External APIs', icon: 'pi pi-globe' }
+        ]},
+        { label: 'Execution History', icon: 'pi pi-history', type: 'item' },
+        { label: 'Performance Metrics', icon: 'pi pi-chart-line', type: 'item' }
+      ];
+    }
+
+    return [];
+  }
+
+  getPermissionContent(): any[] {
+    if (this.selectedMenuItem === 'users') {
+      return [
+        { label: 'Role Assignment', icon: 'pi pi-users', type: 'item' },
+        { label: 'Access Rights', icon: 'pi pi-key', type: 'folder', children: [
+          { label: 'Read Permissions', icon: 'pi pi-eye' },
+          { label: 'Write Permissions', icon: 'pi pi-pencil' },
+          { label: 'Delete Permissions', icon: 'pi pi-trash' }
+        ]},
+        { label: 'Module Access', icon: 'pi pi-th-large', type: 'folder', children: [
+          { label: 'Dashboard Access', icon: 'pi pi-home' },
+          { label: 'Reports Access', icon: 'pi pi-chart-bar' },
+          { label: 'Settings Access', icon: 'pi pi-cog' },
+          { label: 'User Management', icon: 'pi pi-users' }
+        ]},
+        { label: 'API Permissions', icon: 'pi pi-globe', type: 'folder', children: [
+          { label: 'REST API Access', icon: 'pi pi-cloud' },
+          { label: 'GraphQL Access', icon: 'pi pi-code' },
+          { label: 'Webhook Access', icon: 'pi pi-send' }
+        ]},
+        { label: 'Time-based Access', icon: 'pi pi-clock', type: 'item' },
+        { label: 'IP Restrictions', icon: 'pi pi-shield', type: 'item' }
+      ];
+    }
+
+    if (this.selectedMenuItem === 'reports') {
+      return [
+        { label: 'Report Permissions', icon: 'pi pi-file-edit', type: 'item' },
+        { label: 'Access Control', icon: 'pi pi-lock', type: 'folder', children: [
+          { label: 'View Permissions', icon: 'pi pi-eye' },
+          { label: 'Edit Permissions', icon: 'pi pi-pencil' },
+          { label: 'Share Permissions', icon: 'pi pi-share-alt' }
+        ]},
+        { label: 'Data Access', icon: 'pi pi-database', type: 'folder', children: [
+          { label: 'Read Data Sources', icon: 'pi pi-server' },
+          { label: 'Write Data Sources', icon: 'pi pi-upload' },
+          { label: 'Execute Queries', icon: 'pi pi-play' }
+        ]},
+        { label: 'Export Permissions', icon: 'pi pi-download', type: 'folder', children: [
+          { label: 'PDF Export', icon: 'pi pi-file-pdf' },
+          { label: 'Excel Export', icon: 'pi pi-file-excel' },
+          { label: 'CSV Export', icon: 'pi pi-file' }
+        ]},
+        { label: 'Scheduling Rights', icon: 'pi pi-calendar', type: 'item' },
+        { label: 'Distribution List', icon: 'pi pi-send', type: 'item' }
+      ];
+    }
+
+    return [];
   }
 }
