@@ -26,6 +26,7 @@ export class MainLayoutComponent {
   isSidebarOpen = true;
   isSecondaryPanelOpen = false;
   selectedMenuItem: string | null = null;
+  secondaryPanelWidth = 280;
 
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
@@ -43,5 +44,9 @@ export class MainLayoutComponent {
   onSecondaryPanelClose() {
     this.isSecondaryPanelOpen = false;
     this.selectedMenuItem = null;
+  }
+
+  onSecondaryPanelWidthChange(width: number) {
+    this.secondaryPanelWidth = width;
   }
 }

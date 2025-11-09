@@ -8,8 +8,19 @@
   flex-shrink: 0;
   position: relative;
   
-  &.open {
-    width: 280px;
+  &.resizing {
+    transition: none; // Disable transition during resize
+    user-select: none; // Prevent text selection during resize
+    
+    .resize-handle {
+      background-color: rgba(16, 185, 129, 0.2);
+      
+      &::after {
+        opacity: 1;
+        background-color: #059669;
+        width: 3px;
+      }
+    }
   }
   
   // Position: Far right (absolute positioning)
@@ -22,6 +33,60 @@
     border-left: 1px solid #e2e8f0;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
   }
+}
+
+// Resize handles
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+  
+  // Add a visible indicator on hover
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background-color: #e2e8f0;
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  &:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+    
+    &::after {
+      opacity: 1;
+      background-color: #10b981;
+    }
+  }
+  
+  &:active {
+    background-color: rgba(16, 185, 129, 0.2);
+    
+    &::after {
+      opacity: 1;
+      background-color: #059669;
+      width: 3px;
+    }
+  }
+}
+
+.resize-handle-right {
+  right: -2px;
+}
+
+.resize-handle-left {
+  left: -2px;
 }
 
 .panel-header {
@@ -306,8 +371,17 @@
 // Responsive
 @media (max-width: 768px) {
   .secondary-panel {
-    &.open {
-      width: 240px;
+    // On mobile, limit the maximum width to ensure main content is visible
+    max-width: 80vw;
+    
+    .resize-handle {
+      // Make resize handle larger on mobile for easier interaction
+      width: 8px;
+      
+      &::after {
+        width: 4px;
+        height: 40px;
+      }
     }
   }
 }

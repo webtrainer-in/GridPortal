@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
@@ -15,19 +15,40 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isOpen = false;
   @Input() selectedMenuItem: string | null = null;
   @Output() panelClose = new EventEmitter<void>();
+  @Output() widthChange = new EventEmitter<number>();
   
   panelPosition: PanelPosition = 'next-to-sidebar';
   activeTab = 'main'; // Default to main tab
+  panelWidth = 280; // Default width
+  minWidth = 200;
+  maxWidth = 600;
+  isResizing = false;
+
   private subscription = new Subscription();
+  private boundAdjustForScreenSize = this.adjustForScreenSize.bind(this);
   
   constructor(private panelDragService: PanelDragService, private router: Router) {}
   
   ngOnInit(): void {
+    this.loadSavedWidth();
+    this.adjustForScreenSize();
+    this.widthChange.emit(this.panelWidth);
+    
     this.subscription.add(
       this.panelDragService.position$.subscribe(position => {
         this.panelPosition = position;
       })
     );
+    
+    // Listen for window resize to adjust panel width on mobile
+    window.addEventListener('resize', this.boundAdjustForScreenSize);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Reset to main tab when selectedMenuItem changes
+    if (changes['selectedMenuItem']) {
+      this.activeTab = 'main';
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -39,6 +60,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+    window.removeEventListener('resize', this.boundAdjustForScreenSize);
   }
   
   togglePosition(): void {
@@ -56,6 +78,67 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       //this.closePanel(); // Close panel after navigation
     }
     // Add more navigation cases as needed
+  }
+
+  onResizeStart(event: MouseEvent): void {
+    this.isResizing = true;
+    event.preventDefault();
+    
+    const startX = event.clientX;
+    const startWidth = this.panelWidth;
+    
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.isResizing) return;
+      
+      let newWidth: number;
+      if (this.panelPosition === 'far-right') {
+        // For far-right position, dragging left increases width
+        newWidth = startWidth + (startX - e.clientX);
+      } else {
+        // For next-to-sidebar position, dragging right increases width
+        newWidth = startWidth + (e.clientX - startX);
+      }
+      
+      // Clamp width between min and max
+      newWidth = Math.max(this.minWidth, Math.min(this.maxWidth, newWidth));
+      this.panelWidth = newWidth;
+      this.widthChange.emit(this.panelWidth);
+    };
+    
+    const onMouseUp = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      
+      // Save width to localStorage
+      localStorage.setItem('secondary-panel-width', this.panelWidth.toString());
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  loadSavedWidth(): void {
+    const savedWidth = localStorage.getItem('secondary-panel-width');
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (width >= this.minWidth && width <= this.maxWidth) {
+        this.panelWidth = width;
+      }
+    }
+  }
+
+  adjustForScreenSize(): void {
+    const screenWidth = window.innerWidth;
+    
+    if (screenWidth <= 768) {
+      // Mobile: limit panel width to 80% of screen width
+      const maxMobileWidth = Math.floor(screenWidth * 0.8);
+      if (this.panelWidth > maxMobileWidth) {
+        this.panelWidth = Math.max(this.minWidth, maxMobileWidth);
+        this.widthChange.emit(this.panelWidth);
+      }
+    }
   }
 
   setActiveTab(tabId: string): void {
