@@ -1,6 +1,22 @@
 <div class="secondary-panel" 
      [class.open]="isOpen" 
-     [class.far-right]="panelPosition === 'far-right'">
+     [class.far-right]="panelPosition === 'far-right'"
+     [class.resizing]="isResizing"
+     [style.width.px]="isOpen ? panelWidth : 0">
+  
+  <!-- Resize handle for next-to-sidebar position (right edge) -->
+  <div class="resize-handle resize-handle-right" 
+       *ngIf="isOpen && panelPosition === 'next-to-sidebar'"
+       (mousedown)="onResizeStart($event)"
+       title="Drag to resize panel">
+  </div>
+  
+  <!-- Resize handle for far-right position (left edge) -->
+  <div class="resize-handle resize-handle-left" 
+       *ngIf="isOpen && panelPosition === 'far-right'"
+       (mousedown)="onResizeStart($event)"
+       title="Drag to resize panel">
+  </div>
   <div class="panel-header">
     <div class="header-content">
       <h3 class="panel-title">

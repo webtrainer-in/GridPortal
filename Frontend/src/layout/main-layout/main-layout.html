@@ -13,6 +13,7 @@
       [isOpen]="isSecondaryPanelOpen"
       [selectedMenuItem]="selectedMenuItem"
       (panelClose)="onSecondaryPanelClose()"
+      (widthChange)="onSecondaryPanelWidthChange($event)"
     ></app-secondary-panel>
     
     <div class="main-content">
