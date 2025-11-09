@@ -23,6 +23,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   minWidth = 200;
   maxWidth = 600;
   isResizing = false;
+
   private subscription = new Subscription();
   private boundAdjustForScreenSize = this.adjustForScreenSize.bind(this);
   
@@ -41,6 +42,13 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     
     // Listen for window resize to adjust panel width on mobile
     window.addEventListener('resize', this.boundAdjustForScreenSize);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Reset to main tab when selectedMenuItem changes
+    if (changes['selectedMenuItem']) {
+      this.activeTab = 'main';
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
