@@ -1,0 +1,159 @@
+.tab-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.tab-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.tab-list {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #6c757d #f8f9fa;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f8f9fa;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 3px;
+  }
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  min-width: 120px;
+  max-width: 200px;
+  height: 36px;
+  background: #e9ecef;
+  border: 1px solid #dee2e6;
+  border-bottom: none;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  margin-right: 2px;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8f9fa;
+    
+    .tab-close {
+      opacity: 1;
+    }
+  }
+
+  &.active {
+    background: #ffffff;
+    border-color: #007bff;
+    z-index: 1;
+    
+    .tab-title {
+      color: #007bff;
+      font-weight: 500;
+    }
+  }
+
+  &.closable .tab-content {
+    padding-right: 24px;
+  }
+}
+
+.tab-content {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  width: 100%;
+  min-width: 0;
+  position: relative;
+}
+
+.tab-icon {
+  margin-right: 6px;
+  font-size: 12px;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.tab-title {
+  font-size: 13px;
+  color: #495057;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.tab-close {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  color: #6c757d;
+
+  &:hover {
+    background: #dc3545;
+    color: white;
+  }
+
+  i {
+    font-size: 10px;
+  }
+}
+
+.tab-content-area {
+  flex: 1;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .tab-item {
+    min-width: 100px;
+    max-width: 150px;
+    height: 32px;
+  }
+
+  .tab-content {
+    padding: 0 8px;
+  }
+
+  .tab-title {
+    font-size: 12px;
+  }
+
+  .tab-close {
+    width: 16px;
+    height: 16px;
+    right: 2px;
+    
+    i {
+      font-size: 8px;
+    }
+  }
+}

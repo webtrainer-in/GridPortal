@@ -1,0 +1,33 @@
+<div class="tab-container">
+  <!-- Tab Header -->
+  <div class="tab-header" *ngIf="tabs.length > 1">
+    <div class="tab-list">
+      <div
+        *ngFor="let tab of tabs"
+        class="tab-item"
+        [class.active]="tab.id === activeTabId"
+        [class.closable]="tab.canClose"
+        (click)="onTabClick(tab.id)"
+        (mousedown)="onTabMiddleClick($event, tab.id)"
+        [title]="tab.title">
+        
+        <div class="tab-content">
+          <i *ngIf="tab.icon" [class]="tab.icon" class="tab-icon"></i>
+          <span class="tab-title">{{ tab.title }}</span>
+          <button
+            *ngIf="tab.canClose"
+            class="tab-close"
+            (click)="onTabClose($event, tab.id)"
+            title="Close tab">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content-area">
+    <router-outlet></router-outlet>
+  </div>
+</div>
