@@ -156,4 +156,9 @@ export class TabService {
   getAllTabs(): Tab[] {
     return this.tabs$.value;
   }
+
+  clearAllTabs(): void {
+    this.tabs$.next([]);
+    this.activeTabId$.next('');
+  }
 }
