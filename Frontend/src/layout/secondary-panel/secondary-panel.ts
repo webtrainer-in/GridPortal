@@ -122,26 +122,35 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onMenuItemClick(item: MenuItem, event?: MouseEvent): void {
-    // Handle navigation for specific items
-    if (this.selectedMenuItem === 'settings' && item.label === 'Backup') {
+    // Handle Ctrl+click to create tabs
+    if (event && (event.ctrlKey || event.metaKey)) {
+      // First, check if we need to initialize the main menu tab
+      const currentTabs = this.tabService.getAllTabs();
+      if (currentTabs.length === 0 && this.selectedMenuItem) {
+        // Initialize the main menu tab based on the currently selected sidebar menu
+        const mainMenuData = this.getMainMenuTabData();
+        if (mainMenuData) {
+          this.tabService.initializeMainMenuTab(
+            mainMenuData.id,
+            mainMenuData.label,
+            mainMenuData.route,
+            mainMenuData.icon
+          );
+        }
+      }
+
+      // Then create the tab for the clicked item
       const menuData: TabMenuData = {
-        menuType: this.selectedMenuItem,
+        menuType: this.selectedMenuItem || 'general',
         itemLabel: item.label,
-        route: '/settings/backup',
+        route: item.route || '/dashboard',
         icon: item.icon
       };
-
-      if (event && event.ctrlKey) {
-        // Ctrl+click: Open in new tab
-        this.tabService.openMenuItemInNewTab(menuData);
-      } else {
-        // Regular click: Navigate in same panel
-        this.tabService.openMenuItemInSamePanel(menuData);
-      }
+      this.tabService.openMenuItemInNewTab(menuData);
       return;
     }
 
-    // Handle other menu items using route from menu content
+    // Regular click: Navigate in same panel without creating tabs
     const route = item.route;
     if (route) {
       console.log('Navigating to route:', route);
@@ -151,15 +160,21 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
         route: route,
         icon: item.icon
       };
-
-      if (event && event.ctrlKey) {
-        // Ctrl+click: Open in new tab
-        this.tabService.openMenuItemInNewTab(menuData);
-      } else {
-        // Regular click: Navigate in same panel
-        this.tabService.openMenuItemInSamePanel(menuData);
-      }
+      this.tabService.openMenuItemInSamePanel(menuData);
     }
+  }
+
+  private getMainMenuTabData(): { id: string; label: string; route: string; icon: string } | null {
+    // Map of main menu items with their data
+    const mainMenuMap: { [key: string]: { id: string; label: string; route: string; icon: string } } = {
+      'dashboard': { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home' },
+      'users': { id: 'users', label: 'Users', route: '/users', icon: 'pi pi-users' },
+      'settings': { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog' },
+      'analytics': { id: 'analytics', label: 'Analytics', route: '/analytics', icon: 'pi pi-chart-bar' },
+      'reports': { id: 'reports', label: 'Reports', route: '/reports', icon: 'pi pi-file-pdf' }
+    };
+
+    return this.selectedMenuItem ? mainMenuMap[this.selectedMenuItem] || null : null;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {

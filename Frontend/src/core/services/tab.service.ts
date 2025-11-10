@@ -11,16 +11,7 @@ export class TabService {
   private activeTabId$ = new BehaviorSubject<string>('');
 
   constructor(private router: Router) {
-    // Initialize with dashboard tab
-    this.addTab({
-      id: 'dashboard',
-      title: 'Dashboard',
-      route: '/dashboard',
-      icon: 'pi pi-home',
-      isActive: true,
-      canClose: false
-    });
-    this.setActiveTab('dashboard');
+    // Tab will be initialized when user selects a menu item from sidebar
   }
 
   getTabs(): Observable<Tab[]> {
@@ -112,6 +103,20 @@ export class TabService {
   openMenuItemInSamePanel(menuData: TabMenuData): void {
     // Just navigate to the route without creating a new tab
     this.router.navigate([menuData.route]);
+  }
+
+  initializeMainMenuTab(menuId: string, label: string, route: string, icon: string): void {
+    // Initialize or activate main menu tab (non-closable)
+    const tab: Tab = {
+      id: menuId,
+      title: label,
+      route: route,
+      icon: icon,
+      isActive: true,
+      canClose: false
+    };
+    
+    this.addTab(tab);
   }
 
   private generateTabId(route: string, label: string, menuType?: string): string {
