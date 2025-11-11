@@ -2,6 +2,9 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
+import { TabService } from '../../core/services/tab.service';
+import { MenuDataService } from '../../core/services/menu-data.service';
+import { TabMenuData, MenuItem } from '../../core/models/tab.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -23,11 +26,24 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   minWidth = 200;
   maxWidth = 600;
   isResizing = false;
+  isCtrlPressed = false;
 
   private subscription = new Subscription();
   private boundAdjustForScreenSize = this.adjustForScreenSize.bind(this);
+  private boundHandleKeyDown = this.handleKeyDown.bind(this);
+  private boundHandleKeyUp = this.handleKeyUp.bind(this);
   
-  constructor(private panelDragService: PanelDragService, private router: Router) {}
+  // Cache for menu data
+  private menuContentCache: MenuItem[] = [];
+  private userInfoContentCache: MenuItem[] = [];
+  private permissionContentCache: MenuItem[] = [];
+  
+  constructor(
+    private panelDragService: PanelDragService, 
+    private router: Router, 
+    private tabService: TabService,
+    private menuDataService: MenuDataService
+  ) {}
   
   ngOnInit(): void {
     this.loadSavedWidth();
@@ -42,18 +58,59 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     
     // Listen for window resize to adjust panel width on mobile
     window.addEventListener('resize', this.boundAdjustForScreenSize);
+    
+    // Listen for Ctrl key events
+    window.addEventListener('keydown', this.boundHandleKeyDown);
+    window.addEventListener('keyup', this.boundHandleKeyUp);
+    
+    // Load initial menu data
+    this.loadMenuData();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Reset to main tab when selectedMenuItem changes
-    if (changes['selectedMenuItem']) {
+    if (changes['selectedMenuItem'] && !changes['selectedMenuItem'].firstChange) {
+      // Reset to main tab when selectedMenuItem changes
       this.activeTab = 'main';
+      // Reload menu data for new selected menu item
+      this.loadMenuData();
     }
   }
   
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
     window.removeEventListener('resize', this.boundAdjustForScreenSize);
+    window.removeEventListener('keydown', this.boundHandleKeyDown);
+    window.removeEventListener('keyup', this.boundHandleKeyUp);
+  }
+  
+  private loadMenuData(): void {
+    if (!this.selectedMenuItem) {
+      this.menuContentCache = [];
+      this.userInfoContentCache = [];
+      this.permissionContentCache = [];
+      return;
+    }
+
+    // Load main menu content
+    this.subscription.add(
+      this.menuDataService.getMenuContent(this.selectedMenuItem).subscribe(data => {
+        this.menuContentCache = data;
+      })
+    );
+
+    // Load user info content
+    this.subscription.add(
+      this.menuDataService.getUserInfoContent(this.selectedMenuItem).subscribe(data => {
+        this.userInfoContentCache = data;
+      })
+    );
+
+    // Load permission content
+    this.subscription.add(
+      this.menuDataService.getPermissionContent(this.selectedMenuItem).subscribe(data => {
+        this.permissionContentCache = data;
+      })
+    );
   }
   
   togglePosition(): void {
@@ -64,13 +121,72 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     this.panelClose.emit();
   }
 
-  onMenuItemClick(item: any): void {
-    // Handle navigation for specific items
-    if (this.selectedMenuItem === 'settings' && item.label === 'Backup') {
-      this.router.navigate(['/settings/backup']);
-      //this.closePanel(); // Close panel after navigation
+  onMenuItemClick(item: MenuItem, event?: MouseEvent): void {
+    // Handle Ctrl+click to create tabs
+    if (event && (event.ctrlKey || event.metaKey)) {
+      // First, check if we need to initialize the main menu tab
+      const currentTabs = this.tabService.getAllTabs();
+      if (currentTabs.length === 0 && this.selectedMenuItem) {
+        // Initialize the main menu tab based on the currently selected sidebar menu
+        const mainMenuData = this.getMainMenuTabData();
+        if (mainMenuData) {
+          this.tabService.initializeMainMenuTab(
+            mainMenuData.id,
+            mainMenuData.label,
+            mainMenuData.route,
+            mainMenuData.icon
+          );
+        }
+      }
+
+      // Then create the tab for the clicked item
+      const menuData: TabMenuData = {
+        menuType: this.selectedMenuItem || 'general',
+        itemLabel: item.label,
+        route: item.route || '/dashboard',
+        icon: item.icon
+      };
+      this.tabService.openMenuItemInNewTab(menuData);
+      return;
     }
-    // Add more navigation cases as needed
+
+    // Regular click: Navigate in same panel without creating tabs
+    const route = item.route;
+    if (route) {
+      console.log('Navigating to route:', route);
+      const menuData: TabMenuData = {
+        menuType: this.selectedMenuItem || 'general',
+        itemLabel: item.label,
+        route: route,
+        icon: item.icon
+      };
+      this.tabService.openMenuItemInSamePanel(menuData);
+    }
+  }
+
+  private getMainMenuTabData(): { id: string; label: string; route: string; icon: string } | null {
+    // Map of main menu items with their data
+    const mainMenuMap: { [key: string]: { id: string; label: string; route: string; icon: string } } = {
+      'dashboard': { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home' },
+      'users': { id: 'users', label: 'Users', route: '/users', icon: 'pi pi-users' },
+      'settings': { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog' },
+      'analytics': { id: 'analytics', label: 'Analytics', route: '/analytics', icon: 'pi pi-chart-bar' },
+      'reports': { id: 'reports', label: 'Reports', route: '/reports', icon: 'pi pi-file-pdf' }
+    };
+
+    return this.selectedMenuItem ? mainMenuMap[this.selectedMenuItem] || null : null;
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (event.ctrlKey) {
+      this.isCtrlPressed = true;
+    }
+  }
+
+  private handleKeyUp(event: KeyboardEvent): void {
+    if (!event.ctrlKey) {
+      this.isCtrlPressed = false;
+    }
   }
 
   onResizeStart(event: MouseEvent): void {
@@ -178,162 +294,15 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  getMenuContent(): any[] {
-    switch (this.selectedMenuItem) {
-      case 'dashboard':
-        return [
-          { label: 'Overview', icon: 'pi pi-chart-line', type: 'item' },
-          { label: 'Widgets', icon: 'pi pi-th-large', type: 'folder', children: [
-            { label: 'Chart Widgets', icon: 'pi pi-chart-bar' },
-            { label: 'Data Widgets', icon: 'pi pi-table' },
-            { label: 'Custom Widgets', icon: 'pi pi-cog' }
-          ]},
-          { label: 'Dashboards', icon: 'pi pi-desktop', type: 'folder', children: [
-            { label: 'Main Dashboard', icon: 'pi pi-home' },
-            { label: 'Sales Dashboard', icon: 'pi pi-shopping-cart' },
-            { label: 'Analytics Dashboard', icon: 'pi pi-chart-pie' }
-          ]},
-          { label: 'Recent Items', icon: 'pi pi-clock', type: 'item' }
-        ];
-      case 'users':
-        return [
-          { label: 'All Users', icon: 'pi pi-users', type: 'item' },
-          { label: 'User Groups', icon: 'pi pi-users', type: 'folder', children: [
-            { label: 'Administrators', icon: 'pi pi-shield' },
-            { label: 'Moderators', icon: 'pi pi-user-edit' },
-            { label: 'Regular Users', icon: 'pi pi-user' }
-          ]},
-          { label: 'Permissions', icon: 'pi pi-key', type: 'folder', children: [
-            { label: 'Role Management', icon: 'pi pi-cog' },
-            { label: 'Access Control', icon: 'pi pi-lock' }
-          ]},
-          { label: 'User Activity', icon: 'pi pi-chart-line', type: 'item' }
-        ];
-      case 'settings':
-        return [
-          { label: 'General', icon: 'pi pi-cog', type: 'item' },
-          { label: 'System', icon: 'pi pi-desktop', type: 'folder', children: [
-            { label: 'Performance', icon: 'pi pi-gauge' },
-            { label: 'Security', icon: 'pi pi-shield' },
-            { label: 'Backup', icon: 'pi pi-cloud' }
-          ]},
-          { label: 'User Preferences', icon: 'pi pi-user-edit', type: 'item' },
-          { label: 'Appearance', icon: 'pi pi-palette', type: 'item' }
-        ];
-      case 'analytics':
-        return [
-          { label: 'Reports', icon: 'pi pi-chart-bar', type: 'item' },
-          { label: 'Data Sources', icon: 'pi pi-database', type: 'folder', children: [
-            { label: 'SQL Databases', icon: 'pi pi-server' },
-            { label: 'APIs', icon: 'pi pi-globe' },
-            { label: 'Files', icon: 'pi pi-file' }
-          ]},
-          { label: 'Visualizations', icon: 'pi pi-chart-pie', type: 'item' },
-          { label: 'Exports', icon: 'pi pi-download', type: 'item' }
-        ];
-      case 'reports':
-        return [
-          { label: 'Recent Reports', icon: 'pi pi-clock', type: 'item' },
-          { label: 'Templates', icon: 'pi pi-file-edit', type: 'folder', children: [
-            { label: 'Standard Templates', icon: 'pi pi-file' },
-            { label: 'Custom Templates', icon: 'pi pi-file-edit' }
-          ]},
-          { label: 'Scheduled Reports', icon: 'pi pi-calendar', type: 'item' },
-          { label: 'Archives', icon: 'pi pi-folder', type: 'item' }
-        ];
-      default:
-        return [];
-    }
+  getMenuContent(): MenuItem[] {
+    return this.menuContentCache;
   }
 
-  getUserInfoContent(): any[] {
-    if (this.selectedMenuItem === 'users') {
-      return [
-        { label: 'User Profile', icon: 'pi pi-user', type: 'item' },
-        { label: 'Personal Details', icon: 'pi pi-id-card', type: 'folder', children: [
-          { label: 'Basic Information', icon: 'pi pi-info' },
-          { label: 'Contact Details', icon: 'pi pi-phone' },
-          { label: 'Address', icon: 'pi pi-map-marker' }
-        ]},
-        { label: 'Account Settings', icon: 'pi pi-cog', type: 'folder', children: [
-          { label: 'Login Credentials', icon: 'pi pi-key' },
-          { label: 'Security Settings', icon: 'pi pi-shield' },
-          { label: 'Preferences', icon: 'pi pi-sliders-h' }
-        ]},
-        { label: 'Activity Log', icon: 'pi pi-history', type: 'item' },
-        { label: 'Session Management', icon: 'pi pi-clock', type: 'item' }
-      ];
-    }
-
-    if (this.selectedMenuItem === 'reports') {
-      return [
-        { label: 'Report Details', icon: 'pi pi-file-edit', type: 'item' },
-        { label: 'Metadata', icon: 'pi pi-tags', type: 'folder', children: [
-          { label: 'Creation Date', icon: 'pi pi-calendar' },
-          { label: 'Author', icon: 'pi pi-user' },
-          { label: 'Version', icon: 'pi pi-code' }
-        ]},
-        { label: 'Data Sources', icon: 'pi pi-database', type: 'folder', children: [
-          { label: 'Primary Sources', icon: 'pi pi-server' },
-          { label: 'Secondary Sources', icon: 'pi pi-cloud' },
-          { label: 'External APIs', icon: 'pi pi-globe' }
-        ]},
-        { label: 'Execution History', icon: 'pi pi-history', type: 'item' },
-        { label: 'Performance Metrics', icon: 'pi pi-chart-line', type: 'item' }
-      ];
-    }
-
-    return [];
+  getUserInfoContent(): MenuItem[] {
+    return this.userInfoContentCache;
   }
 
-  getPermissionContent(): any[] {
-    if (this.selectedMenuItem === 'users') {
-      return [
-        { label: 'Role Assignment', icon: 'pi pi-users', type: 'item' },
-        { label: 'Access Rights', icon: 'pi pi-key', type: 'folder', children: [
-          { label: 'Read Permissions', icon: 'pi pi-eye' },
-          { label: 'Write Permissions', icon: 'pi pi-pencil' },
-          { label: 'Delete Permissions', icon: 'pi pi-trash' }
-        ]},
-        { label: 'Module Access', icon: 'pi pi-th-large', type: 'folder', children: [
-          { label: 'Dashboard Access', icon: 'pi pi-home' },
-          { label: 'Reports Access', icon: 'pi pi-chart-bar' },
-          { label: 'Settings Access', icon: 'pi pi-cog' },
-          { label: 'User Management', icon: 'pi pi-users' }
-        ]},
-        { label: 'API Permissions', icon: 'pi pi-globe', type: 'folder', children: [
-          { label: 'REST API Access', icon: 'pi pi-cloud' },
-          { label: 'GraphQL Access', icon: 'pi pi-code' },
-          { label: 'Webhook Access', icon: 'pi pi-send' }
-        ]},
-        { label: 'Time-based Access', icon: 'pi pi-clock', type: 'item' },
-        { label: 'IP Restrictions', icon: 'pi pi-shield', type: 'item' }
-      ];
-    }
-
-    if (this.selectedMenuItem === 'reports') {
-      return [
-        { label: 'Report Permissions', icon: 'pi pi-file-edit', type: 'item' },
-        { label: 'Access Control', icon: 'pi pi-lock', type: 'folder', children: [
-          { label: 'View Permissions', icon: 'pi pi-eye' },
-          { label: 'Edit Permissions', icon: 'pi pi-pencil' },
-          { label: 'Share Permissions', icon: 'pi pi-share-alt' }
-        ]},
-        { label: 'Data Access', icon: 'pi pi-database', type: 'folder', children: [
-          { label: 'Read Data Sources', icon: 'pi pi-server' },
-          { label: 'Write Data Sources', icon: 'pi pi-upload' },
-          { label: 'Execute Queries', icon: 'pi pi-play' }
-        ]},
-        { label: 'Export Permissions', icon: 'pi pi-download', type: 'folder', children: [
-          { label: 'PDF Export', icon: 'pi pi-file-pdf' },
-          { label: 'Excel Export', icon: 'pi pi-file-excel' },
-          { label: 'CSV Export', icon: 'pi pi-file' }
-        ]},
-        { label: 'Scheduling Rights', icon: 'pi pi-calendar', type: 'item' },
-        { label: 'Distribution List', icon: 'pi pi-send', type: 'item' }
-      ];
-    }
-
-    return [];
+  getPermissionContent(): MenuItem[] {
+    return this.permissionContentCache;
   }
 }

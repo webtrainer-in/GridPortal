@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { TabService } from '../../core/services/tab.service';
 
 interface CustomMenuItem {
   label: string;
@@ -29,6 +30,8 @@ export class SidebarComponent {
   @Output() secondaryPanelToggle = new EventEmitter<{isOpen: boolean, menuId: string | null}>();
 
   selectedMenuItem: string | null = null;
+
+  constructor(private tabService: TabService) {}
 
   menuItems: CustomMenuItem[] = [
     {
@@ -101,6 +104,12 @@ export class SidebarComponent {
     
     // For regular menu items without children
     event.preventDefault();
+    
+    // Clear all tabs when switching to a different main menu
+    const isDifferentMenu = this.selectedMenuItem !== null && this.selectedMenuItem !== menuId;
+    if (isDifferentMenu) {
+      this.tabService.clearAllTabs();
+    }
     
     // Toggle secondary panel
     const isCurrentlySelected = this.selectedMenuItem === menuId;
