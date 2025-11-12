@@ -105,14 +105,35 @@ export class SidebarComponent {
     // For regular menu items without children
     event.preventDefault();
     
-    // Clear all tabs when switching to a different main menu
+    // Check if this is a different menu from currently selected
     const isDifferentMenu = this.selectedMenuItem !== null && this.selectedMenuItem !== menuId;
+    const isCurrentlySelected = this.selectedMenuItem === menuId;
+    
+    // Clear all tabs only when switching to a completely different main menu
     if (isDifferentMenu) {
       this.tabService.clearAllTabs();
     }
     
+    // For any menu item with a route, create a tab
+    if (menuItem && menuItem.routerLink) {
+      // Create tab data
+      const tabData = {
+        menuType: menuId,
+        itemLabel: menuItem.label,
+        route: menuItem.routerLink,
+        icon: menuItem.icon
+      };
+      
+      // Check if Ctrl/Cmd key is pressed for new tab
+      const mouseEvent = event as MouseEvent;
+      if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
+        this.tabService.openMenuItemInNewTab(tabData);
+      } else {
+        this.tabService.openMenuItem(tabData);
+      }
+    }
+    
     // Toggle secondary panel
-    const isCurrentlySelected = this.selectedMenuItem === menuId;
     this.selectedMenuItem = isCurrentlySelected ? null : menuId;
     
     // Emit event to parent component

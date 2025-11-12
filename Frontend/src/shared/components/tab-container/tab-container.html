@@ -1,6 +1,6 @@
 <div class="tab-container" [class.fullscreen-mode]="isUndocked">
   <!-- Tab Header -->
-  <div class="tab-header" *ngIf="tabs.length > 1 && !isUndocked">
+  <div class="tab-header" *ngIf="tabs.length > 0 && !isUndocked">
     <div class="tab-list">
       <div
         *ngFor="let tab of tabs"

@@ -105,6 +105,31 @@ export class TabService {
     this.router.navigate([menuData.route]);
   }
 
+  openMenuItem(menuData: TabMenuData): void {
+    // Open menu item in existing tab (replace current tab or activate existing)
+    const tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
+    
+    // For main menu items, use the label directly without adding context prefix
+    const mainMenuItems = ['dashboard', 'users', 'settings', 'analytics', 'reports'];
+    const isMainMenuItem = mainMenuItems.includes(menuData.menuType);
+    const tabTitle = isMainMenuItem ? menuData.itemLabel : this.generateTabTitle(menuData.itemLabel, menuData.menuType);
+    
+    // Main menu items should not be closable
+    const canClose = !isMainMenuItem;
+    
+    const tab: Tab = {
+      id: tabId,
+      title: tabTitle,
+      route: menuData.route,
+      icon: menuData.icon || 'pi pi-file',
+      isActive: true,
+      canClose: canClose,
+      data: menuData
+    };
+    
+    this.addTab(tab);
+  }
+
   initializeMainMenuTab(menuId: string, label: string, route: string, icon: string): void {
     // Initialize or activate main menu tab (non-closable)
     const tab: Tab = {
