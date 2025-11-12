@@ -5,6 +5,7 @@ export interface Tab {
   icon?: string;
   isActive: boolean;
   canClose: boolean;
+  isUndocked?: boolean; // Whether tab is undocked/maximized
   data?: any; // Additional data to pass to the component
 }
 

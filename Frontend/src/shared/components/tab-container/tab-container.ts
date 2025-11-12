@@ -15,6 +15,9 @@ import { Subscription } from 'rxjs';
 export class TabContainerComponent implements OnInit, OnDestroy {
   tabs: Tab[] = [];
   activeTabId: string = '';
+  undockedTabId: string | null = null;
+  undockedTabTitle: string = '';
+  isUndocked: boolean = false;
   private subscription = new Subscription();
 
   constructor(private tabService: TabService) {}
@@ -51,5 +54,26 @@ export class TabContainerComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.tabService.removeTab(tabId);
     }
+  }
+
+  onTabUndock(event: Event, tabId: string): void {
+    event.stopPropagation(); // Prevent tab activation
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (tab) {
+      this.undockedTabId = tabId;
+      this.undockedTabTitle = tab.title;
+      this.isUndocked = true;
+      this.tabService.setActiveTab(tabId);
+    }
+  }
+
+  onUndockClose(): void {
+    this.isUndocked = false;
+    this.undockedTabId = null;
+    this.undockedTabTitle = '';
+  }
+
+  getUndockedTab(): Tab | undefined {
+    return this.tabs.find(t => t.id === this.undockedTabId);
   }
 }
