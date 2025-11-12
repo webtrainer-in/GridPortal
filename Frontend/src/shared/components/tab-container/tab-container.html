@@ -1,6 +1,6 @@
-<div class="tab-container">
+<div class="tab-container" [class.fullscreen-mode]="isUndocked">
   <!-- Tab Header -->
-  <div class="tab-header" *ngIf="tabs.length > 1">
+  <div class="tab-header" *ngIf="tabs.length > 1 && !isUndocked">
     <div class="tab-list">
       <div
         *ngFor="let tab of tabs"
@@ -15,6 +15,12 @@
           <i *ngIf="tab.icon" [class]="tab.icon" class="tab-icon"></i>
           <span class="tab-title">{{ tab.title }}</span>
           <button
+            class="tab-undock"
+            (click)="onTabUndock($event, tab.id)"
+            title="Maximize tab">
+            <i class="pi pi-window-maximize"></i>
+          </button>
+          <button
             *ngIf="tab.canClose"
             class="tab-close"
             (click)="onTabClose($event, tab.id)"
@@ -24,6 +30,17 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Fullscreen Header (shown when undocked) -->
+  <div class="fullscreen-header" *ngIf="isUndocked">
+    <div class="fullscreen-title">
+      <i *ngIf="getUndockedTab()?.icon" [class]="getUndockedTab()?.icon"></i>
+      <span>{{ undockedTabTitle }}</span>
+    </div>
+    <button class="fullscreen-close" (click)="onUndockClose()" title="Exit fullscreen">
+      <i class="pi pi-times"></i>
+    </button>
   </div>
 
   <!-- Tab Content -->
