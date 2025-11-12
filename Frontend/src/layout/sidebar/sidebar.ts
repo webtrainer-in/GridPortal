@@ -41,6 +41,12 @@ export class SidebarComponent {
       routerLink: '/dashboard'
     },
     {
+      id: 'grid-demo',
+      label: 'Grid Demo',
+      icon: 'pi pi-table',
+      routerLink: '/grid-demo'
+    },
+    {
       id: 'users',
       label: 'Users',
       icon: 'pi pi-users',
@@ -99,6 +105,21 @@ export class SidebarComponent {
     if (menuItem && menuItem.children && menuItem.children.length > 0) {
       event.preventDefault();
       this.toggleSubmenu(menuId);
+      return;
+    }
+    
+    // Special handling for grid-demo - allow direct navigation without secondary panel
+    if (menuId === 'grid-demo') {
+      this.selectedMenuItem = null;
+      this.secondaryPanelToggle.emit({
+        isOpen: false,
+        menuId: null
+      });
+      // Close sidebar on mobile
+      if (window.innerWidth <= 768) {
+        this.toggleSidebar.emit();
+      }
+      // Let the router handle navigation
       return;
     }
     

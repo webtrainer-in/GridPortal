@@ -11,7 +11,8 @@ export class MenuDataService {
   // Simulate API response structure
   private menuData = {
     dashboard: [
-      { label: 'Overview', icon: 'pi pi-chart-line', type: 'item', route: '/users' },
+      { label: 'Overview', icon: 'pi pi-chart-line', type: 'item', route: '/dashboard' },
+      { label: 'Grid Demo', icon: 'pi pi-table', type: 'item', route: '/grid-demo' },
       { 
         label: 'Widgets', 
         icon: 'pi pi-th-large', 

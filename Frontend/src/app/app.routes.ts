@@ -24,6 +24,10 @@ export const routes: Routes = [
         loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent)
       },
       {
+        path: 'grid-demo',
+        loadComponent: () => import('../features/dashboard/pages/grid-demo/grid-demo').then(m => m.GridDemoComponent)
+      },
+      {
         path: 'users',
         loadComponent: () => import('../features/users/pages/users/users').then(m => m.UsersComponent)
       },

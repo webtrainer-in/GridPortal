@@ -1,0 +1,199 @@
+<div class="grid-demo-container">
+  <!-- Employee Grid Section -->
+  <section class="demo-section">
+    <div class="section-header">
+      <h2>
+        <i class="pi pi-users"></i>
+        Employee Directory
+      </h2>
+      <p class="section-description">
+        Browse employee records with advanced filtering and sorting. Notice the hidden columns (SSN, Internal Notes) 
+        that can be shown using the column selector.
+      </p>
+    </div>
+
+    <div class="grid-wrapper">
+      <app-dynamic-grid 
+        [config]="employeeGridConfig"
+        (onRowSelect)="handleEmployeeSelect($event)">
+      </app-dynamic-grid>
+    </div>
+
+    <div class="feature-highlights">
+      <div class="feature-item">
+        <i class="pi pi-eye-slash"></i>
+        <span>Hidden sensitive columns (SSN)</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-sort"></i>
+        <span>Sortable columns</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-filter"></i>
+        <span>Column-specific filtering</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-file-excel"></i>
+        <span>Export to CSV</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-arrows-h"></i>
+        <span>Resize & reorder columns</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transaction Grid Section -->
+  <section class="demo-section">
+    <div class="section-header">
+      <h2>
+        <i class="pi pi-shopping-cart"></i>
+        Transaction History
+      </h2>
+      <p class="section-description">
+        View transaction records with virtual scrolling for better performance. 
+        Multiple row selection is enabled for batch operations.
+      </p>
+    </div>
+
+    <div class="grid-wrapper">
+      <app-dynamic-grid 
+        [config]="transactionGridConfig"
+        (onRowSelect)="handleTransactionSelect($event)">
+      </app-dynamic-grid>
+    </div>
+
+    <div class="feature-highlights">
+      <div class="feature-item">
+        <i class="pi pi-bolt"></i>
+        <span>Virtual scrolling enabled</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-check-square"></i>
+        <span>Multiple row selection</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-dollar"></i>
+        <span>Custom currency formatting</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-calendar"></i>
+        <span>Date formatting</span>
+      </div>
+      <div class="feature-item">
+        <i class="pi pi-globe"></i>
+        <span>Global search</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Documentation -->
+  <section class="demo-section documentation-section">
+    <div class="section-header">
+      <h2>
+        <i class="pi pi-book"></i>
+        Key Features
+      </h2>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="pi pi-database"></i>
+        </div>
+        <h3>Data Sources</h3>
+        <ul>
+          <li>Static JSON arrays</li>
+          <li>API endpoints</li>
+          <li>Lazy loading for large datasets</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="pi pi-sliders-h"></i>
+        </div>
+        <h3>Column Management</h3>
+        <ul>
+          <li>Show/hide columns dynamically</li>
+          <li>Custom formatting</li>
+          <li>Resize and reorder</li>
+          <li>Nested field support</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <h3>Performance</h3>
+        <ul>
+          <li>Virtual scrolling</li>
+          <li>Handles millions of records</li>
+          <li>Optimized rendering</li>
+          <li>Server-side pagination</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="pi pi-user"></i>
+        </div>
+        <h3>User Features</h3>
+        <ul>
+          <li>Global search/filter</li>
+          <li>Column-specific filtering</li>
+          <li>Sorting & pagination</li>
+          <li>Row selection</li>
+          <li>CSV export</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started -->
+  <section class="demo-section getting-started-section">
+    <div class="section-header">
+      <h2>
+        <i class="pi pi-code"></i>
+        Getting Started
+      </h2>
+    </div>
+
+    <div class="code-example">
+      <h3>Quick Start Example</h3>
+      <pre><code>import {{ '{' }} DynamicGridComponent {{ '}' }} from './shared/components/dynamic-grid/dynamic-grid';
+import type {{ '{' }} GridConfig {{ '}' }} from './shared/components/dynamic-grid/dynamic-grid.model';
+
+gridConfig: GridConfig = {{ '{' }}
+  columns: [
+    {{ '{' }} field: 'id', header: 'ID', width: '80px' {{ '}' }},
+    {{ '{' }} field: 'name', header: 'Name', width: '200px' {{ '}' }},
+    {{ '{' }} field: 'email', header: 'Email', width: '250px' {{ '}' }}
+  ],
+  data: yourDataArray,
+  options: {{ '{' }}
+    paginator: true,
+    rows: 50,
+    selectable: true,
+    exportCSV: true
+  {{ '}' }}
+{{ '}' }};</code></pre>
+    </div>
+
+    <div class="documentation-links">
+      <a href="#" class="doc-link">
+        <i class="pi pi-book"></i>
+        <span>Read Full Documentation</span>
+      </a>
+      <a href="#" class="doc-link">
+        <i class="pi pi-github"></i>
+        <span>View Source Code</span>
+      </a>
+      <a href="#" class="doc-link">
+        <i class="pi pi-file"></i>
+        <span>API Reference</span>
+      </a>
+    </div>
+  </section>
+</div>

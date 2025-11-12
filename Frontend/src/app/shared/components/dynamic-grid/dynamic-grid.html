@@ -1,0 +1,171 @@
+<div class="dynamic-grid-container">
+  <!-- Toolbar -->
+  <div class="grid-toolbar" *ngIf="options.globalFilter || options.exportCSV">
+    <div class="toolbar-left">
+      <!-- Global Search -->
+      <span class="p-input-icon-left" *ngIf="options.globalFilter">
+        <i class="pi pi-search"></i>
+        <input 
+          pInputText 
+          type="text" 
+          [(ngModel)]="globalFilterValue"
+          (input)="applyGlobalFilter(dt, globalFilterValue)" 
+          placeholder="Search..."
+          class="search-input" />
+      </span>
+
+      <!-- Column Selector -->
+      <p-multiSelect
+        [options]="allColumns"
+        [(ngModel)]="visibleColumns"
+        optionLabel="header"
+        dataKey="field"
+        selectedItemsLabel="{0} columns selected"
+        placeholder="Select Columns"
+        (onChange)="onColumnToggle($event)"
+        [style]="{'min-width': '200px'}"
+        [filter]="true"
+        filterPlaceHolder="Search columns..."
+        appendTo="body"
+        [panelStyle]="{'min-width': '250px', 'background': '#ffffff'}"
+        class="column-selector">
+      </p-multiSelect>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Refresh Button -->
+      <button 
+        pButton 
+        icon="pi pi-refresh" 
+        class="p-button-outlined p-button-secondary"
+        (click)="refresh()"
+        pTooltip="Refresh"
+        tooltipPosition="bottom">
+      </button>
+
+      <!-- Clear Filters -->
+      <button 
+        pButton 
+        icon="pi pi-filter-slash" 
+        class="p-button-outlined p-button-secondary"
+        (click)="clearFilters(dt)"
+        pTooltip="Clear Filters"
+        tooltipPosition="bottom">
+      </button>
+
+      <!-- Export CSV -->
+      <button 
+        pButton 
+        icon="pi pi-file-excel" 
+        class="p-button-outlined p-button-success"
+        (click)="exportToCSV(dt)"
+        *ngIf="options.exportCSV"
+        pTooltip="Export to CSV"
+        tooltipPosition="bottom">
+      </button>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <p-table
+    #dt
+    [value]="displayData"
+    [columns]="visibleColumns"
+    [paginator]="options.paginator"
+    [rows]="options.rows"
+    [rowsPerPageOptions]="options.rowsPerPageOptions || [25, 50, 100]"
+    [totalRecords]="totalRecords"
+    [lazy]="options.lazy"
+    [loading]="loading || options.loading"
+    [virtualScroll]="options.virtualScroll"
+    [virtualScrollItemSize]="options.virtualScrollItemSize"
+    [scrollable]="false"
+    [showGridlines]="options.showGridlines"
+    [stripedRows]="options.stripedRows"
+    [styleClass]="options.styleClass"
+    [(selection)]="selectedRows"
+    [selectionMode]="options.selectable ? options.selectionMode : undefined"
+    (onLazyLoad)="onLazyLoadData($event)"
+    (onRowSelect)="onRowSelectHandler($event)"
+    dataKey="id"
+    [tableStyle]="{ 'min-width': '50rem' }">
+
+    <!-- Loading Template -->
+    <ng-template pTemplate="loadingbody">
+      <tr>
+        <td [attr.colspan]="visibleColumns.length">
+          <div class="loading-container">
+            <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+            <p>Loading data...</p>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Empty Template -->
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="visibleColumns.length">
+          <div class="empty-container">
+            <i class="pi pi-inbox" style="font-size: 3rem"></i>
+            <p>No records found</p>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Header -->
+    <ng-template pTemplate="header" let-columns>
+      <tr>
+        <th 
+          *ngFor="let col of columns"
+          [pSortableColumn]="col.sortable !== false ? col.field : undefined"
+          [style.width]="col.width"
+          [ngClass]="col.styleClass"
+          [style.text-align]="col.align || 'left'">
+          {{ col.header }}
+          <p-sortIcon 
+            *ngIf="col.sortable !== false" 
+            [field]="col.field">
+          </p-sortIcon>
+        </th>
+      </tr>
+
+      <!-- Column Filters -->
+      <tr *ngIf="!options.lazy">
+        <th *ngFor="let col of columns">
+          <input 
+            *ngIf="col.filterable !== false"
+            pInputText 
+            type="text" 
+            (input)="dt.filter($any($event.target).value, col.field, 'contains')"
+            placeholder="Filter"
+            class="column-filter" />
+        </th>
+      </tr>
+    </ng-template>
+
+    <!-- Body -->
+    <ng-template pTemplate="body" let-rowData let-columns="columns">
+      <tr [pSelectableRow]="rowData">
+        <td 
+          *ngFor="let col of columns"
+          [ngClass]="col.styleClass"
+          [style.text-align]="col.align || 'left'">
+          {{ getCellValue(rowData, col) }}
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Footer -->
+    <ng-template pTemplate="footer" *ngIf="options.paginator">
+      <tr>
+        <td [attr.colspan]="visibleColumns.length">
+          <div class="grid-footer">
+            Total Records: {{ totalRecords | number }}
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
