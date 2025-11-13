@@ -79,7 +79,8 @@ export class TabService {
     // Navigate to the tab's route
     const activeTab = updatedTabs.find(t => t.id === tabId);
     if (activeTab) {
-      this.router.navigate([activeTab.route]);
+      // Preserve existing query parameters during navigation
+      this.router.navigate([activeTab.route], { queryParamsHandling: 'preserve' });
     }
   }
 
@@ -101,8 +102,65 @@ export class TabService {
   }
 
   openMenuItemInSamePanel(menuData: TabMenuData): void {
-    // Just navigate to the route without creating a new tab
+    // Update the active tab with the new content
+    const currentTabs = this.tabs$.value;
+    const activeTabId = this.activeTabId$.value;
+    
+    if (activeTabId && currentTabs.length > 0) {
+      const activeTab = currentTabs.find(t => t.id === activeTabId);
+      
+      if (activeTab) {
+        // Generate new tab data
+        const newTabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
+        const newTabTitle = this.generateTabTitle(menuData.itemLabel, menuData.menuType);
+        
+        // Update the active tab with new information
+        const updatedTabs = currentTabs.map(tab => {
+          if (tab.id === activeTabId) {
+            return {
+              ...tab,
+              id: newTabId,
+              title: newTabTitle,
+              route: menuData.route,
+              icon: menuData.icon || tab.icon,
+              data: menuData
+            };
+          }
+          return tab;
+        });
+        
+        this.tabs$.next(updatedTabs);
+        this.activeTabId$.next(newTabId);
+      }
+    }
+    
+    // Navigate to the route
     this.router.navigate([menuData.route]);
+  }
+
+  openMenuItem(menuData: TabMenuData): void {
+    // Open menu item in existing tab (replace current tab or activate existing)
+    const tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
+    
+    // For main menu items, use the label directly without adding context prefix
+    const mainMenuItems = ['dashboard', 'users', 'settings', 'analytics', 'reports'];
+    const isMainMenuItem = mainMenuItems.includes(menuData.menuType);
+    const tabTitle = isMainMenuItem ? menuData.itemLabel : this.generateTabTitle(menuData.itemLabel, menuData.menuType);
+    
+    // Main menu items should not be closable
+    const canClose = !isMainMenuItem;
+    
+    const tab: Tab = {
+      id: tabId,
+      title: tabTitle,
+      route: menuData.route,
+      icon: menuData.icon || 'pi pi-file',
+      isActive: true,
+      canClose: canClose,
+      data: menuData
+    };
+    
+    this.addTab(tab);
   }
 
   initializeMainMenuTab(menuId: string, label: string, route: string, icon: string): void {

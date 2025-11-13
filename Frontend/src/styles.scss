@@ -226,3 +226,46 @@ html, body {
 .p-toolbar {
   border-radius: 8px;
 }
+
+// Undocked/Maximized tab dialog styles
+.undocked-tab-dialog {
+  .p-dialog {
+    width: 95vw !important;
+    height: 95vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+  
+  .p-dialog-content {
+    height: calc(100% - 60px) !important;
+    padding: 0 !important;
+    overflow: auto !important;
+    flex: 1 !important;
+  }
+  
+  .p-dialog-header {
+    background: white !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding: 1rem 1.5rem !important;
+    
+    .p-dialog-title {
+      font-weight: 600 !important;
+      color: #1f2937 !important;
+      font-size: 1.25rem !important;
+    }
+
+    .p-dialog-header-icons {
+      .p-dialog-header-icon {
+        width: 2rem !important;
+        height: 2rem !important;
+        color: #6c757d !important;
+        
+        &:hover {
+          background: #f1f5f9 !important;
+          color: #1f2937 !important;
+        }
+      }
+    }
+  }
+}
