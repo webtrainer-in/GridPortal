@@ -79,7 +79,8 @@ export class TabService {
     // Navigate to the tab's route
     const activeTab = updatedTabs.find(t => t.id === tabId);
     if (activeTab) {
-      this.router.navigate([activeTab.route]);
+      // Preserve existing query parameters during navigation
+      this.router.navigate([activeTab.route], { queryParamsHandling: 'preserve' });
     }
   }
 
