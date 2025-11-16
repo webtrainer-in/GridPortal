@@ -16,8 +16,8 @@
           <span class="tab-title">{{ tab.title }}</span>
           <button
             class="tab-undock"
-            (click)="onTabUndock($event, tab.id)"
-            title="Maximize tab">
+            (click)="onTabUndock($event, tab)"
+            title="Maximize tab (Ctrl+Click: New Tab, Shift+Click: New Window)">
             <i class="pi pi-window-maximize"></i>
           </button>
           <button
