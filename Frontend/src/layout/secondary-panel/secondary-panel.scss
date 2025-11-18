@@ -336,16 +336,6 @@
       &:hover {
         background-color: #e5e7eb;
       }
-
-      &.ctrl-highlight {
-        background: #e3f2fd;
-        border-left: 3px solid #2196f3;
-        color: #1976d2;
-        
-        &:hover {
-          background: #bbdefb;
-        }
-      }
       
       .tree-icon {
         color: #9ca3af;
@@ -355,13 +345,6 @@
       .tree-label {
         color: #6b7280;
         font-weight: 400;
-      }
-
-      .new-tab-indicator {
-        margin-left: auto;
-        font-size: 10px;
-        color: #2196f3;
-        opacity: 0.8;
       }
     }
   }
