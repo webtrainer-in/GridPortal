@@ -130,6 +130,33 @@ export class MenuDataService {
       { label: 'Activity Log', icon: 'pi pi-history', type: 'item', route: '/users/activity' },
       { label: 'Session Management', icon: 'pi pi-clock', type: 'item', route: '/users/sessions' }
     ],
+
+    dashboard: [
+      { label: 'User Profile', icon: 'pi pi-user', type: 'item', route: '/users/profile' },
+      { 
+        label: 'Personal Details', 
+        icon: 'pi pi-id-card', 
+        type: 'folder', 
+        children: [
+          { label: 'Basic Information', icon: 'pi pi-info', route: '/users/profile/basic' },
+          { label: 'Contact Details', icon: 'pi pi-phone', route: '/users/profile/contact' },
+          { label: 'Address', icon: 'pi pi-map-marker', route: '/users/profile/address' }
+        ]
+      },
+      { 
+        label: 'Account Settings', 
+        icon: 'pi pi-cog', 
+        type: 'folder', 
+        children: [
+          { label: 'Login Credentials', icon: 'pi pi-key', route: '/users/account/credentials' },
+          { label: 'Security Settings', icon: 'pi pi-shield', route: '/users/account/security' },
+          { label: 'Preferences', icon: 'pi pi-sliders-h', route: '/users/account/preferences' }
+        ]
+      },
+      { label: 'Activity Log', icon: 'pi pi-history', type: 'item', route: '/users/activity' },
+      { label: 'Session Management', icon: 'pi pi-clock', type: 'item', route: '/users/sessions' }
+    ],    
+
     reports: [
       { label: 'Report Details', icon: 'pi pi-file-edit', type: 'item', route: '/reports/details' },
       { 

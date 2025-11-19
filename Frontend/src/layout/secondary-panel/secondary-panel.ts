@@ -255,7 +255,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   shouldShowTabs(): boolean {
-    return this.selectedMenuItem === 'users' || this.selectedMenuItem === 'reports';
+    return this.selectedMenuItem === 'users' || this.selectedMenuItem === 'reports'  || this.selectedMenuItem === 'dashboard';
   }
 
   getTabs(): any[] {
@@ -266,6 +266,15 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
         { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
       ];
     }
+
+     if (this.selectedMenuItem === 'dashboard') {
+      return [
+        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
+        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
+      ];
+    }
+
 
     if (this.selectedMenuItem === 'reports') {
       return [
