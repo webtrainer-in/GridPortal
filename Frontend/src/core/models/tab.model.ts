@@ -19,6 +19,7 @@ export interface TabMenuData {
 export interface MenuItem {
   label: string;
   icon: string;
+  iconType?: 'primeicons' | 'fontawesome' | 'image'; // Type of icon
   type?: 'item' | 'folder';
   route?: string; // The route to navigate to when clicked
   children?: MenuItem[];

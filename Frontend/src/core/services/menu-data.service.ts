@@ -17,8 +17,8 @@ export class MenuDataService {
         icon: 'pi pi-th-large', 
         type: 'folder', 
         children: [
-          { label: 'Chart Widgets', icon: 'pi pi-chart-bar', route: '/users' },
-          { label: 'Data Widgets', icon: 'pi pi-table', route: '/users' },
+          { label: 'Chart Widgets', icon: 'fa-solid fa-chart-line', iconType: 'fontawesome', route: '/users' },
+          { label: 'Data Widgets', icon: 'assets/icons/data-widget.svg', iconType: 'image', route: '/users' },
           { label: 'Custom Widgets', icon: 'pi pi-cog', route: '/dashboard/widgets/custom' }
         ]
       },
