@@ -11,6 +11,22 @@ export interface SidebarMenuItem {
   isExpanded?: boolean;
 }
 
+export interface TabConfig {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface MenuPanelConfig {
+  id: string;
+  label: string;
+  displayTitle: string;
+  icon: string;
+  hasTabs: boolean;
+  tabs?: TabConfig[];
+  routerLink?: string;
+}
+
 // This service simulates how the menu data would come from an API
 @Injectable({
   providedIn: 'root'
@@ -62,6 +78,65 @@ export class MenuDataService {
       id: 'reports',
       label: 'Reports',
       icon: 'pi pi-file-pdf',
+      routerLink: '/reports'
+    }
+  ];
+
+  // Menu panel configurations - maps menu items to their panel display settings and tabs
+  private menuPanelConfigs: MenuPanelConfig[] = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      displayTitle: 'Dashboard Explorer',
+      icon: 'pi pi-home',
+      hasTabs: true,
+      tabs: [
+        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
+        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
+      ],
+      routerLink: '/dashboard'
+    },
+    {
+      id: 'users',
+      label: 'Users',
+      displayTitle: 'User Management',
+      icon: 'pi pi-users',
+      hasTabs: true,
+      tabs: [
+        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
+        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
+      ],
+      routerLink: '/users'
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      displayTitle: 'Settings Panel',
+      icon: 'pi pi-cog',
+      hasTabs: false,
+      routerLink: '/settings'
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      displayTitle: 'Analytics Tools',
+      icon: 'pi pi-chart-bar',
+      hasTabs: false,
+      routerLink: '/analytics'
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      displayTitle: 'Reports Explorer',
+      icon: 'pi pi-file-pdf',
+      hasTabs: true,
+      tabs: [
+        { id: 'main', label: 'Report Management', icon: 'pi pi-file-edit' },
+        { id: 'user-info', label: 'Report Info', icon: 'pi pi-info-circle' },
+        { id: 'permission', label: 'Report Permission', icon: 'pi pi-key' }
+      ],
       routerLink: '/reports'
     }
   ];
@@ -325,6 +400,41 @@ export class MenuDataService {
    */
   getMenuItems(): Observable<SidebarMenuItem[]> {
     return of(this.customMenuItems);
+  }
+
+  /**
+   * Get tabs configuration for a specific menu
+   * Returns an array of TabConfig for the given menu ID
+   */
+  getTabsForMenu(menuId: string): TabConfig[] {
+    const menuConfig = this.menuPanelConfigs.find(config => config.id === menuId);
+    return menuConfig?.tabs || [];
+  }
+
+  /**
+   * Check if a specific menu has tabs
+   * Returns boolean indicating if the menu should display tabs
+   */
+  hasTabsForMenu(menuId: string): boolean {
+    const menuConfig = this.menuPanelConfigs.find(config => config.id === menuId);
+    return menuConfig?.hasTabs || false;
+  }
+
+  /**
+   * Get the display title for a specific menu
+   * Returns the title to be displayed in the secondary panel
+   */
+  getMenuDisplayTitle(menuId: string): string {
+    const menuConfig = this.menuPanelConfigs.find(config => config.id === menuId);
+    return menuConfig?.displayTitle || 'Explorer';
+  }
+
+  /**
+   * Get complete menu panel configuration for a specific menu
+   * Returns the full MenuPanelConfig object or null if not found
+   */
+  getMenuPanelConfig(menuId: string): MenuPanelConfig | null {
+    return this.menuPanelConfigs.find(config => config.id === menuId) || null;
   }
 
   /**

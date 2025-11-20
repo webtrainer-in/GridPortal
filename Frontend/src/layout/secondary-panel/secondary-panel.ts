@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { TabService } from '../../core/services/tab.service';
-import { MenuDataService, SidebarMenuItem } from '../../core/services/menu-data.service';
+import { MenuDataService, SidebarMenuItem, TabConfig } from '../../core/services/menu-data.service';
 import { TabMenuData, MenuItem } from '../../core/models/tab.model';
 import { Subscription } from 'rxjs';
 
@@ -245,52 +245,24 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   shouldShowTabs(): boolean {
-    return this.selectedMenuItem === 'users' || this.selectedMenuItem === 'reports'  || this.selectedMenuItem === 'dashboard';
+    if (!this.selectedMenuItem) {
+      return false;
+    }
+    return this.menuDataService.hasTabsForMenu(this.selectedMenuItem);
   }
 
-  getTabs(): any[] {
-    if (this.selectedMenuItem === 'users') {
-      return [
-        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
-        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
-      ];
+  getTabs(): TabConfig[] {
+    if (!this.selectedMenuItem) {
+      return [];
     }
-
-     if (this.selectedMenuItem === 'dashboard') {
-      return [
-        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
-        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
-      ];
-    }
-
-
-    if (this.selectedMenuItem === 'reports') {
-      return [
-        { id: 'main', label: 'Report Management', icon: 'pi pi-file-edit' },
-        { id: 'user-info', label: 'Report Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'Report Permission', icon: 'pi pi-key' }
-      ];
-    }    
-    return [];
+    return this.menuDataService.getTabsForMenu(this.selectedMenuItem);
   }
 
   getMenuTitle(): string {
-    switch (this.selectedMenuItem) {
-      case 'dashboard':
-        return 'Dashboard Explorer';
-      case 'users':
-        return 'User Management';
-      case 'settings':
-        return 'Settings Panel';
-      case 'analytics':
-        return 'Analytics Tools';
-      case 'reports':
-        return 'Reports Explorer';
-      default:
-        return 'Explorer';
+    if (!this.selectedMenuItem) {
+      return 'Explorer';
     }
+    return this.menuDataService.getMenuDisplayTitle(this.selectedMenuItem);
   }
 
   getMenuContent(): MenuItem[] {
