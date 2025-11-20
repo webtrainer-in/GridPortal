@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { TabService } from '../../core/services/tab.service';
-import { MenuDataService, SidebarMenuItem, TabConfig } from '../../core/services/menu-data.service';
-import { TabMenuData, MenuItem } from '../../core/models/tab.model';
+import { MenuDataService } from '../../core/services/menu-data.service';
+import { TabMenuData, MenuItem, TabConfig } from '../../core/models/menu.model';
 import { Subscription } from 'rxjs';
 
 @Component({

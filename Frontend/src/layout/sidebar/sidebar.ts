@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
-import { MenuDataService, SidebarMenuItem } from '../../core/services/menu-data.service';
+import { MenuDataService } from '../../core/services/menu-data.service';
+import { SidebarMenuItem } from '../../core/models/menu.model';
 
 @Component({
   selector: 'app-sidebar',

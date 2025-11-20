@@ -1,31 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { MenuItem } from '../models/tab.model';
-
-export interface SidebarMenuItem {
-  label: string;
-  icon: string;
-  routerLink?: string;
-  id: string;
-  children?: SidebarMenuItem[];
-  isExpanded?: boolean;
-}
-
-export interface TabConfig {
-  id: string;
-  label: string;
-  icon: string;
-}
-
-export interface MenuPanelConfig {
-  id: string;
-  label: string;
-  displayTitle: string;
-  icon: string;
-  hasTabs: boolean;
-  tabs?: TabConfig[];
-  routerLink?: string;
-}
+import { MenuItem, SidebarMenuItem, TabConfig, MenuPanelConfig } from '../models/menu.model';
 
 // This service simulates how the menu data would come from an API
 @Injectable({
