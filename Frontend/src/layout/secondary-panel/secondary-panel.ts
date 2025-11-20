@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { TabService } from '../../core/services/tab.service';
-import { MenuDataService } from '../../core/services/menu-data.service';
+import { MenuDataService, SidebarMenuItem } from '../../core/services/menu-data.service';
 import { TabMenuData, MenuItem } from '../../core/models/tab.model';
 import { Subscription } from 'rxjs';
 
@@ -128,15 +128,18 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       const currentTabs = this.tabService.getAllTabs();
       if (currentTabs.length === 0 && this.selectedMenuItem) {
         // Initialize the main menu tab based on the currently selected sidebar menu
-        const mainMenuData = this.menuDataService.getMainMenuTabData(this.selectedMenuItem);
-        if (mainMenuData) {
-          this.tabService.initializeMainMenuTab(
-            mainMenuData.id,
-            mainMenuData.label,
-            mainMenuData.route,
-            mainMenuData.icon
-          );
-        }
+        // Get menu items to find the corresponding item with routing info
+        this.menuDataService.getMenuItems().subscribe(menuItems => {
+          const mainMenuItem = menuItems.find(item => item.id === this.selectedMenuItem);
+          if (mainMenuItem && mainMenuItem.routerLink) {
+            this.tabService.initializeMainMenuTab(
+              mainMenuItem.id,
+              mainMenuItem.label,
+              mainMenuItem.routerLink,
+              mainMenuItem.icon
+            );
+          }
+        });
       }
 
       // Then create the tab for the clicked item

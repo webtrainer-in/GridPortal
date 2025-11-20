@@ -328,23 +328,6 @@ export class MenuDataService {
   }
 
   /**
-   * Get main menu tab data for a specific menu item
-   * Used to initialize the main menu tab with proper routing information
-   */
-  getMainMenuTabData(menuId: string): { id: string; label: string; route: string; icon: string } | null {
-    // Map of main menu items with their data
-    const mainMenuMap: { [key: string]: { id: string; label: string; route: string; icon: string } } = {
-      'dashboard': { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home' },
-      'users': { id: 'users', label: 'Users', route: '/users', icon: 'pi pi-users' },
-      'settings': { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog' },
-      'analytics': { id: 'analytics', label: 'Analytics', route: '/analytics', icon: 'pi pi-chart-bar' },
-      'reports': { id: 'reports', label: 'Reports', route: '/reports', icon: 'pi pi-file-pdf' }
-    };
-
-    return mainMenuMap[menuId] || null;
-  }
-
-  /**
    * Get menu content for a specific menu type
    * In a real application, this would make an HTTP call to your backend API
    */
