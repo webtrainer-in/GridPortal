@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -15,7 +15,8 @@ import { SidebarMenuItem } from '../../core/models/menu.model';
     ButtonModule
   ],
   templateUrl: './sidebar.html',
-  styleUrl: './sidebar.scss'
+  styleUrl: './sidebar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SidebarComponent implements OnInit {
   @Input() isOpen = true;
@@ -27,7 +28,8 @@ export class SidebarComponent implements OnInit {
 
   constructor(
     private tabService: TabService,
-    private menuDataService: MenuDataService
+    private menuDataService: MenuDataService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -37,6 +39,7 @@ export class SidebarComponent implements OnInit {
   loadMenuItems(): void {
     this.menuDataService.getMenuItems().subscribe(items => {
       this.menuItems = items;
+      this.cdr.markForCheck();
     });
   }
 
