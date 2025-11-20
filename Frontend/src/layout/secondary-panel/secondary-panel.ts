@@ -33,10 +33,8 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   private boundHandleKeyDown = this.handleKeyDown.bind(this);
   private boundHandleKeyUp = this.handleKeyUp.bind(this);
   
-  // Cache for menu data
-  private menuContentCache: MenuItem[] = [];
-  private userInfoContentCache: MenuItem[] = [];
-  private permissionContentCache: MenuItem[] = [];
+  // Cache for ALL tab content (generic instead of hardcoded 3 tabs)
+  private tabContentCache: { [tabId: string]: MenuItem[] } = {};
   
   constructor(
     private panelDragService: PanelDragService, 
@@ -85,32 +83,21 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   
   private loadMenuData(): void {
     if (!this.selectedMenuItem) {
-      this.menuContentCache = [];
-      this.userInfoContentCache = [];
-      this.permissionContentCache = [];
+      this.tabContentCache = {};
       return;
     }
 
-    // Load main menu content
-    this.subscription.add(
-      this.menuDataService.getMenuContent(this.selectedMenuItem).subscribe(data => {
-        this.menuContentCache = data;
-      })
-    );
-
-    // Load user info content
-    this.subscription.add(
-      this.menuDataService.getUserInfoContent(this.selectedMenuItem).subscribe(data => {
-        this.userInfoContentCache = data;
-      })
-    );
-
-    // Load permission content
-    this.subscription.add(
-      this.menuDataService.getPermissionContent(this.selectedMenuItem).subscribe(data => {
-        this.permissionContentCache = data;
-      })
-    );
+    // Get all tabs for this menu
+    const tabs = this.menuDataService.getTabsForMenu(this.selectedMenuItem);
+    
+    // Load content for each tab
+    tabs.forEach(tab => {
+      this.subscription.add(
+        this.menuDataService.getTabContent(this.selectedMenuItem!, tab.id).subscribe(data => {
+          this.tabContentCache[tab.id] = data;
+        })
+      );
+    });
   }
   
   togglePosition(): void {
@@ -265,15 +252,19 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     return this.menuDataService.getMenuDisplayTitle(this.selectedMenuItem);
   }
 
-  getMenuContent(): MenuItem[] {
-    return this.menuContentCache;
+  /**
+   * Get content for the active tab
+   * This is generic and works for any tab ID
+   */
+  getActiveTabContent(): MenuItem[] {
+    return this.tabContentCache[this.activeTab] || [];
   }
 
-  getUserInfoContent(): MenuItem[] {
-    return this.userInfoContentCache;
-  }
-
-  getPermissionContent(): MenuItem[] {
-    return this.permissionContentCache;
+  /**
+   * Get content for a specific tab by ID
+   * This is generic and works for any tab ID
+   */
+  getTabContentById(tabId: string): MenuItem[] {
+    return this.tabContentCache[tabId] || [];
   }
 }
