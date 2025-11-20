@@ -2,11 +2,69 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { MenuItem } from '../models/tab.model';
 
+export interface SidebarMenuItem {
+  label: string;
+  icon: string;
+  routerLink?: string;
+  id: string;
+  children?: SidebarMenuItem[];
+  isExpanded?: boolean;
+}
+
 // This service simulates how the menu data would come from an API
 @Injectable({
   providedIn: 'root'
 })
 export class MenuDataService {
+
+  // Sidebar menu items
+  private customMenuItems: SidebarMenuItem[] = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: 'pi pi-home',
+      routerLink: '/dashboard'
+    },
+    {
+      id: 'users',
+      label: 'Users',
+      icon: 'pi pi-users',
+      routerLink: '/users'
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: 'pi pi-cog',
+      routerLink: '/settings',
+      isExpanded: false,
+      children: [
+        {
+          id: 'general-settings',
+          label: 'General',
+          icon: 'pi pi-sliders-h',
+          routerLink: '/settings/general'
+        },
+        {
+          id: 'backup-history',
+          label: 'Backup History',
+          icon: 'pi pi-history',
+          routerLink: '/settings/backup-history'
+        }
+      ]
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: 'pi pi-chart-bar',
+      routerLink: '/analytics'
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: 'pi pi-file-pdf',
+      routerLink: '/reports'
+    }
+  ];
 
   // Simulate API response structure
   private menuData = {
@@ -260,6 +318,14 @@ export class MenuDataService {
   };
 
   constructor() {}
+
+  /**
+   * Get custom menu items for sidebar
+   * Returns an Observable of the custom menu items array
+   */
+  getMenuItems(): Observable<SidebarMenuItem[]> {
+    return of(this.customMenuItems);
+  }
 
   /**
    * Get menu content for a specific menu type

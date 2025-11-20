@@ -1,17 +1,9 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
-
-interface CustomMenuItem {
-  label: string;
-  icon: string;
-  routerLink?: string;
-  id: string;
-  children?: CustomMenuItem[];
-  isExpanded?: boolean;
-}
+import { MenuDataService, SidebarMenuItem } from '../../core/services/menu-data.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -24,62 +16,28 @@ interface CustomMenuItem {
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss'
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   @Input() isOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() secondaryPanelToggle = new EventEmitter<{isOpen: boolean, menuId: string | null}>();
 
   selectedMenuItem: string | null = null;
+  menuItems: SidebarMenuItem[] = [];
 
-  constructor(private tabService: TabService) {}
+  constructor(
+    private tabService: TabService,
+    private menuDataService: MenuDataService
+  ) {}
 
-  menuItems: CustomMenuItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: 'pi pi-home',
-      routerLink: '/dashboard'
-    },
-    {
-      id: 'users',
-      label: 'Users',
-      icon: 'pi pi-users',
-      routerLink: '/users'
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: 'pi pi-cog',
-      routerLink: '/settings',
-      isExpanded: false,
-      children: [
-        {
-          id: 'general-settings',
-          label: 'General',
-          icon: 'pi pi-sliders-h',
-          routerLink: '/settings/general'
-        },
-        {
-          id: 'backup-history',
-          label: 'Backup History',
-          icon: 'pi pi-history',
-          routerLink: '/settings/backup-history'
-        }
-      ]
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: 'pi pi-chart-bar',
-      routerLink: '/analytics'
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: 'pi pi-file-pdf',
-      routerLink: '/reports'
-    }
-  ];
+  ngOnInit(): void {
+    this.loadMenuItems();
+  }
+
+  loadMenuItems(): void {
+    this.menuDataService.getMenuItems().subscribe(items => {
+      this.menuItems = items;
+    });
+  }
 
   onMenuItemClick() {
     // Close sidebar on mobile when menu item is clicked
@@ -155,7 +113,7 @@ export class SidebarComponent {
     }
   }
 
-  findMenuItem(id: string): CustomMenuItem | undefined {
+  findMenuItem(id: string): SidebarMenuItem | undefined {
     return this.menuItems.find(item => item.id === id);
   }
 
