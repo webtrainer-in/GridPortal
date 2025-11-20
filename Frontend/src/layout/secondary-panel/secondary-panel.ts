@@ -128,7 +128,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       const currentTabs = this.tabService.getAllTabs();
       if (currentTabs.length === 0 && this.selectedMenuItem) {
         // Initialize the main menu tab based on the currently selected sidebar menu
-        const mainMenuData = this.getMainMenuTabData();
+        const mainMenuData = this.menuDataService.getMainMenuTabData(this.selectedMenuItem);
         if (mainMenuData) {
           this.tabService.initializeMainMenuTab(
             mainMenuData.id,
@@ -162,19 +162,6 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       };
       this.tabService.openMenuItemInSamePanel(menuData);
     }
-  }
-
-  private getMainMenuTabData(): { id: string; label: string; route: string; icon: string } | null {
-    // Map of main menu items with their data
-    const mainMenuMap: { [key: string]: { id: string; label: string; route: string; icon: string } } = {
-      'dashboard': { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home' },
-      'users': { id: 'users', label: 'Users', route: '/users', icon: 'pi pi-users' },
-      'settings': { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog' },
-      'analytics': { id: 'analytics', label: 'Analytics', route: '/analytics', icon: 'pi pi-chart-bar' },
-      'reports': { id: 'reports', label: 'Reports', route: '/reports', icon: 'pi pi-file-pdf' }
-    };
-
-    return this.selectedMenuItem ? mainMenuMap[this.selectedMenuItem] || null : null;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
