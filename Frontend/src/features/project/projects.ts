@@ -2,7 +2,8 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DynamicTableComponent } from '../../shared/components/dynamic-table/dynamic-table';
 import { DynamicTableConfig } from '../../shared/components/dynamic-table/models/dynamic-table.model';
-import { ProjectsService, Project } from './projects.service';
+import { DynamicTableConfigGenerator } from '../../shared/components/dynamic-table/services/dynamic-table-config-generator.service';
+import { ProjectsService } from './projects.service';
 
 @Component({
   selector: 'app-projects',
@@ -62,111 +63,10 @@ import { ProjectsService, Project } from './projects.service';
   `]
 })
 export class ProjectsComponent implements OnInit {
-  tableData: Project[] = [];
+  tableData: any[] = [];
   isLoading: boolean = false;
-  selectedRow: Project | null = null;
-
-  // Define table columns configuration
-  tableConfig: DynamicTableConfig = {
-    columns: [
-      {
-        field: 'id',
-        header: 'ID',
-        width: '80px',
-        dataType: 'number',
-        sortable: true,
-        filterable: true,
-        align: 'center'
-      },
-      {
-        field: 'name',
-        header: 'Project Name',
-        width: '250px',
-        dataType: 'string',
-        sortable: true,
-        filterable: true
-      },
-      {
-        field: 'description',
-        header: 'Description',
-        width: '300px',
-        dataType: 'string',
-        sortable: false,
-        filterable: true
-      },
-      {
-        field: 'status',
-        header: 'Status',
-        width: '120px',
-        dataType: 'string',
-        sortable: true,
-        filterable: true,
-        align: 'center'
-      },
-      {
-        field: 'startDate',
-        header: 'Start Date',
-        width: '130px',
-        dataType: 'date',
-        sortable: true,
-        filterable: false,
-        align: 'center'
-      },
-      {
-        field: 'endDate',
-        header: 'End Date',
-        width: '130px',
-        dataType: 'date',
-        sortable: true,
-        filterable: false,
-        align: 'center'
-      },
-      {
-        field: 'budget',
-        header: 'Budget',
-        width: '120px',
-        dataType: 'currency',
-        sortable: true,
-        filterable: false,
-        align: 'right'
-      },
-      {
-        field: 'progress',
-        header: 'Progress %',
-        width: '120px',
-        dataType: 'number',
-        sortable: true,
-        filterable: false,
-        align: 'center'
-      },
-      {
-        field: 'teamLead',
-        header: 'Team Lead',
-        width: '150px',
-        dataType: 'string',
-        sortable: true,
-        filterable: true
-      },
-      {
-        field: 'isActive',
-        header: 'Active',
-        width: '100px',
-        dataType: 'boolean',
-        sortable: true,
-        filterable: false,
-        align: 'center'
-      }
-    ],
-    dataKey: 'id',
-    rowsPerPage: 10,
-    paginator: true,
-    globalFilterFields: ['name', 'description', 'status', 'teamLead'],
-    showGridlines: true,
-    striped: true,
-    scrollable: false,
-    resizableColumns: true,
-    reorderableColumns: true
-  };
+  selectedRow: any | null = null;
+  tableConfig: DynamicTableConfig = { columns: [] };
 
   constructor(
     private projectsService: ProjectsService,
@@ -186,8 +86,22 @@ export class ProjectsComponent implements OnInit {
     this.projectsService.getProjects().subscribe({
       next: (response) => {
         this.tableData = response.data;
+        
+        // Generate table config dynamically from the data
+        if (this.tableData.length > 0) {
+          this.tableConfig = DynamicTableConfigGenerator.generateTableConfig(
+            this.tableData,
+            {
+              globalFilterFields: ['name', 'description', 'status', 'teamLead']
+            }
+          );
+        }
+        
         this.isLoading = false;
-        this.cdr.markForCheck();
+        // Force change detection to propagate input changes
+        setTimeout(() => {
+          this.cdr.detectChanges();
+        }, 0);
       },
       error: (error) => {
         console.error('Error loading projects:', error);
@@ -200,7 +114,7 @@ export class ProjectsComponent implements OnInit {
   /**
    * Handle row selection
    */
-  onRowSelected(row: Project): void {
+  onRowSelected(row: any): void {
     this.selectedRow = row;
     console.log('Project selected:', row);
   }
@@ -208,7 +122,7 @@ export class ProjectsComponent implements OnInit {
   /**
    * Handle row double click
    */
-  onRowDoubleClicked(row: Project): void {
+  onRowDoubleClicked(row: any): void {
     console.log('Project double clicked:', row);
     // Perform action like opening edit dialog, etc.
   }

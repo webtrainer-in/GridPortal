@@ -2,26 +2,21 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
 
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  status: string;
-  startDate: string;
-  endDate: string;
-  budget: number;
-  progress: number;
-  teamLead: string;
-  isActive: boolean;
-}
-
-export interface ProjectsResponse {
-  data: Project[];
+/**
+ * Generic response structure for any API data
+ * Works with any type of data - no need to define specific interfaces
+ */
+export interface GenericDataResponse<T = any> {
+  data: T[];
   totalRecords: number;
   success: boolean;
   message: string;
 }
 
+/**
+ * Projects Service - Generic implementation
+ * Can be used with any data structure from API
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -29,11 +24,13 @@ export class ProjectsService {
   constructor() {}
 
   /**
-   * Get all projects
-   * Replace this with actual API call: this.http.get<ProjectsResponse>('/api/projects')
+   * Get all projects with generic type support
+   * Replace this with actual API call: this.http.get<GenericDataResponse>('/api/projects')
+   * The API can return any structure - the service will adapt automatically
    */
-  getProjects(): Observable<ProjectsResponse> {
-    const dummyData: Project[] = [
+  getProjects<T = any>(): Observable<GenericDataResponse<T>> {
+    // Dummy data - replace with actual API call
+    const dummyData: any[] = [
       {
         id: 1,
         name: 'GridPortal Development',
@@ -137,39 +134,39 @@ export class ProjectsService {
       data: dummyData,
       totalRecords: dummyData.length,
       success: true,
-      message: 'Projects retrieved successfully'
+      message: 'Data retrieved successfully'
     }).pipe(delay(300));
   }
 
   /**
-   * Get project by ID
-   * Replace this with: this.http.get<Project>(`/api/projects/${id}`)
+   * Get data by ID - Generic implementation
+   * Replace this with: this.http.get<T>(`/api/data/${id}`)
    */
-  getProjectById(id: number): Observable<Project | undefined> {
+  getDataById<T = any>(id: number): Observable<T | undefined> {
     return of(undefined).pipe(delay(200));
   }
 
   /**
-   * Create new project
-   * Replace this with: this.http.post<Project>('/api/projects', project)
+   * Create new data - Generic implementation
+   * Replace this with: this.http.post<T>('/api/data', data)
    */
-  createProject(project: Omit<Project, 'id'>): Observable<Project> {
-    return of({ id: 0, ...project }).pipe(delay(300));
+  createData<T = any>(data: Omit<T, 'id'>): Observable<T> {
+    return of({ id: 0, ...data } as T).pipe(delay(300));
   }
 
   /**
-   * Update project
-   * Replace this with: this.http.put<Project>(`/api/projects/${id}`, project)
+   * Update data - Generic implementation
+   * Replace this with: this.http.put<T>(`/api/data/${id}`, data)
    */
-  updateProject(id: number, project: Partial<Project>): Observable<Project> {
-    return of({ id, ...project } as Project).pipe(delay(300));
+  updateData<T = any>(id: number, data: Partial<T>): Observable<T> {
+    return of({ id, ...data } as T).pipe(delay(300));
   }
 
   /**
-   * Delete project
-   * Replace this with: this.http.delete(`/api/projects/${id}`)
+   * Delete data - Generic implementation
+   * Replace this with: this.http.delete(`/api/data/${id}`)
    */
-  deleteProject(id: number): Observable<{ success: boolean }> {
+  deleteData(id: number): Observable<{ success: boolean }> {
     return of({ success: true }).pipe(delay(300));
   }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -32,7 +32,7 @@ import { CsvExportService } from './services/csv-export.service';
   templateUrl: './dynamic-table.html',
   styleUrl: './dynamic-table.scss'
 })
-export class DynamicTableComponent implements OnInit {
+export class DynamicTableComponent implements OnInit, OnChanges {
   @ViewChild('dt') table!: Table;
 
   @Input() data: any[] = [];
@@ -65,6 +65,17 @@ export class DynamicTableComponent implements OnInit {
   constructor(private csvExportService: CsvExportService) {}
 
   ngOnInit(): void {
+    this.initializeTableConfig();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Re-initialize when tableConfig changes
+    if (changes['tableConfig']) {
+      this.initializeTableConfig();
+    }
+  }
+
+  private initializeTableConfig(): void {
     // Merge provided config with defaults
     this.tableConfig = { ...this.defaultConfig, ...this.tableConfig };
 
