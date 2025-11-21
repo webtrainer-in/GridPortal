@@ -1,0 +1,151 @@
+.dynamic-table-container {
+  width: 100%;
+  padding: 1rem;
+  background-color: var(--surface-card);
+  border-radius: 6px;
+
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--surface-50);
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+
+    .toolbar-actions {
+      display: flex;
+      gap: 0.5rem;
+
+      p-button {
+        &::ng-deep button {
+          padding: 0.5rem 1rem;
+        }
+      }
+    }
+
+    .search-field {
+      margin-left: auto;
+      width: 300px;
+
+      &::ng-deep input {
+        width: 100%;
+      }
+    }
+  }
+
+  // Table styling
+  ::ng-deep {
+    .p-datatable {
+      .p-datatable-header {
+        background-color: var(--surface-50);
+        border-color: var(--surface-border);
+        padding: 1rem;
+      }
+
+      .p-datatable-thead > tr > th {
+        background-color: var(--primary-color);
+        color: var(--primary-color-text);
+        font-weight: 600;
+        padding: 1rem 0.5rem;
+        border-color: var(--surface-border);
+
+        .p-column-title {
+          font-weight: 600;
+        }
+      }
+
+      .p-datatable-tbody {
+        > tr {
+          &:nth-child(odd) {
+            background-color: var(--surface-card);
+          }
+
+          &:nth-child(even) {
+            background-color: var(--surface-50);
+          }
+
+          &:hover {
+            background-color: var(--primary-50);
+            cursor: pointer;
+          }
+
+          > td {
+            padding: 1rem 0.5rem;
+            border-color: var(--surface-border);
+            vertical-align: middle;
+
+            &.currency {
+              text-align: right;
+              font-weight: 500;
+              color: var(--primary-color);
+            }
+          }
+        }
+      }
+
+      .p-datatable-footer {
+        background-color: var(--surface-50);
+        border-color: var(--surface-border);
+        padding: 1rem;
+      }
+
+      .p-paginator {
+        background-color: var(--surface-card);
+        border-color: var(--surface-border);
+        padding: 0.5rem;
+
+        .p-paginator-current {
+          padding: 0.5rem;
+        }
+      }
+
+      // Loading state
+      &.p-datatable-loading {
+        .p-datatable-tbody > tr > td {
+          padding: 2rem 0.5rem;
+        }
+      }
+    }
+
+    // Icons styling
+    .pi-check {
+      color: var(--green-600);
+    }
+
+    .pi-times {
+      color: var(--red-600);
+    }
+
+    .text-green-600 {
+      color: var(--green-600);
+    }
+
+    .text-red-600 {
+      color: var(--red-600);
+    }
+  }
+}
+
+// Responsive design
+@media screen and (max-width: 960px) {
+  .dynamic-table-container {
+    padding: 0.5rem;
+
+    .table-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+
+      .toolbar-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .search-field {
+        margin-left: 0;
+        width: 100%;
+      }
+    }
+  }
+}

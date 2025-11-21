@@ -1,0 +1,122 @@
+<div class="dynamic-table-container">
+  <!-- Search and Export Toolbar -->
+  <div class="table-toolbar">
+    <div class="toolbar-actions">
+      <p-button
+        label="Clear"
+        [outlined]="true"
+        icon="pi pi-filter-slash"
+        (click)="clearSearch()"
+        pTooltip="Clear search filters"
+        tooltipPosition="top"
+      />
+      <p-button
+        label="Export CSV"
+        [outlined]="true"
+        icon="pi pi-download"
+        (click)="exportCSV()"
+        pTooltip="Export table data to CSV"
+        tooltipPosition="top"
+      />
+    </div>
+
+    <!-- Search Input -->
+    <p-iconfield iconPosition="left" class="search-field">
+      <p-inputicon>
+        <i class="pi pi-search"></i>
+      </p-inputicon>
+      <input
+        pInputText
+        type="text"
+        [(ngModel)]="searchValue"
+        (input)="onSearch($event)"
+        placeholder="Search..."
+      />
+    </p-iconfield>
+  </div>
+
+  <!-- Dynamic Table -->
+  <p-table
+    #dt
+    [value]="data"
+    [rows]="tableConfig.rowsPerPage"
+    [paginator]="tableConfig.paginator"
+    [globalFilterFields]="tableConfig.globalFilterFields"
+    [loading]="loading"
+    [showGridlines]="tableConfig.showGridlines"
+    [scrollable]="tableConfig.scrollable"
+    [scrollHeight]="tableConfig.scrollHeight"
+    [resizableColumns]="tableConfig.resizableColumns"
+    [reorderableColumns]="tableConfig.reorderableColumns"
+    [dataKey]="tableConfig.dataKey"
+    selectionMode="single"
+    [(selection)]="selectedRows"
+    (onRowSelect)="onRowSelect($event)"
+    (onRowDblClick)="onRowDblClick($event)"
+    (onPage)="onPageChange($event)"
+    [tableStyle]="{ 'min-width': '50rem' }"
+    styleClass="p-datatable-sm"
+    [paginatorDropdownAppendTo]="'body'"
+  >
+    <!-- Dynamic Columns with Header Template -->
+    <ng-template pTemplate="header">
+      <tr>
+        <th *ngFor="let col of visibleColumns"
+          [pSortableColumn]="col.field"
+          [style]="'width:' + getColumnWidth(col)"
+          [ngStyle]="{ 'text-align': col.align || 'left' }">
+          <span>{{ getColumnHeader(col) }}</span>
+        </th>
+      </tr>
+    </ng-template>
+
+    <!-- Table Body Template -->
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td *ngFor="let col of visibleColumns"
+          [style]="'width:' + getColumnWidth(col)"
+          [ngStyle]="{ 'text-align': col.align || 'left' }">
+          <!-- String Data -->
+          <ng-container *ngIf="col.dataType !== 'currency' && col.dataType !== 'date' && col.dataType !== 'boolean'">
+            {{ getFormattedValue(row, col) }}
+          </ng-container>
+
+          <!-- Date Data -->
+          <ng-container *ngIf="col.dataType === 'date'">
+            {{ getFormattedValue(row, col) }}
+          </ng-container>
+
+          <!-- Currency Data -->
+          <ng-container *ngIf="col.dataType === 'currency'">
+            <span class="currency">{{ getFormattedValue(row, col) }}</span>
+          </ng-container>
+
+          <!-- Boolean Data -->
+          <ng-container *ngIf="col.dataType === 'boolean'">
+            <i
+              [class]="getFormattedValue(row, col) ? 'pi pi-check text-green-600' : 'pi pi-times text-red-600'"
+            ></i>
+          </ng-container>
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Empty Message -->
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="visibleColumns.length" class="text-center py-4">
+          No records found
+        </td>
+      </tr>
+    </ng-template>
+
+    <!-- Loading Template -->
+    <ng-template pTemplate="loadingbody">
+      <tr>
+        <td [attr.colspan]="visibleColumns.length" class="text-center py-4">
+          <p-progressbar mode="indeterminate" [style]="{ height: '6px' }"></p-progressbar>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

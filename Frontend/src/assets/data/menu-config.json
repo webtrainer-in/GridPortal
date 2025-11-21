@@ -40,7 +40,7 @@
                 {
                   "label": "Custom Widgets",
                   "icon": "pi pi-cog",
-                  "route": "/dashboard/widgets/custom"
+                  "route": "/projects"
                 }
               ]
             },
