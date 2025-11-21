@@ -587,7 +587,72 @@
           "id": "backup-history",
           "label": "Backup History",
           "icon": "pi pi-history",
-          "routerLink": "/settings/backup-history"
+          "routerLink": "/settings/backup-history",
+          "displayTitle": "Backup History Details",
+          "hasTabs": true,
+          "tabs": [
+            {
+              "id": "main",
+              "label": "Backup List",
+              "icon": "pi pi-list",
+              "content": [
+                {
+                  "label": "Recent Backups",
+                  "icon": "pi pi-clock",
+                  "type": "item",
+                  "route": "/settings/backup-history/recent"
+                },
+                {
+                  "label": "Full Backups",
+                  "icon": "pi pi-database",
+                  "type": "item",
+                  "route": "/settings/backup-history/full"
+                },
+                {
+                  "label": "Incremental Backups",
+                  "icon": "pi pi-plus",
+                  "type": "item",
+                  "route": "/settings/backup-history/incremental"
+                },
+                {
+                  "label": "Restore Points",
+                  "icon": "pi pi-refresh",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Last Week",
+                      "icon": "pi pi-calendar",
+                      "route": "/settings/backup-history/week"
+                    },
+                    {
+                      "label": "Last Month",
+                      "icon": "pi pi-calendar",
+                      "route": "/settings/backup-history/month"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "backup-status",
+              "label": "Status",
+              "icon": "pi pi-chart-bar",
+              "content": [
+                {
+                  "label": "Backup Status",
+                  "icon": "pi pi-check-circle",
+                  "type": "item",
+                  "route": "/settings/backup-history/status"
+                },
+                {
+                  "label": "Storage Info",
+                  "icon": "pi pi-server",
+                  "type": "item",
+                  "route": "/settings/backup-history/storage"
+                }
+              ]
+            }
+          ]
         }
       ],
       "displayTitle": "Settings Panel",

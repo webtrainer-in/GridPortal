@@ -77,12 +77,27 @@ export class MenuConfigLoaderService {
 
   /**
    * Find a specific menu by ID
+   * Searches top-level menus first, then recursively searches in children arrays
+   * This allows second-level menu items (like submenu items) to be found and configured
    * 
    * @param menuId - The ID of the menu to find
    * @returns any - The menu definition or undefined
    */
   getMenuById(menuId: string): any {
-    return this.cachedConfig?.menus.find((menu: any) => menu.id === menuId);
+    // Search top-level menus first
+    let menu = this.cachedConfig?.menus.find((m: any) => m.id === menuId);
+    
+    // If not found, search recursively in children (second-level items)
+    if (!menu) {
+      for (let topMenu of this.cachedConfig?.menus || []) {
+        if (topMenu.children && topMenu.children.length > 0) {
+          menu = topMenu.children.find((child: any) => child.id === menuId);
+          if (menu) break;
+        }
+      }
+    }
+    
+    return menu;
   }
 
   /**
