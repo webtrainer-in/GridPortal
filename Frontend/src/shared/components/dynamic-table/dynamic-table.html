@@ -1,26 +1,26 @@
 <div class="dynamic-table-container">
-  <!-- Search and Export Toolbar -->
+  <!-- Toolbar with Buttons and Search -->
   <div class="table-toolbar">
     <div class="toolbar-actions">
       <p-button
         label="Clear"
-        [outlined]="true"
         icon="pi pi-filter-slash"
+        styleClass="btn-clear"
         (click)="clearSearch()"
         pTooltip="Clear search filters"
         tooltipPosition="top"
       />
       <p-button
         label="Export CSV"
-        [outlined]="true"
         icon="pi pi-download"
+        styleClass="btn-export"
         (click)="exportCSV()"
         pTooltip="Export table data to CSV"
         tooltipPosition="top"
       />
     </div>
 
-    <!-- Search Input -->
+    <!-- Search Input on Right -->
     <p-iconfield iconPosition="left" class="search-field">
       <p-inputicon>
         <i class="pi pi-search"></i>
