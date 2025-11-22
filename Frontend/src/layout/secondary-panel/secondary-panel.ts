@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.service';
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
-import { TabMenuData, MenuItem } from '../../core/models/tab.model';
+import { TabMenuData, MenuItem, TabConfig } from '../../core/models/menu.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -33,10 +33,8 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   private boundHandleKeyDown = this.handleKeyDown.bind(this);
   private boundHandleKeyUp = this.handleKeyUp.bind(this);
   
-  // Cache for menu data
-  private menuContentCache: MenuItem[] = [];
-  private userInfoContentCache: MenuItem[] = [];
-  private permissionContentCache: MenuItem[] = [];
+  // Cache for ALL tab content (generic instead of hardcoded 3 tabs)
+  private tabContentCache: { [tabId: string]: MenuItem[] } = {};
   
   constructor(
     private panelDragService: PanelDragService, 
@@ -85,32 +83,24 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   
   private loadMenuData(): void {
     if (!this.selectedMenuItem) {
-      this.menuContentCache = [];
-      this.userInfoContentCache = [];
-      this.permissionContentCache = [];
+      this.tabContentCache = {};
       return;
     }
 
-    // Load main menu content
-    this.subscription.add(
-      this.menuDataService.getMenuContent(this.selectedMenuItem).subscribe(data => {
-        this.menuContentCache = data;
-      })
-    );
+    // Clear cache before loading new menu data to prevent stale content
+    this.tabContentCache = {};
 
-    // Load user info content
-    this.subscription.add(
-      this.menuDataService.getUserInfoContent(this.selectedMenuItem).subscribe(data => {
-        this.userInfoContentCache = data;
-      })
-    );
-
-    // Load permission content
-    this.subscription.add(
-      this.menuDataService.getPermissionContent(this.selectedMenuItem).subscribe(data => {
-        this.permissionContentCache = data;
-      })
-    );
+    // Get all tabs for this menu
+    const tabs = this.menuDataService.getTabsForMenu(this.selectedMenuItem);
+    
+    // Load content for each tab
+    tabs.forEach(tab => {
+      this.subscription.add(
+        this.menuDataService.getTabContent(this.selectedMenuItem!, tab.id).subscribe(data => {
+          this.tabContentCache[tab.id] = data;
+        })
+      );
+    });
   }
   
   togglePosition(): void {
@@ -128,15 +118,18 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       const currentTabs = this.tabService.getAllTabs();
       if (currentTabs.length === 0 && this.selectedMenuItem) {
         // Initialize the main menu tab based on the currently selected sidebar menu
-        const mainMenuData = this.getMainMenuTabData();
-        if (mainMenuData) {
-          this.tabService.initializeMainMenuTab(
-            mainMenuData.id,
-            mainMenuData.label,
-            mainMenuData.route,
-            mainMenuData.icon
-          );
-        }
+        // Get menu items to find the corresponding item with routing info
+        this.menuDataService.getMenuItems().subscribe(menuItems => {
+          const mainMenuItem = menuItems.find(item => item.id === this.selectedMenuItem);
+          if (mainMenuItem && mainMenuItem.routerLink) {
+            this.tabService.initializeMainMenuTab(
+              mainMenuItem.id,
+              mainMenuItem.label,
+              mainMenuItem.routerLink,
+              mainMenuItem.icon
+            );
+          }
+        });
       }
 
       // Then create the tab for the clicked item
@@ -162,19 +155,6 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       };
       this.tabService.openMenuItemInSamePanel(menuData);
     }
-  }
-
-  private getMainMenuTabData(): { id: string; label: string; route: string; icon: string } | null {
-    // Map of main menu items with their data
-    const mainMenuMap: { [key: string]: { id: string; label: string; route: string; icon: string } } = {
-      'dashboard': { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'pi pi-home' },
-      'users': { id: 'users', label: 'Users', route: '/users', icon: 'pi pi-users' },
-      'settings': { id: 'settings', label: 'Settings', route: '/settings', icon: 'pi pi-cog' },
-      'analytics': { id: 'analytics', label: 'Analytics', route: '/analytics', icon: 'pi pi-chart-bar' },
-      'reports': { id: 'reports', label: 'Reports', route: '/reports', icon: 'pi pi-file-pdf' }
-    };
-
-    return this.selectedMenuItem ? mainMenuMap[this.selectedMenuItem] || null : null;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -255,54 +235,39 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   shouldShowTabs(): boolean {
-    return this.selectedMenuItem === 'users' || this.selectedMenuItem === 'reports';
+    if (!this.selectedMenuItem) {
+      return false;
+    }
+    return this.menuDataService.hasTabsForMenu(this.selectedMenuItem);
   }
 
-  getTabs(): any[] {
-    if (this.selectedMenuItem === 'users') {
-      return [
-        { id: 'main', label: 'User Management', icon: 'pi pi-users' },
-        { id: 'user-info', label: 'User Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'User Permission', icon: 'pi pi-key' }
-      ];
+  getTabs(): TabConfig[] {
+    if (!this.selectedMenuItem) {
+      return [];
     }
-
-    if (this.selectedMenuItem === 'reports') {
-      return [
-        { id: 'main', label: 'Report Management', icon: 'pi pi-file-edit' },
-        { id: 'user-info', label: 'Report Info', icon: 'pi pi-info-circle' },
-        { id: 'permission', label: 'Report Permission', icon: 'pi pi-key' }
-      ];
-    }    
-    return [];
+    return this.menuDataService.getTabsForMenu(this.selectedMenuItem);
   }
 
   getMenuTitle(): string {
-    switch (this.selectedMenuItem) {
-      case 'dashboard':
-        return 'Dashboard Explorer';
-      case 'users':
-        return 'User Management';
-      case 'settings':
-        return 'Settings Panel';
-      case 'analytics':
-        return 'Analytics Tools';
-      case 'reports':
-        return 'Reports Explorer';
-      default:
-        return 'Explorer';
+    if (!this.selectedMenuItem) {
+      return 'Explorer';
     }
+    return this.menuDataService.getMenuDisplayTitle(this.selectedMenuItem);
   }
 
-  getMenuContent(): MenuItem[] {
-    return this.menuContentCache;
+  /**
+   * Get content for the active tab
+   * This is generic and works for any tab ID
+   */
+  getActiveTabContent(): MenuItem[] {
+    return this.tabContentCache[this.activeTab] || [];
   }
 
-  getUserInfoContent(): MenuItem[] {
-    return this.userInfoContentCache;
-  }
-
-  getPermissionContent(): MenuItem[] {
-    return this.permissionContentCache;
+  /**
+   * Get content for a specific tab by ID
+   * This is generic and works for any tab ID
+   */
+  getTabContentById(tabId: string): MenuItem[] {
+    return this.tabContentCache[tabId] || [];
   }
 }

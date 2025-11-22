@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { TabService } from '../../../core/services/tab.service';
-import { Tab } from '../../../core/models/tab.model';
+import { Tab } from '../../../core/models/menu.model';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 

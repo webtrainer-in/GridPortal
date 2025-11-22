@@ -4,7 +4,8 @@ import { RouterModule } from '@angular/router';
 import { MenuModule } from 'primeng/menu';
 import { MenubarModule } from 'primeng/menubar';
 import { ButtonModule } from 'primeng/button';
-import { TopBarModeService, TopBarMode, MenuItem } from '../../core/services/top-bar-mode.service';
+import { TopBarModeService, TopBarMode } from '../../core/services/top-bar-mode.service';
+import { TopBarMenuItem } from '../../core/services/top-bar-config-loader.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -23,14 +24,20 @@ import { Subscription } from 'rxjs';
 export class TopMenuComponent implements OnInit, OnDestroy {
   currentMode: TopBarMode = 'dropdown';
   selectedMenu: string | null = null;
-  menuItems: MenuItem[] = [];
+  menuItems: TopBarMenuItem[] = [];
   private subscription = new Subscription();
   
   constructor(private topBarModeService: TopBarModeService) {}
   
   ngOnInit(): void {
-    this.menuItems = this.topBarModeService.getMenuItems();
+    // Load menu items from configuration
+    this.subscription.add(
+      this.topBarModeService.getMenuItems().subscribe(items => {
+        this.menuItems = items;
+      })
+    );
     
+    // Subscribe to mode changes
     this.subscription.add(
       this.topBarModeService.mode$.subscribe(mode => {
         console.log('Top bar mode changed to:', mode, 'Previous selected menu:', this.selectedMenu);

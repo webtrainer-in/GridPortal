@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Tab, TabMenuData } from '../models/tab.model';
+import { Tab, TabMenuData } from '../models/menu.model';
 import { Router } from '@angular/router';
 
 @Injectable({
