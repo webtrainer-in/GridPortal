@@ -200,13 +200,15 @@
   }
 }
 
-// Button Styles
+// Button Styles - Using PrimeNG Severity
 .btn-clear,
-.btn-export {
+.btn-export,
+.btn-new-entry,
+.btn-freeze,
+.btn-clear-filters {
   padding: 0.5rem 1rem !important;
   border: none !important;
   border-radius: 6px !important;
-  color: #ffffff !important;
   font-weight: 500 !important;
   font-size: 0.875rem !important;
   transition: all 0.2s ease !important;
@@ -214,40 +216,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 
   .p-button-label {
-    color: #ffffff !important;
     font-weight: 500 !important;
-  }
-
-  .p-button-icon {
-    color: #ffffff !important;
-  }
-}
-
-.btn-clear {
-  background: linear-gradient(to bottom, #3b82f6, #2563eb) !important;
-
-  &:hover {
-    background: linear-gradient(to bottom, #2563eb, #1d4ed8) !important;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3) !important;
-  }
-
-  &:focus {
-    outline: none !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-  }
-}
-
-.btn-export {
-  background: linear-gradient(to bottom, #10b981, #059669) !important;
-
-  &:hover {
-    background: linear-gradient(to bottom, #059669, #047857) !important;
-    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3) !important;
-  }
-
-  &:focus {
-    outline: none !important;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
   }
 }
 

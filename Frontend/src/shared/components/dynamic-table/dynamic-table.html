@@ -3,19 +3,35 @@
   <div class="table-toolbar">
     <div class="toolbar-actions">
       <p-button
-        label="Clear"
-        icon="pi pi-filter-slash"
-        styleClass="btn-clear"
-        (click)="clearSearch()"
-        pTooltip="Clear search filters"
+        label="Export"
+        icon="pi pi-download"
+        severity="help"
+        (click)="exportCSV()"
+        pTooltip="Export table data to CSV"
         tooltipPosition="top"
       />
       <p-button
-        label="Export CSV"
-        icon="pi pi-download"
-        styleClass="btn-export"
-        (click)="exportCSV()"
-        pTooltip="Export table data to CSV"
+        label="New Entry"
+        icon="pi pi-plus"
+        severity="success" 
+        (click)="onNewEntry()"
+        pTooltip="Add new entry"
+        tooltipPosition="top"
+      />
+      <p-button
+        label="Freeze"
+        icon="pi pi-lock"
+        severity="info"
+        (click)="onFreeze()"
+        pTooltip="Freeze columns"
+        tooltipPosition="top"
+      />
+      <p-button
+        label="Clear Filters"
+        icon="pi pi-filter-slash"
+        severity="warning"
+        (click)="clearSearch()"
+        pTooltip="Clear search filters"
         tooltipPosition="top"
       />
     </div>

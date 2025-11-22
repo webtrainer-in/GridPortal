@@ -43,6 +43,8 @@ export class DynamicTableComponent implements OnInit, OnChanges {
   @Output() rowSelected = new EventEmitter<any>();
   @Output() rowDoubleClicked = new EventEmitter<any>();
   @Output() pageChange = new EventEmitter<any>();
+  @Output() newEntry = new EventEmitter<void>();
+  @Output() freeze = new EventEmitter<void>();
 
   visibleColumns: DynamicTableColumn[] = [];
   searchValue: string = '';
@@ -193,5 +195,19 @@ export class DynamicTableComponent implements OnInit, OnChanges {
    */
   getColumnWidth(column: DynamicTableColumn): string {
     return column.width || 'auto';
+  }
+
+  /**
+   * Handle new entry button click
+   */
+  onNewEntry(): void {
+    this.newEntry.emit();
+  }
+
+  /**
+   * Handle freeze button click
+   */
+  onFreeze(): void {
+    this.freeze.emit();
   }
 }
