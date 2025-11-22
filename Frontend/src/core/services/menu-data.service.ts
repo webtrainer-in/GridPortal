@@ -22,18 +22,6 @@ export class MenuDataService {
   constructor(private configLoader: MenuConfigLoaderService) {}
 
   /**
-   * Initialize the service by loading menu configuration
-   * Should be called during app initialization
-   */
-  initialize(): Observable<void> {
-    return this.configLoader.loadMenuConfig().pipe(
-      map(() => {
-        // Initialization complete
-      })
-    );
-  }
-
-  /**
    * Get custom menu items for sidebar
    * Loads sidebar menu items from JSON configuration
    * Returns an Observable of the custom menu items array
@@ -84,59 +72,6 @@ export class MenuDataService {
   getMenuDisplayTitle(menuId: string): string {
     const menu = this.configLoader.getMenuById(menuId);
     return menu?.displayTitle || 'Explorer';
-  }
-
-  /**
-   * Get complete menu panel configuration for a specific menu
-   * Returns the full MenuPanelConfig object or null if not found
-   */
-  getMenuPanelConfig(menuId: string): MenuPanelConfig | null {
-    const menu = this.configLoader.getMenuById(menuId);
-    if (!menu) {
-      return null;
-    }
-
-    return {
-      id: menu.id,
-      label: menu.label,
-      displayTitle: menu.displayTitle,
-      icon: menu.icon,
-      hasTabs: menu.hasTabs,
-      tabs: this.getTabsForMenu(menuId),
-      routerLink: menu.routerLink
-    } as MenuPanelConfig;
-  }
-
-  /**
-   * Get menu content for a specific menu type (main tab)
-   * Returns the content items for the main tab of a menu
-   */
-  getMenuContent(menuType: string): Observable<MenuItem[]> {
-    const menu = this.configLoader.getMenuById(menuType);
-    if (!menu?.tabs) {
-      return of([]);
-    }
-
-    const mainTab = menu.tabs.find((t: any) => t.id === 'main');
-    return of(mainTab?.content || []);
-  }
-
-  /**
-   * Get user info tab content
-   * Returns content items for the user-info tab of a menu
-   */
-  getUserInfoContent(menuType: string): Observable<MenuItem[]> {
-    const content = this.configLoader.getTabContent(menuType, 'user-info');
-    return of(content);
-  }
-
-  /**
-   * Get permission tab content
-   * Returns content items for the permission tab of a menu
-   */
-  getPermissionContent(menuType: string): Observable<MenuItem[]> {
-    const content = this.configLoader.getTabContent(menuType, 'permission');
-    return of(content);
   }
 
   /**

@@ -87,6 +87,9 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    // Clear cache before loading new menu data to prevent stale content
+    this.tabContentCache = {};
+
     // Get all tabs for this menu
     const tabs = this.menuDataService.getTabsForMenu(this.selectedMenuItem);
     

@@ -581,7 +581,58 @@
           "id": "general-settings",
           "label": "General",
           "icon": "pi pi-sliders-h",
-          "routerLink": "/settings/general"
+          "routerLink": "/settings/general",
+          "displayTitle": "General Settings",
+          "hasTabs": true,
+          "tabs": [
+            {
+              "id": "main",
+              "label": "Settings",
+              "icon": "pi pi-sliders-h",
+              "content": [
+                {
+                  "label": "Application Settings",
+                  "icon": "pi pi-cog",
+                  "type": "item",
+                  "route": "/settings/general/app"
+                },
+                {
+                  "label": "System Configuration",
+                  "icon": "pi pi-server",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Database Settings",
+                      "icon": "pi pi-database",
+                      "route": "/settings/general/database"
+                    },
+                    {
+                      "label": "Network Settings",
+                      "icon": "pi pi-globe",
+                      "route": "/settings/general/network"
+                    }
+                  ]
+                },
+                {
+                  "label": "Localization",
+                  "icon": "pi pi-language",
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Language",
+                      "icon": "pi pi-flag",
+                      "route": "/settings/general/language"
+                    },
+                    {
+                      "label": "Time Zone",
+                      "icon": "pi pi-clock",
+                      "route": "/settings/general/timezone"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "backup-history",
