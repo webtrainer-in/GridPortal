@@ -24,10 +24,17 @@ export class SidebarComponent implements OnInit {
   @Input() isOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() secondaryPanelToggle = new EventEmitter<{isOpen: boolean, menuId: string | null}>();
+  @Output() widthChange = new EventEmitter<number>();
 
   selectedMenuItem: string | null = null;
   menuItems: SidebarMenuItem[] = [];
   expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
+  
+  // Resize properties
+  sidebarWidth = 300; // Default width - increased for better text visibility
+  minWidth = 200; // Minimum width to show menu items properly
+  maxWidth = 600; // Maximum width for large screens
+  isResizing = false;
 
   constructor(
     private tabService: TabService,
@@ -37,6 +44,7 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadMenuItems();
+    this.loadSavedWidth();
   }
 
   loadMenuItems(): void {
@@ -44,6 +52,66 @@ export class SidebarComponent implements OnInit {
       this.menuItems = items;
       this.cdr.markForCheck();
     });
+  }
+
+  loadSavedWidth(): void {
+    // First try to load the expanded width if saved
+    const savedExpandedWidth = localStorage.getItem('sidebar-width-expanded');
+    if (savedExpandedWidth) {
+      const width = parseInt(savedExpandedWidth, 10);
+      if (width >= this.minWidth && width <= this.maxWidth) {
+        this.sidebarWidth = width;
+        return;
+      }
+    }
+    
+    // Fallback to general sidebar-width for backward compatibility
+    const savedWidth = localStorage.getItem('sidebar-width');
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (width >= this.minWidth && width <= this.maxWidth) {
+        this.sidebarWidth = width;
+      } else {
+        // Reset to default if saved width is outside bounds
+        this.sidebarWidth = 300;
+        localStorage.setItem('sidebar-width-expanded', '300');
+      }
+    } else {
+      // No saved width, use default and save it
+      localStorage.setItem('sidebar-width-expanded', '300');
+    }
+  }
+
+  onResizeStart(event: MouseEvent): void {
+    this.isResizing = true;
+    event.preventDefault();
+    
+    const startX = event.clientX;
+    const startWidth = this.sidebarWidth;
+    
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.isResizing) return;
+      
+      // Calculate new width by dragging right
+      const newWidth = startWidth + (e.clientX - startX);
+      
+      // Clamp width between min and max
+      this.sidebarWidth = Math.max(this.minWidth, Math.min(this.maxWidth, newWidth));
+      this.cdr.markForCheck();
+    };
+    
+    const onMouseUp = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      
+      // Save width to localStorage
+      localStorage.setItem('sidebar-width', this.sidebarWidth.toString());
+      this.widthChange.emit(this.sidebarWidth);
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   }
 
   onMenuItemClick() {
@@ -54,6 +122,31 @@ export class SidebarComponent implements OnInit {
   }
 
   onToggleSidebar() {
+    this.toggleSidebar.emit();
+  }
+
+  /**
+   * Handle sidebar collapse/expand and manage resizing state
+   */
+  onSidebarToggle(): void {
+    this.isOpen = !this.isOpen;
+    
+    if (!this.isOpen) {
+      // When collapsing, save current width and set to collapsed width
+      localStorage.setItem('sidebar-width-expanded', this.sidebarWidth.toString());
+      this.sidebarWidth = 60; // Collapsed width
+    } else {
+      // When expanding, restore previous width
+      const savedExpandedWidth = localStorage.getItem('sidebar-width-expanded');
+      if (savedExpandedWidth) {
+        const width = parseInt(savedExpandedWidth, 10);
+        if (width >= this.minWidth && width <= this.maxWidth) {
+          this.sidebarWidth = width;
+        }
+      }
+    }
+    
+    this.cdr.markForCheck();
     this.toggleSidebar.emit();
   }
 

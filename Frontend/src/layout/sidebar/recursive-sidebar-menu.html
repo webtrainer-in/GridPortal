@@ -10,14 +10,14 @@
       [style.--nesting-level]="level"
       (click)="onItemClick(item, $event)">
       
-      <!-- Toggle Arrow (only for items with children) -->
-      <span *ngIf="hasChildren(item)" class="menu-arrow">
+      <!-- Toggle Arrow (only for items with children and when sidebar is open) -->
+      <span *ngIf="hasChildren(item) && isOpen" class="menu-arrow">
         <i class="pi pi-chevron-right" 
            [class.rotated]="isExpanded(item)"></i>
       </span>
       
-      <!-- Spacer for items without children to maintain alignment -->
-      <span *ngIf="!hasChildren(item)" class="menu-arrow-spacer"></span>
+      <!-- Spacer for items without children to maintain alignment (only when sidebar is open) -->
+      <span *ngIf="!hasChildren(item) && isOpen" class="menu-arrow-spacer"></span>
       
       <!-- Icon -->
       <i [class]="item.icon" class="menu-icon"></i>
