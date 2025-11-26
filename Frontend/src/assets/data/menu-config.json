@@ -364,17 +364,130 @@
                 {
                   "label": "Administrators",
                   "icon": "pi pi-shield",
-                  "route": "/users/admins"
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Super Admins",
+                      "icon": "pi pi-crown",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "System Owner",
+                          "icon": "pi pi-star-fill",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "label": "Primary Owner",
+                              "icon": "pi pi-check",
+                              "route": "/users/admins/super/owner/primary"
+                            },
+                            {
+                              "label": "Backup Owner",
+                              "icon": "pi pi-copy",
+                              "route": "/users/admins/super/owner/backup"
+                            }
+                          ]
+                        },
+                        {
+                          "label": "System Administrators",
+                          "icon": "pi pi-cog",
+                          "route": "/users/admins/super/sysadmin"
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Regular Admins",
+                      "icon": "pi pi-user-plus",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Department Admins",
+                          "icon": "pi pi-sitemap",
+                          "route": "/users/admins/regular/dept"
+                        },
+                        {
+                          "label": "Module Admins",
+                          "icon": "pi pi-th",
+                          "route": "/users/admins/regular/module"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "label": "Moderators",
                   "icon": "pi pi-user-edit",
-                  "route": "/users/moderators"
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Content Moderators",
+                      "icon": "pi pi-file-edit",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Forum Moderators",
+                          "icon": "pi pi-comments",
+                          "route": "/users/moderators/content/forum"
+                        },
+                        {
+                          "label": "Blog Moderators",
+                          "icon": "pi pi-book",
+                          "route": "/users/moderators/content/blog"
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Security Moderators",
+                      "icon": "pi pi-shield",
+                      "route": "/users/moderators/security"
+                    }
+                  ]
                 },
                 {
                   "label": "Regular Users",
                   "icon": "pi pi-user",
-                  "route": "/users/regular"
+                  "type": "folder",
+                  "children": [
+                    {
+                      "label": "Power Users",
+                      "icon": "pi pi-bolt",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Advanced Users",
+                          "icon": "pi pi-star",
+                          "route": "/users/regular/power/advanced"
+                        },
+                        {
+                          "label": "API Users",
+                          "icon": "pi pi-code",
+                          "type": "folder",
+                          "children": [
+                            {
+                              "label": "OAuth Token Users",
+                              "icon": "pi pi-lock",
+                              "route": "/users/regular/power/api/oauth"
+                            },
+                            {
+                              "label": "API Key Users",
+                              "icon": "pi pi-key",
+                              "route": "/users/regular/power/api/apikey"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Basic Users",
+                      "icon": "pi pi-user",
+                      "route": "/users/regular/basic"
+                    },
+                    {
+                      "label": "Guest Users",
+                      "icon": "pi pi-user-minus",
+                      "route": "/users/regular/guest"
+                    }
+                  ]
                 }
               ]
             },
