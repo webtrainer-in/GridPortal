@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
 import { SidebarMenuItem } from '../../core/models/menu.model';
+import { RecursiveSidebarMenuComponent } from './recursive-sidebar-menu';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,7 +13,8 @@ import { SidebarMenuItem } from '../../core/models/menu.model';
   imports: [
     CommonModule,
     RouterModule,
-    ButtonModule
+    ButtonModule,
+    RecursiveSidebarMenuComponent
   ],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
@@ -25,6 +27,7 @@ export class SidebarComponent implements OnInit {
 
   selectedMenuItem: string | null = null;
   menuItems: SidebarMenuItem[] = [];
+  expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
 
   constructor(
     private tabService: TabService,
@@ -55,14 +58,7 @@ export class SidebarComponent implements OnInit {
   }
 
   onMenuItemSelect(menuId: string, event: Event) {
-    const menuItem = this.findMenuItem(menuId);
-    
-    // If menu has children, toggle expansion and prevent navigation
-    if (menuItem && menuItem.children && menuItem.children.length > 0) {
-      event.preventDefault();
-      this.toggleSubmenu(menuId);
-      return;
-    }
+    const menuItem = this.findMenuItemRecursive(menuId, this.menuItems);
     
     // For regular menu items without children
     event.preventDefault();
@@ -110,15 +106,58 @@ export class SidebarComponent implements OnInit {
     }
   }
 
+  /**
+   * Handle toggle expand for menu items (recursive support)
+   */
+  onToggleMenuExpand(item: SidebarMenuItem): void {
+    this.expandedMenuItems.add(item.id);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handle menu selection change from recursive component
+   */
+  onMenuSelectionChange(menuId: string, isOpen: boolean): void {
+    this.selectedMenuItem = isOpen ? menuId : null;
+    
+    this.secondaryPanelToggle.emit({
+      isOpen: isOpen,
+      menuId: this.selectedMenuItem
+    });
+
+    // Close sidebar on mobile
+    if (window.innerWidth <= 768) {
+      this.toggleSidebar.emit();
+    }
+  }
+
+  /**
+   * Find menu item recursively (supports n-level nesting)
+   */
+  private findMenuItemRecursive(id: string, items: SidebarMenuItem[]): SidebarMenuItem | undefined {
+    for (const item of items) {
+      if (item.id === id) {
+        return item;
+      }
+      if (item.children && item.children.length > 0) {
+        const found = this.findMenuItemRecursive(id, item.children);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return undefined;
+  }
+
   toggleSubmenu(menuId: string) {
-    const menuItem = this.findMenuItem(menuId);
+    const menuItem = this.findMenuItemRecursive(menuId, this.menuItems);
     if (menuItem) {
       menuItem.isExpanded = !menuItem.isExpanded;
     }
   }
 
   findMenuItem(id: string): SidebarMenuItem | undefined {
-    return this.menuItems.find(item => item.id === id);
+    return this.findMenuItemRecursive(id, this.menuItems);
   }
 
   onSubmenuItemSelect(menuId: string, event: Event) {

@@ -582,6 +582,144 @@
           "label": "General",
           "icon": "pi pi-sliders-h",
           "routerLink": "/settings/general",
+          "isExpanded": false,
+          "children": [
+            {
+              "id": "system-config",
+              "label": "System Configuration",
+              "icon": "pi pi-server",
+              "routerLink": "/settings/general/system",
+              "isExpanded": false,
+              "children": [
+                {
+                  "id": "database-settings",
+                  "label": "Database Settings",
+                  "icon": "pi pi-database",
+                  "routerLink": "/settings/general/database",
+                  "isExpanded": false,
+                  "children": [
+                    {
+                      "id": "database-connection",
+                      "label": "Connection",
+                      "icon": "pi pi-link",
+                      "routerLink": "/settings/general/database/connection",
+                      "isExpanded": false,
+                      "children": [
+                        {
+                          "id": "connection-host",
+                          "label": "Host Configuration",
+                          "icon": "pi pi-server",
+                          "routerLink": "/settings/general/database/connection/host"
+                        },
+                        {
+                          "id": "connection-port",
+                          "label": "Port Settings",
+                          "icon": "pi pi-th",
+                          "routerLink": "/settings/general/database/connection/port"
+                        },
+                        {
+                          "id": "connection-auth",
+                          "label": "Authentication",
+                          "icon": "pi pi-key",
+                          "routerLink": "/settings/general/database/connection/auth",
+                          "isExpanded": false,
+                          "children": [
+                            {
+                              "id": "connection-user",
+                              "label": "Username",
+                              "icon": "pi pi-user",
+                              "routerLink": "/settings/general/database/connection/auth/user"
+                            },
+                            {
+                              "id": "connection-password",
+                              "label": "Password",
+                              "icon": "pi pi-lock",
+                              "routerLink": "/settings/general/database/connection/auth/password"
+                            },
+                            {
+                              "id": "connection-ssl",
+                              "label": "SSL/TLS",
+                              "icon": "pi pi-shield",
+                              "routerLink": "/settings/general/database/connection/auth/ssl",
+                              "isExpanded": false,
+                              "children": [
+                                {
+                                  "id": "ssl-certificate",
+                                  "label": "Certificate",
+                                  "icon": "pi pi-certificate",
+                                  "routerLink": "/settings/general/database/connection/auth/ssl/cert"
+                                },
+                                {
+                                  "id": "ssl-encryption",
+                                  "label": "Encryption Level",
+                                  "icon": "pi pi-lock",
+                                  "routerLink": "/settings/general/database/connection/auth/ssl/level"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "database-performance",
+                      "label": "Performance Tuning",
+                      "icon": "pi pi-bolt",
+                      "routerLink": "/settings/general/database/performance"
+                    },
+                    {
+                      "id": "database-backup",
+                      "label": "Backup",
+                      "icon": "pi pi-save",
+                      "routerLink": "/settings/general/database/backup"
+                    }
+                  ]
+                },
+                {
+                  "id": "network-settings",
+                  "label": "Network Settings",
+                  "icon": "pi pi-globe",
+                  "routerLink": "/settings/general/network",
+                  "isExpanded": false,
+                  "children": [
+                    {
+                      "id": "network-http",
+                      "label": "HTTP Configuration",
+                      "icon": "pi pi-globe",
+                      "routerLink": "/settings/general/network/http"
+                    },
+                    {
+                      "id": "network-proxy",
+                      "label": "Proxy Settings",
+                      "icon": "pi pi-filter",
+                      "routerLink": "/settings/general/network/proxy"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "localization-settings",
+              "label": "Localization",
+              "icon": "pi pi-language",
+              "routerLink": "/settings/general/localization",
+              "isExpanded": false,
+              "children": [
+                {
+                  "id": "localization-language",
+                  "label": "Language",
+                  "icon": "pi pi-flag",
+                  "routerLink": "/settings/general/language"
+                },
+                {
+                  "id": "localization-timezone",
+                  "label": "Time Zone",
+                  "icon": "pi pi-clock",
+                  "routerLink": "/settings/general/timezone"
+                }
+              ]
+            }
+          ],
           "displayTitle": "General Settings",
           "hasTabs": true,
           "tabs": [
@@ -604,12 +742,159 @@
                     {
                       "label": "Database Settings",
                       "icon": "pi pi-database",
-                      "route": "/settings/general/database"
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Connection",
+                          "icon": "pi pi-link",
+                          "id": "database-connection",
+                          "routerLink": "/settings/general/database/connection",
+                          "displayTitle": "Database Connection Settings",
+                          "hasTabs": true,
+                          "tabs": [
+                            {
+                              "id": "connection-main",
+                              "label": "Connection Details",
+                              "icon": "pi pi-link",
+                              "content": [
+                                {
+                                  "label": "Host Configuration",
+                                  "icon": "pi pi-server",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/host"
+                                },
+                                {
+                                  "label": "Port Settings",
+                                  "icon": "pi pi-th",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/port"
+                                },
+                                {
+                                  "label": "Connection String",
+                                  "icon": "pi pi-code",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/string"
+                                },
+                                {
+                                  "label": "Connection Timeout",
+                                  "icon": "pi pi-clock",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/timeout"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "connection-auth",
+                              "label": "Authentication",
+                              "icon": "pi pi-key",
+                              "content": [
+                                {
+                                  "label": "Username",
+                                  "icon": "pi pi-user",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/auth/user"
+                                },
+                                {
+                                  "label": "Password",
+                                  "icon": "pi pi-lock",
+                                  "type": "item",
+                                  "route": "/settings/general/database/connection/auth/password"
+                                },
+                                {
+                                  "label": "SSL/TLS",
+                                  "icon": "pi pi-shield",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "label": "Certificate",
+                                      "icon": "pi pi-certificate",
+                                      "route": "/settings/general/database/connection/auth/ssl/cert"
+                                    },
+                                    {
+                                      "label": "Encryption Level",
+                                      "icon": "pi pi-lock",
+                                      "route": "/settings/general/database/connection/auth/ssl/level"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "children": [
+                            {
+                              "label": "Host Configuration",
+                              "icon": "pi pi-server",
+                              "route": "/settings/general/database/connection/host"
+                            },
+                            {
+                              "label": "Port Settings",
+                              "icon": "pi pi-th",
+                              "route": "/settings/general/database/connection/port"
+                            },
+                            {
+                              "label": "Authentication",
+                              "icon": "pi pi-key",
+                              "type": "folder",
+                              "children": [
+                                {
+                                  "label": "Username",
+                                  "icon": "pi pi-user",
+                                  "route": "/settings/general/database/connection/auth/user"
+                                },
+                                {
+                                  "label": "Password",
+                                  "icon": "pi pi-lock",
+                                  "route": "/settings/general/database/connection/auth/password"
+                                },
+                                {
+                                  "label": "SSL/TLS",
+                                  "icon": "pi pi-shield",
+                                  "type": "folder",
+                                  "children": [
+                                    {
+                                      "label": "Certificate",
+                                      "icon": "pi pi-certificate",
+                                      "route": "/settings/general/database/connection/auth/ssl/cert"
+                                    },
+                                    {
+                                      "label": "Encryption Level",
+                                      "icon": "pi pi-lock",
+                                      "route": "/settings/general/database/connection/auth/ssl/level"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "label": "Performance Tuning",
+                          "icon": "pi pi-bolt",
+                          "route": "/settings/general/database/performance"
+                        },
+                        {
+                          "label": "Backup",
+                          "icon": "pi pi-save",
+                          "route": "/settings/general/database/backup"
+                        }
+                      ]
                     },
                     {
                       "label": "Network Settings",
                       "icon": "pi pi-globe",
-                      "route": "/settings/general/network"
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "HTTP Configuration",
+                          "icon": "pi pi-globe",
+                          "route": "/settings/general/network/http"
+                        },
+                        {
+                          "label": "Proxy Settings",
+                          "icon": "pi pi-filter",
+                          "route": "/settings/general/network/proxy"
+                        }
+                      ]
                     }
                   ]
                 },

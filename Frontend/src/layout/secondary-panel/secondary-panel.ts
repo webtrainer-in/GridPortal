@@ -5,12 +5,13 @@ import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
 import { TabMenuData, MenuItem, TabConfig } from '../../core/models/menu.model';
+import { RecursiveMenuTreeComponent } from './recursive-menu-tree';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-secondary-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RecursiveMenuTreeComponent],
   templateUrl: './secondary-panel.html',
   styleUrl: './secondary-panel.scss'
 })
@@ -27,6 +28,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   maxWidth = 600;
   isResizing = false;
   isCtrlPressed = false;
+  expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
 
   private subscription = new Subscription();
   private boundAdjustForScreenSize = this.adjustForScreenSize.bind(this);
@@ -154,6 +156,22 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
         icon: item.icon
       };
       this.tabService.openMenuItemInSamePanel(menuData);
+    }
+  }
+
+  /**
+   * Handle toggle expand for menu items
+   * Called when user clicks the expand/collapse button on a folder
+   */
+  onToggleMenuExpand(item: MenuItem): void {
+    // Generate unique key for this item based on its label
+    const itemKey = item.label;
+    
+    // Toggle expanded state
+    if (this.expandedMenuItems.has(itemKey)) {
+      this.expandedMenuItems.delete(itemKey);
+    } else {
+      this.expandedMenuItems.add(itemKey);
     }
   }
 

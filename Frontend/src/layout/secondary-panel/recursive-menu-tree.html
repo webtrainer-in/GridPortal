@@ -1,0 +1,50 @@
+<ul class="tree-list" [class.nested-level]="level > 0" [attr.data-level]="level">
+  <li *ngFor="let item of items; trackBy: trackByLabel" class="tree-item">
+    <div class="tree-node" 
+         [class.folder]="item.type === 'folder'"
+         [class.expanded]="hasChildren(item) && isExpanded(item)"
+         [style.--nesting-level]="level"
+         (click)="onItemClick(item, $event)"
+         [title]="hasChildren(item) ? 'Click to toggle or navigate' : 'Click to navigate'">
+      
+      <!-- Folder Toggle Button (only for folders with children) -->
+      <button *ngIf="hasChildren(item)" 
+              class="tree-toggle"
+              (click)="onToggleExpand(item, $event)"
+              [attr.aria-expanded]="isExpanded(item)"
+              [attr.aria-label]="'Toggle ' + item.label">
+        <i class="pi pi-chevron-right tree-chevron" 
+           [class.rotated]="isExpanded(item)"></i>
+      </button>
+      
+      <!-- Spacer for items without children to maintain alignment -->
+      <span *ngIf="!hasChildren(item)" class="tree-toggle-spacer"></span>
+      
+      <!-- Icon Display (PrimeIcons, FontAwesome, or Image) -->
+      <i *ngIf="!item.iconType || item.iconType === 'primeicons'" 
+         [class]="item.icon" 
+         class="tree-icon"></i>
+      <i *ngIf="item.iconType === 'fontawesome'" 
+         [class]="item.icon" 
+         class="tree-icon"></i>
+      <img *ngIf="item.iconType === 'image'" 
+           [src]="item.icon" 
+           class="tree-icon-image" 
+           alt="">
+      
+      <!-- Item Label -->
+      <span class="tree-label">{{ item.label }}</span>
+    </div>
+    
+    <!-- Recursive Children (shown only when expanded) -->
+    <div *ngIf="hasChildren(item) && isExpanded(item)" class="tree-children-container">
+      <app-recursive-menu-tree 
+        [items]="item.children!" 
+        [level]="getNextLevel()"
+        [expandedItems]="expandedItems"
+        (itemClick)="itemClick.emit($event)"
+        (toggleExpand)="toggleExpand.emit($event)">
+      </app-recursive-menu-tree>
+    </div>
+  </li>
+</ul>

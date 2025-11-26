@@ -1,0 +1,45 @@
+<ul class="sidebar-menu-list" [class.nested-level]="level > 0" [attr.data-level]="level">
+  <li *ngFor="let item of items; trackBy: trackById" class="sidebar-menu-item">
+    <a 
+      href="javascript:void(0)"
+      class="sidebar-menu-link"
+      [class.has-children]="hasChildren(item)"
+      [class.expanded]="hasChildren(item) && isExpanded(item)"
+      [class.selected]="selectedMenuItem === item.id"
+      [title]="!isOpen && level === 0 ? item.label : ''"
+      [style.--nesting-level]="level"
+      (click)="onItemClick(item, $event)">
+      
+      <!-- Toggle Arrow (only for items with children) -->
+      <span *ngIf="hasChildren(item)" class="menu-arrow">
+        <i class="pi pi-chevron-right" 
+           [class.rotated]="isExpanded(item)"></i>
+      </span>
+      
+      <!-- Spacer for items without children to maintain alignment -->
+      <span *ngIf="!hasChildren(item)" class="menu-arrow-spacer"></span>
+      
+      <!-- Icon -->
+      <i [class]="item.icon" class="menu-icon"></i>
+      
+      <!-- Label (hidden when sidebar collapsed at level 0) -->
+      <span class="menu-label" [class.hidden]="!isOpen && level === 0">
+        {{ item.label }}
+      </span>
+    </a>
+    
+    <!-- Recursive Children (shown only when expanded and sidebar is open) -->
+    <div *ngIf="hasChildren(item) && isExpanded(item) && isOpen" class="sidebar-children-container">
+      <app-recursive-sidebar-menu 
+        [items]="item.children!" 
+        [level]="getNextLevel()"
+        [isOpen]="isOpen"
+        [expandedItems]="expandedItems"
+        [selectedMenuItem]="selectedMenuItem"
+        (itemSelect)="itemSelect.emit($event)"
+        (toggleExpand)="toggleExpand.emit($event)"
+        (selectionChange)="selectionChange.emit($event)">
+      </app-recursive-sidebar-menu>
+    </div>
+  </li>
+</ul>
