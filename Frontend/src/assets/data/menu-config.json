@@ -816,6 +816,137 @@
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "isExpanded": false,
+              "displayTitle": "Transmission Lines",
+              "hasTabs": true,
+              "tabs": [
+                {
+                  "id": "lines-overview",
+                  "label": "Overview",
+                  "icon": "pi pi-th",
+                  "content": [
+                    {
+                      "label": "All Lines",
+                      "icon": "pi pi-list",
+                      "type": "item",
+                      "route": "/lines/all"
+                    },
+                    {
+                      "label": "Active Lines",
+                      "icon": "pi pi-check-circle",
+                      "type": "item",
+                      "route": "/lines/active"
+                    },
+                    {
+                      "label": "Inactive Lines",
+                      "icon": "pi pi-times-circle",
+                      "type": "item",
+                      "route": "/lines/inactive"
+                    },
+                    {
+                      "label": "Status by Region",
+                      "icon": "pi pi-map",
+                      "type": "item",
+                      "route": "/lines/status-by-region"
+                    }
+                  ]
+                },
+                {
+                  "id": "lines-parameters",
+                  "label": "Parameters",
+                  "icon": "pi pi-sliders-h",
+                  "content": [
+                    {
+                      "label": "Electrical Parameters",
+                      "icon": "pi pi-bolt",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Impedance",
+                          "icon": "pi pi-chart-line",
+                          "route": "/lines/parameters/impedance"
+                        },
+                        {
+                          "label": "Admittance",
+                          "icon": "pi pi-chart-bar",
+                          "route": "/lines/parameters/admittance"
+                        },
+                        {
+                          "label": "Reactance",
+                          "icon": "pi pi-wave",
+                          "route": "/lines/parameters/reactance"
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Physical Parameters",
+                      "icon": "pi pi-ruler",
+                      "type": "folder",
+                      "children": [
+                        {
+                          "label": "Length",
+                          "icon": "pi pi-minus",
+                          "route": "/lines/parameters/length"
+                        },
+                        {
+                          "label": "Conductor Type",
+                          "icon": "pi pi-briefcase",
+                          "route": "/lines/parameters/conductor"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "lines-monitoring",
+                  "label": "Monitoring",
+                  "icon": "pi pi-eye",
+                  "content": [
+                    {
+                      "label": "Real-time Flow",
+                      "icon": "pi pi-circle-fill",
+                      "type": "item",
+                      "route": "/lines/monitoring/realtime"
+                    },
+                    {
+                      "label": "Historical Data",
+                      "icon": "pi pi-history",
+                      "type": "item",
+                      "route": "/lines/monitoring/history"
+                    },
+                    {
+                      "label": "Alerts & Warnings",
+                      "icon": "pi pi-exclamation-triangle",
+                      "type": "item",
+                      "route": "/lines/monitoring/alerts"
+                    }
+                  ]
+                },
+                {
+                  "id": "lines-maintenance",
+                  "label": "Maintenance",
+                  "icon": "pi pi-wrench",
+                  "content": [
+                    {
+                      "label": "Scheduled Maintenance",
+                      "icon": "pi pi-calendar",
+                      "type": "item",
+                      "route": "/lines/maintenance/scheduled"
+                    },
+                    {
+                      "label": "Maintenance History",
+                      "icon": "pi pi-book",
+                      "type": "item",
+                      "route": "/lines/maintenance/history"
+                    },
+                    {
+                      "label": "Equipment Status",
+                      "icon": "pi pi-cog",
+                      "type": "item",
+                      "route": "/lines/maintenance/equipment"
+                    }
+                  ]
+                }
+              ],
               "children": 
               [
                 {
@@ -824,13 +955,102 @@
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "isExpanded": false,
+              "displayTitle": "Transmission Lines - Sub-Level",
+              "hasTabs": true,
+              "tabs": [
+                {
+                  "id": "lines-config",
+                  "label": "Configuration",
+                  "icon": "pi pi-cog",
+                  "content": [
+                    {
+                      "label": "Voltage Level Configuration",
+                      "icon": "pi pi-sliders-h",
+                      "type": "item",
+                      "route": "/lines/config/voltage"
+                    },
+                    {
+                      "label": "Protection Settings",
+                      "icon": "pi pi-shield",
+                      "type": "item",
+                      "route": "/lines/config/protection"
+                    },
+                    {
+                      "label": "SCADA Configuration",
+                      "icon": "pi pi-database",
+                      "type": "item",
+                      "route": "/lines/config/scada"
+                    }
+                  ]
+                },
+                {
+                  "id": "lines-performance",
+                  "label": "Performance",
+                  "icon": "pi pi-chart-pie",
+                  "content": [
+                    {
+                      "label": "Efficiency Metrics",
+                      "icon": "pi pi-chart-line",
+                      "type": "item",
+                      "route": "/lines/performance/efficiency"
+                    },
+                    {
+                      "label": "Fault Analysis",
+                      "icon": "pi pi-exclamation-circle",
+                      "type": "item",
+                      "route": "/lines/performance/faults"
+                    },
+                    {
+                      "label": "Reliability Indices",
+                      "icon": "pi pi-lock",
+                      "type": "item",
+                      "route": "/lines/performance/reliability"
+                    }
+                  ]
+                }
+              ],
               "children": 
               [
                 {
               "id": "lines",
               "label": "Lines",
               "icon": "pi pi-history",
-              "routerLink": "/dash"
+              "routerLink": "/dash",
+              "displayTitle": "Transmission Lines - Details",
+              "hasTabs": true,
+              "tabs": [
+                {
+                  "id": "lines-details",
+                  "label": "Details",
+                  "icon": "pi pi-info-circle",
+                  "content": [
+                    {
+                      "label": "Line ID & Naming",
+                      "icon": "pi pi-tag",
+                      "type": "item",
+                      "route": "/lines/details/identity"
+                    },
+                    {
+                      "label": "Ownership Information",
+                      "icon": "pi pi-user",
+                      "type": "item",
+                      "route": "/lines/details/ownership"
+                    },
+                    {
+                      "label": "Route Information",
+                      "icon": "pi pi-map-marker",
+                      "type": "item",
+                      "route": "/lines/details/route"
+                    },
+                    {
+                      "label": "Technical Specifications",
+                      "icon": "pi pi-book",
+                      "type": "item",
+                      "route": "/lines/details/specs"
+                    }
+                  ]
+                }
+              ]
             }
               ]
             }

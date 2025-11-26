@@ -22,7 +22,7 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   @Output() widthChange = new EventEmitter<number>();
   
   panelPosition: PanelPosition = 'next-to-sidebar';
-  activeTab = 'main'; // Default to main tab
+  activeTab = ''; // Will be set dynamically when menu item is selected
   panelWidth = 280; // Default width
   minWidth = 200;
   maxWidth = 600;
@@ -69,10 +69,16 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedMenuItem'] && !changes['selectedMenuItem'].firstChange) {
-      // Reset to main tab when selectedMenuItem changes
-      this.activeTab = 'main';
       // Reload menu data for new selected menu item
       this.loadMenuData();
+      
+      // Set active tab to the first tab of the new menu item
+      if (this.selectedMenuItem) {
+        const tabs = this.menuDataService.getTabsForMenu(this.selectedMenuItem);
+        if (tabs.length > 0) {
+          this.activeTab = tabs[0].id;
+        }
+      }
     }
   }
   
