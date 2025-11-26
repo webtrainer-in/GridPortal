@@ -20,7 +20,7 @@ export class RecursiveMenuTreeComponent implements OnInit {
   @Input() level: number = 0; // Track nesting level for styling
   @Input() expandedItems: Set<string> = new Set(); // Track which items are expanded
   
-  @Output() itemClick = new EventEmitter<MenuItem>();
+  @Output() itemClick = new EventEmitter<{item: MenuItem, event?: MouseEvent}>();
   @Output() toggleExpand = new EventEmitter<MenuItem>();
   
   // Map to track expanded state by item label (using label as unique identifier)
@@ -67,7 +67,7 @@ export class RecursiveMenuTreeComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.itemClick.emit(item);
+    this.itemClick.emit({item, event});
   }
   
   /**

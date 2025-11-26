@@ -119,7 +119,8 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     this.panelClose.emit();
   }
 
-  onMenuItemClick(item: MenuItem, event?: MouseEvent): void {
+  onMenuItemClick(data: {item: MenuItem, event?: MouseEvent}): void {
+    const {item, event} = data;
     // Handle Ctrl+click to create tabs
     if (event && (event.ctrlKey || event.metaKey)) {
       // First, check if we need to initialize the main menu tab
