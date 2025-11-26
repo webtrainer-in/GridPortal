@@ -2,11 +2,11 @@
   "version": "1.0",
   "menus": [
     {
-      "id": "dashboard",
-      "label": "Dashboard",
+      "id": "home",
+      "label": "Home",
       "icon": "pi pi-home",
-      "routerLink": "/dashboard",
-      "displayTitle": "Dashboard Explorer",
+      "routerLink": "/dash",
+      "displayTitle": "GridPortal Home",
       "hasTabs": true,
       "tabs": [
         {
@@ -27,7 +27,7 @@
               "children": [
                 {
                   "label": "Chart Widgets",
-                  "icon": "fa-solid fa-chart-line",
+                  "icon": "fa-regular fa-flag",
                   "iconType": "fontawesome",
                   "route": "/users"
                 },
@@ -52,7 +52,7 @@
                 {
                   "label": "Main Dashboard",
                   "icon": "pi pi-home",
-                  "route": "/dashboard"
+                  "route": "/table"
                 },
                 {
                   "label": "Sales Dashboard",
@@ -338,10 +338,10 @@
       ]
     },
     {
-      "id": "users",
-      "label": "Users",
-      "icon": "pi pi-users",
-      "routerLink": "/users",
+      "id": "projects",
+      "label": "Projects",
+      "icon": "pi pi-key",
+      "routerLink": "/table",
       "displayTitle": "User Management",
       "hasTabs": true,
       "tabs": [
@@ -571,443 +571,585 @@
       ]
     },
     {
-      "id": "settings",
-      "label": "Settings",
-      "icon": "pi pi-cog",
-      "routerLink": "/settings",
+      "id": "engineering",
+      "label": "Engineering",
+      "icon": "pi pi-user-edit",
+      "routerLink": "/dash",
       "isExpanded": false,
       "children": [
         {
-          "id": "general-settings",
-          "label": "General",
+          "id": "substations",
+          "label": "Substations",
           "icon": "pi pi-sliders-h",
-          "routerLink": "/settings/general",
-          "isExpanded": false,
-          "children": [
+          "routerLink": "/dash",
+          "displayTitle": "Settings Panel",
+          "hasTabs": true,
+          "tabs": [
+        {
+          "id": "main",
+          "label": "User Management",
+          "icon": "pi pi-users",
+          "content": [
             {
-              "id": "system-config",
-              "label": "System Configuration",
-              "icon": "pi pi-server",
-              "routerLink": "/settings/general/system",
-              "isExpanded": false,
+              "label": "All Users",
+              "icon": "pi pi-users",
+              "type": "item",
+              "route": "/users"
+            },
+            {
+              "label": "User Groups",
+              "icon": "pi pi-users",
+              "type": "folder",
               "children": [
                 {
-                  "id": "database-settings",
-                  "label": "Database Settings",
-                  "icon": "pi pi-database",
-                  "routerLink": "/settings/general/database",
-                  "isExpanded": false,
-                  "children": [
-                    {
-                      "id": "database-connection",
-                      "label": "Connection",
-                      "icon": "pi pi-link",
-                      "routerLink": "/settings/general/database/connection",
-                      "isExpanded": false,
-                      "children": [
-                        {
-                          "id": "connection-host",
-                          "label": "Host Configuration",
-                          "icon": "pi pi-server",
-                          "routerLink": "/settings/general/database/connection/host"
-                        },
-                        {
-                          "id": "connection-port",
-                          "label": "Port Settings",
-                          "icon": "pi pi-th",
-                          "routerLink": "/settings/general/database/connection/port"
-                        },
-                        {
-                          "id": "connection-auth",
-                          "label": "Authentication",
-                          "icon": "pi pi-key",
-                          "routerLink": "/settings/general/database/connection/auth",
-                          "isExpanded": false,
-                          "children": [
-                            {
-                              "id": "connection-user",
-                              "label": "Username",
-                              "icon": "pi pi-user",
-                              "routerLink": "/settings/general/database/connection/auth/user"
-                            },
-                            {
-                              "id": "connection-password",
-                              "label": "Password",
-                              "icon": "pi pi-lock",
-                              "routerLink": "/settings/general/database/connection/auth/password"
-                            },
-                            {
-                              "id": "connection-ssl",
-                              "label": "SSL/TLS",
-                              "icon": "pi pi-shield",
-                              "routerLink": "/settings/general/database/connection/auth/ssl",
-                              "isExpanded": false,
-                              "children": [
-                                {
-                                  "id": "ssl-certificate",
-                                  "label": "Certificate",
-                                  "icon": "pi pi-certificate",
-                                  "routerLink": "/settings/general/database/connection/auth/ssl/cert"
-                                },
-                                {
-                                  "id": "ssl-encryption",
-                                  "label": "Encryption Level",
-                                  "icon": "pi pi-lock",
-                                  "routerLink": "/settings/general/database/connection/auth/ssl/level"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "id": "database-performance",
-                      "label": "Performance Tuning",
-                      "icon": "pi pi-bolt",
-                      "routerLink": "/settings/general/database/performance"
-                    },
-                    {
-                      "id": "database-backup",
-                      "label": "Backup",
-                      "icon": "pi pi-save",
-                      "routerLink": "/settings/general/database/backup"
-                    }
-                  ]
+                  "label": "Administrators",
+                  "icon": "pi pi-shield",
+                  "route": "/users/admins"
                 },
                 {
-                  "id": "network-settings",
-                  "label": "Network Settings",
-                  "icon": "pi pi-globe",
-                  "routerLink": "/settings/general/network",
-                  "isExpanded": false,
-                  "children": [
-                    {
-                      "id": "network-http",
-                      "label": "HTTP Configuration",
-                      "icon": "pi pi-globe",
-                      "routerLink": "/settings/general/network/http"
-                    },
-                    {
-                      "id": "network-proxy",
-                      "label": "Proxy Settings",
-                      "icon": "pi pi-filter",
-                      "routerLink": "/settings/general/network/proxy"
-                    }
-                  ]
+                  "label": "Moderators",
+                  "icon": "pi pi-user-edit",
+                  "route": "/users/moderators"
+                },
+                {
+                  "label": "Regular Users",
+                  "icon": "pi pi-user",
+                  "route": "/users/regular"
                 }
               ]
             },
             {
-              "id": "localization-settings",
-              "label": "Localization",
-              "icon": "pi pi-language",
-              "routerLink": "/settings/general/localization",
-              "isExpanded": false,
+              "label": "Permissions",
+              "icon": "pi pi-key",
+              "type": "folder",
               "children": [
                 {
-                  "id": "localization-language",
-                  "label": "Language",
-                  "icon": "pi pi-flag",
-                  "routerLink": "/settings/general/language"
-                },
-                {
-                  "id": "localization-timezone",
-                  "label": "Time Zone",
-                  "icon": "pi pi-clock",
-                  "routerLink": "/settings/general/timezone"
-                }
-              ]
-            }
-          ],
-          "displayTitle": "General Settings",
-          "hasTabs": true,
-          "tabs": [
-            {
-              "id": "main",
-              "label": "Settings",
-              "icon": "pi pi-sliders-h",
-              "content": [
-                {
-                  "label": "Application Settings",
+                  "label": "Role Management",
                   "icon": "pi pi-cog",
-                  "type": "item",
-                  "route": "/settings/general/app"
+                  "route": "/users/roles"
                 },
                 {
-                  "label": "System Configuration",
-                  "icon": "pi pi-server",
-                  "type": "folder",
-                  "children": [
-                    {
-                      "label": "Database Settings",
-                      "icon": "pi pi-database",
-                      "type": "folder",
-                      "children": [
-                        {
-                          "label": "Connection",
-                          "icon": "pi pi-link",
-                          "id": "database-connection",
-                          "routerLink": "/settings/general/database/connection",
-                          "displayTitle": "Database Connection Settings",
-                          "hasTabs": true,
-                          "tabs": [
-                            {
-                              "id": "connection-main",
-                              "label": "Connection Details",
-                              "icon": "pi pi-link",
-                              "content": [
-                                {
-                                  "label": "Host Configuration",
-                                  "icon": "pi pi-server",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/host"
-                                },
-                                {
-                                  "label": "Port Settings",
-                                  "icon": "pi pi-th",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/port"
-                                },
-                                {
-                                  "label": "Connection String",
-                                  "icon": "pi pi-code",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/string"
-                                },
-                                {
-                                  "label": "Connection Timeout",
-                                  "icon": "pi pi-clock",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/timeout"
-                                }
-                              ]
-                            },
-                            {
-                              "id": "connection-auth",
-                              "label": "Authentication",
-                              "icon": "pi pi-key",
-                              "content": [
-                                {
-                                  "label": "Username",
-                                  "icon": "pi pi-user",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/auth/user"
-                                },
-                                {
-                                  "label": "Password",
-                                  "icon": "pi pi-lock",
-                                  "type": "item",
-                                  "route": "/settings/general/database/connection/auth/password"
-                                },
-                                {
-                                  "label": "SSL/TLS",
-                                  "icon": "pi pi-shield",
-                                  "type": "folder",
-                                  "children": [
-                                    {
-                                      "label": "Certificate",
-                                      "icon": "pi pi-certificate",
-                                      "route": "/settings/general/database/connection/auth/ssl/cert"
-                                    },
-                                    {
-                                      "label": "Encryption Level",
-                                      "icon": "pi pi-lock",
-                                      "route": "/settings/general/database/connection/auth/ssl/level"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ],
-                          "children": [
-                            {
-                              "label": "Host Configuration",
-                              "icon": "pi pi-server",
-                              "route": "/settings/general/database/connection/host"
-                            },
-                            {
-                              "label": "Port Settings",
-                              "icon": "pi pi-th",
-                              "route": "/settings/general/database/connection/port"
-                            },
-                            {
-                              "label": "Authentication",
-                              "icon": "pi pi-key",
-                              "type": "folder",
-                              "children": [
-                                {
-                                  "label": "Username",
-                                  "icon": "pi pi-user",
-                                  "route": "/settings/general/database/connection/auth/user"
-                                },
-                                {
-                                  "label": "Password",
-                                  "icon": "pi pi-lock",
-                                  "route": "/settings/general/database/connection/auth/password"
-                                },
-                                {
-                                  "label": "SSL/TLS",
-                                  "icon": "pi pi-shield",
-                                  "type": "folder",
-                                  "children": [
-                                    {
-                                      "label": "Certificate",
-                                      "icon": "pi pi-certificate",
-                                      "route": "/settings/general/database/connection/auth/ssl/cert"
-                                    },
-                                    {
-                                      "label": "Encryption Level",
-                                      "icon": "pi pi-lock",
-                                      "route": "/settings/general/database/connection/auth/ssl/level"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "label": "Performance Tuning",
-                          "icon": "pi pi-bolt",
-                          "route": "/settings/general/database/performance"
-                        },
-                        {
-                          "label": "Backup",
-                          "icon": "pi pi-save",
-                          "route": "/settings/general/database/backup"
-                        }
-                      ]
-                    },
-                    {
-                      "label": "Network Settings",
-                      "icon": "pi pi-globe",
-                      "type": "folder",
-                      "children": [
-                        {
-                          "label": "HTTP Configuration",
-                          "icon": "pi pi-globe",
-                          "route": "/settings/general/network/http"
-                        },
-                        {
-                          "label": "Proxy Settings",
-                          "icon": "pi pi-filter",
-                          "route": "/settings/general/network/proxy"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "label": "Localization",
-                  "icon": "pi pi-language",
-                  "type": "folder",
-                  "children": [
-                    {
-                      "label": "Language",
-                      "icon": "pi pi-flag",
-                      "route": "/settings/general/language"
-                    },
-                    {
-                      "label": "Time Zone",
-                      "icon": "pi pi-clock",
-                      "route": "/settings/general/timezone"
-                    }
-                  ]
+                  "label": "Access Control",
+                  "icon": "pi pi-lock",
+                  "route": "/users/access"
                 }
               ]
+            },
+            {
+              "label": "User Activity",
+              "icon": "pi pi-chart-line",
+              "type": "item",
+              "route": "/users/activity"
             }
           ]
         },
         {
-          "id": "backup-history",
-          "label": "Backup History",
-          "icon": "pi pi-history",
-          "routerLink": "/settings/backup-history",
-          "displayTitle": "Backup History Details",
-          "hasTabs": true,
-          "tabs": [
+          "id": "user-info",
+          "label": "User Info",
+          "icon": "pi pi-info-circle",
+          "content": [
             {
-              "id": "main",
-              "label": "Backup List",
-              "icon": "pi pi-list",
-              "content": [
+              "label": "User Profile",
+              "icon": "pi pi-user",
+              "type": "item",
+              "route": "/users/profile"
+            },
+            {
+              "label": "Personal Details",
+              "icon": "pi pi-id-card",
+              "type": "folder",
+              "children": [
                 {
-                  "label": "Recent Backups",
-                  "icon": "pi pi-clock",
-                  "type": "item",
-                  "route": "/settings/backup-history/recent"
+                  "label": "Basic Information",
+                  "icon": "pi pi-info",
+                  "route": "/users/profile/basic"
                 },
                 {
-                  "label": "Full Backups",
-                  "icon": "pi pi-database",
-                  "type": "item",
-                  "route": "/settings/backup-history/full"
+                  "label": "Contact Details",
+                  "icon": "pi pi-phone",
+                  "route": "/users/profile/contact"
                 },
                 {
-                  "label": "Incremental Backups",
-                  "icon": "pi pi-plus",
-                  "type": "item",
-                  "route": "/settings/backup-history/incremental"
-                },
-                {
-                  "label": "Restore Points",
-                  "icon": "pi pi-refresh",
-                  "type": "folder",
-                  "children": [
-                    {
-                      "label": "Last Week",
-                      "icon": "pi pi-calendar",
-                      "route": "/settings/backup-history/week"
-                    },
-                    {
-                      "label": "Last Month",
-                      "icon": "pi pi-calendar",
-                      "route": "/settings/backup-history/month"
-                    }
-                  ]
+                  "label": "Address",
+                  "icon": "pi pi-map-marker",
+                  "route": "/users/profile/address"
                 }
               ]
             },
             {
-              "id": "backup-status",
-              "label": "Status",
-              "icon": "pi pi-chart-bar",
-              "content": [
+              "label": "Account Settings",
+              "icon": "pi pi-cog",
+              "type": "folder",
+              "children": [
                 {
-                  "label": "Backup Status",
-                  "icon": "pi pi-check-circle",
-                  "type": "item",
-                  "route": "/settings/backup-history/status"
+                  "label": "Login Credentials",
+                  "icon": "pi pi-key",
+                  "route": "/users/account/credentials"
                 },
                 {
-                  "label": "Storage Info",
-                  "icon": "pi pi-server",
-                  "type": "item",
-                  "route": "/settings/backup-history/storage"
+                  "label": "Security Settings",
+                  "icon": "pi pi-shield",
+                  "route": "/users/account/security"
+                },
+                {
+                  "label": "Preferences",
+                  "icon": "pi pi-sliders-h",
+                  "route": "/users/account/preferences"
                 }
               ]
+            },
+            {
+              "label": "Activity Log",
+              "icon": "pi pi-history",
+              "type": "item",
+              "route": "/users/activity"
+            },
+            {
+              "label": "Session Management",
+              "icon": "pi pi-clock",
+              "type": "item",
+              "route": "/users/sessions"
             }
           ]
+        },
+        {
+          "id": "permission",
+          "label": "User Permission",
+          "icon": "pi pi-key",
+          "content": [
+            {
+              "label": "Role Assignment",
+              "icon": "pi pi-users",
+              "type": "item",
+              "route": "/users/roles/assign"
+            },
+            {
+              "label": "Access Rights",
+              "icon": "pi pi-key",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Read Permissions",
+                  "icon": "pi pi-eye",
+                  "route": "/users/permissions/read"
+                },
+                {
+                  "label": "Write Permissions",
+                  "icon": "pi pi-pencil",
+                  "route": "/users/permissions/write"
+                },
+                {
+                  "label": "Delete Permissions",
+                  "icon": "pi pi-trash",
+                  "route": "/users/permissions/delete"
+                }
+              ]
+            },
+            {
+              "label": "Module Access",
+              "icon": "pi pi-th-large",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Dashboard Access",
+                  "icon": "pi pi-home",
+                  "route": "/users/permissions/dashboard"
+                },
+                {
+                  "label": "Reports Access",
+                  "icon": "pi pi-chart-bar",
+                  "route": "/users/permissions/reports"
+                },
+                {
+                  "label": "Settings Access",
+                  "icon": "pi pi-cog",
+                  "route": "/users/permissions/settings"
+                },
+                {
+                  "label": "User Management",
+                  "icon": "pi pi-users",
+                  "route": "/users/permissions/user-mgmt"
+                }
+              ]
+            },
+            {
+              "label": "API Permissions",
+              "icon": "pi pi-globe",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "REST API Access",
+                  "icon": "pi pi-cloud",
+                  "route": "/users/permissions/api-rest"
+                },
+                {
+                  "label": "GraphQL Access",
+                  "icon": "pi pi-code",
+                  "route": "/users/permissions/api-graphql"
+                },
+                {
+                  "label": "Webhook Access",
+                  "icon": "pi pi-send",
+                  "route": "/users/permissions/api-webhook"
+                }
+              ]
+            },
+            {
+              "label": "Time-based Access",
+              "icon": "pi pi-clock",
+              "type": "item",
+              "route": "/users/permissions/time-based"
+            },
+            {
+              "label": "IP Restrictions",
+              "icon": "pi pi-shield",
+              "type": "item",
+              "route": "/users/permissions/ip-restrictions"
+            }
+          ]
+        }
+          ]
+            },
+            {
+              "id": "lines",
+              "label": "Lines",
+              "icon": "pi pi-history",
+              "routerLink": "/dash",
+              "isExpanded": false,
+              "children": 
+              [
+                {
+              "id": "lines",
+              "label": "Lines",
+              "icon": "pi pi-history",
+              "routerLink": "/dash",
+              "isExpanded": false,
+              "children": 
+              [
+                {
+              "id": "lines",
+              "label": "Lines",
+              "icon": "pi pi-history",
+              "routerLink": "/dash"
+            }
+              ]
+            }
+              ]
+            }
+          ],
+      "displayTitle": "Settings Panel",
+      "hasTabs": false
+    },
+    {
+      "id": "planning",
+      "label": "Planning",
+      "icon": "pi pi-calendar-clock",
+      "routerLink": "/dash",
+      "displayTitle": "User Management",
+      "hasTabs": true,
+      "tabs": [
+        {
+          "id": "pln-mm",
+          "label": "Model Management",
+          "icon": "pi pi-users",
+          "content": [
+            {
+              "label": "All Users",
+              "icon": "pi pi-users",
+              "type": "item",
+              "route": "/diagram",
+              "view level": "gray",
+              "roles": [ {"role":"planner", "access level" : "R/W/D"}, "operators"]
+            },
+            {
+              "label": "User Groups",
+              "icon": "pi pi-users",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Administrators",
+                  "icon": "pi pi-shield",
+                  "route": "/table"
+                },
+                {
+                  "label": "Moderators",
+                  "icon": "pi pi-user-edit",
+                  "route": "/diagram"
+                },
+                {
+                  "label": "Regular Users",
+                  "icon": "pi pi-user",
+                  "route": "/users/regular"
+                }
+              ]
+            },
+            {
+              "label": "Permissions",
+              "icon": "pi pi-key",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Role Management",
+                  "icon": "pi pi-cog",
+                  "route": "/users/roles"
+                },
+                {
+                  "label": "Access Control",
+                  "icon": "pi pi-lock",
+                  "route": "/users/access"
+                }
+              ]
+            },
+            {
+              "label": "User Activity",
+              "icon": "pi pi-chart-line",
+              "type": "item",
+              "route": "/users/activity"
+            }
+          ]
+        },
+        {
+          "id": "user-info",
+          "label": "Studies",
+          "icon": "pi pi-info-circle",
+          "content": [
+            {
+              "label": "User Profile",
+              "icon": "pi pi-user",
+              "type": "item",
+              "route": "/users/profile"
+            },
+            {
+              "label": "Personal Details",
+              "icon": "pi pi-id-card",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Basic Information",
+                  "icon": "pi pi-info",
+                  "route": "/users/profile/basic"
+                },
+                {
+                  "label": "Contact Details",
+                  "icon": "pi pi-phone",
+                  "route": "/users/profile/contact"
+                },
+                {
+                  "label": "Address",
+                  "icon": "pi pi-map-marker",
+                  "route": "/users/profile/address"
+                }
+              ]
+            },
+            {
+              "label": "Account Settings",
+              "icon": "pi pi-cog",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Login Credentials",
+                  "icon": "pi pi-key",
+                  "route": "/users/account/credentials"
+                },
+                {
+                  "label": "Security Settings",
+                  "icon": "pi pi-shield",
+                  "route": "/users/account/security"
+                },
+                {
+                  "label": "Preferences",
+                  "icon": "pi pi-sliders-h",
+                  "route": "/users/account/preferences"
+                }
+              ]
+            },
+            {
+              "label": "Activity Log",
+              "icon": "pi pi-history",
+              "type": "item",
+              "route": "/users/activity"
+            },
+            {
+              "label": "Session Management",
+              "icon": "pi pi-clock",
+              "type": "item",
+              "route": "/users/sessions"
+            }
+          ]
+        },
+        {
+          "id": "permission",
+          "label": "Compliance",
+          "icon": "pi pi-key",
+          "content": [
+            {
+              "label": "Role Assignment",
+              "icon": "pi pi-users",
+              "type": "item",
+              "route": "/users/roles/assign"
+            },
+            {
+              "label": "Access Rights",
+              "icon": "pi pi-key",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Read Permissions",
+                  "icon": "pi pi-eye",
+                  "route": "/users/permissions/read"
+                },
+                {
+                  "label": "Write Permissions",
+                  "icon": "pi pi-pencil",
+                  "route": "/users/permissions/write"
+                },
+                {
+                  "label": "Delete Permissions",
+                  "icon": "pi pi-trash",
+                  "route": "/users/permissions/delete"
+                }
+              ]
+            },
+            {
+              "label": "Module Access",
+              "icon": "pi pi-th-large",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Dashboard Access",
+                  "icon": "pi pi-home",
+                  "route": "/users/permissions/dashboard"
+                },
+                {
+                  "label": "Reports Access",
+                  "icon": "pi pi-chart-bar",
+                  "route": "/users/permissions/reports"
+                },
+                {
+                  "label": "Settings Access",
+                  "icon": "pi pi-cog",
+                  "route": "/users/permissions/settings"
+                },
+                {
+                  "label": "User Management",
+                  "icon": "pi pi-users",
+                  "route": "/users/permissions/user-mgmt"
+                }
+              ]
+            },
+            {
+              "label": "API Permissions",
+              "icon": "pi pi-globe",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "REST API Access",
+                  "icon": "pi pi-cloud",
+                  "route": "/users/permissions/api-rest"
+                },
+                {
+                  "label": "GraphQL Access",
+                  "icon": "pi pi-code",
+                  "route": "/users/permissions/api-graphql"
+                },
+                {
+                  "label": "Webhook Access",
+                  "icon": "pi pi-send",
+                  "route": "/users/permissions/api-webhook"
+                }
+              ]
+            },
+            {
+              "label": "Time-based Access",
+              "icon": "pi pi-clock",
+              "type": "item",
+              "route": "/users/permissions/time-based"
+            },
+            {
+              "label": "IP Restrictions",
+              "icon": "pi pi-shield",
+              "type": "item",
+              "route": "/users/permissions/ip-restrictions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "protection",
+      "label": "Protection",
+      "icon": "pi pi-stopwatch",
+      "routerLink": "/settings",
+      "isExpanded": false,
+      "children": [
+        {
+          "id": "standards",
+          "label": "Standards",
+          "icon": "pi pi-sliders-h",
+          "routerLink": "/settings/general"
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "icon": "pi pi-sliders-h",
+          "routerLink": "/settings/general"
+        },
+        {
+          "id": "fault",
+          "label": "Fault Analysis",
+          "icon": "pi pi-history",
+          "routerLink": "/settings/backup-history"
         }
       ],
       "displayTitle": "Settings Panel",
       "hasTabs": false
     },
     {
-      "id": "analytics",
-      "label": "Analytics",
-      "icon": "pi pi-chart-bar",
-      "routerLink": "/analytics",
-      "displayTitle": "Analytics Tools",
-      "hasTabs": false,
-      "tabs": []
+      "id": "operations",
+      "label": "Operations",
+      "icon": "pi pi-user",
+      "routerLink": "/settings",
+      "isExpanded": false,
+      "children": [
+        {
+          "id": "modeling",
+          "label": "Modeling",
+          "icon": "pi pi-sliders-h",
+          "routerLink": "/settings/general"
+        },
+        {
+          "id": "outage",
+          "label": "Outage Study",
+          "icon": "pi pi-sliders-h",
+          "routerLink": "/settings/general"
+        },
+        {
+          "id": "switching",
+          "label": "Switching",
+          "icon": "pi pi-history",
+          "routerLink": "/settings/backup-history"
+        },
+        {
+          "id": "voltage",
+          "label": "Voltage Management",
+          "icon": "pi pi-sliders-h",
+          "routerLink": "/settings/general"
+        },
+        {
+          "id": "reliability",
+          "label": "Reliability Desk",
+          "icon": "pi pi-history",
+          "routerLink": "/settings/backup-history"
+        }
+      ],
+      "displayTitle": "Settings Panel",
+      "hasTabs": false
     },
     {
       "id": "reports",
       "label": "Reports",
       "icon": "pi pi-file-pdf",
-      "routerLink": "/reports",
+      "routerLink": "/dash",
       "displayTitle": "Reports Explorer",
       "hasTabs": true,
       "tabs": [
@@ -1227,7 +1369,7 @@
             "id": "new",
             "label": "New",
             "icon": "pi pi-plus",
-            "action": "new"
+            "action": "/Feature/load-stuty.py"
           },
           {
             "id": "open",
@@ -1438,6 +1580,261 @@
             "icon": "pi pi-th-large",
             "type": "toggle",
             "group": "display",
+            "size": "small"
+          }
+        ]
+      },      
+      {
+        "id": "smartDiagram",
+        "label": "SmartDiagram",
+        "icon": "pi pi-sitemap",
+        "children": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "action": "settings"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "action": "preferences"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "action": "plugins"
+          }
+        ],
+        "ribbonItems": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "type": "button",
+            "group": "configure",
+            "size": "large"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          }
+        ]
+      },
+      {
+        "id": "modelMaster",
+        "label": "ModelMaster",
+        "icon": "pi pi-objects-column",
+        "children": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "action": "settings"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "action": "preferences"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "action": "plugins"
+          }
+        ],
+        "ribbonItems": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "type": "button",
+            "group": "configure",
+            "size": "large"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          }
+        ]
+      },
+      {
+        "id": "studyPro",
+        "label": "StudyPro",
+        "icon": "pi pi-graduation-cap",
+        "children": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "action": "settings"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "action": "preferences"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "action": "plugins"
+          }
+        ],
+        "ribbonItems": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "type": "button",
+            "group": "configure",
+            "size": "large"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          }
+        ]
+      },
+      {
+        "id": "dataBlend",
+        "label": "DataBlend",
+        "icon": "pi pi-server",
+        "children": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "action": "settings"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "action": "preferences"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "action": "plugins"
+          }
+        ],
+        "ribbonItems": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "type": "button",
+            "group": "configure",
+            "size": "large"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          }
+        ]
+      },
+      {
+        "id": "custom",
+        "label": "Custom",
+        "icon": "pi pi-hammer",
+        "children": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "action": "settings"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "action": "preferences"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "action": "plugins"
+          }
+        ],
+        "ribbonItems": [
+          {
+            "id": "settings",
+            "label": "Settings",
+            "icon": "pi pi-cog",
+            "type": "button",
+            "group": "configure",
+            "size": "large"
+          },
+          {
+            "id": "preferences",
+            "label": "Preferences",
+            "icon": "pi pi-sliders-h",
+            "type": "button",
+            "group": "configure",
+            "size": "small"
+          },
+          {
+            "id": "plugins",
+            "label": "Plugins",
+            "icon": "pi pi-star",
+            "type": "button",
+            "group": "configure",
             "size": "small"
           }
         ]
