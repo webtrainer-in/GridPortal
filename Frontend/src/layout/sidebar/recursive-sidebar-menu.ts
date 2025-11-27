@@ -57,27 +57,29 @@ export class RecursiveSidebarMenuComponent implements OnInit {
   
   /**
    * Handle item click
-   * If item has children AND a routerLink, navigate to the route but still allow expand/collapse
-   * If item has children but NO routerLink, only toggle expansion
+   * If item has children, expand it and notify parent to open sidebar if collapsed
    * If item has no children, navigate or emit selection
    */
   onItemClick(item: SidebarMenuItem, event: Event): void {
     event.preventDefault();
     
-    // If item has children and a route, navigate to parent route and emit selection
-    if (this.hasChildren(item) && item.routerLink) {
-      // Navigate to parent route
-      this.router.navigate([item.routerLink]);
+    // If item has children, expand it
+    if (this.hasChildren(item)) {
+      // Expand the menu item if not already expanded
+      if (!this.isExpanded(item)) {
+        this.expandedMap.set(item.id, true);
+        item.isExpanded = true;
+        this.toggleExpand.emit(item);
+      }
+      
+      // If item also has a route, navigate to it
+      if (item.routerLink) {
+        this.router.navigate([item.routerLink]);
+      }
       
       // Emit item selection for tab/secondary panel handling
       this.itemSelect.emit({ menuId: item.id, event });
       this.selectionChange.emit({ menuId: item.id, isOpen: true });
-      return;
-    }
-    
-    // If item has children but no route, only toggle expansion
-    if (this.hasChildren(item)) {
-      this.onToggleExpand(item, event);
       return;
     }
     

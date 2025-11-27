@@ -158,6 +158,11 @@ export class SidebarComponent implements OnInit {
     // For regular menu items without children
     event.preventDefault();
     
+    // If sidebar is collapsed and menu item has children, auto-expand sidebar
+    if (!this.isOpen && menuItem && menuItem.children && menuItem.children.length > 0) {
+      this.onSidebarToggle();
+    }
+    
     // Check if this is a different menu from the last viewed menu
     const isDifferentMenu = this.lastViewedMenuId !== null && this.lastViewedMenuId !== menuId;
     const isCurrentlySelected = this.selectedMenuItem === menuId;
@@ -230,6 +235,13 @@ export class SidebarComponent implements OnInit {
    * Handle menu selection change from recursive component
    */
   onMenuSelectionChange(menuId: string, isOpen: boolean): void {
+    const menuItem = this.findMenuItemRecursive(menuId, this.menuItems);
+    
+    // If sidebar is collapsed and menu item has children, auto-expand sidebar
+    if (!this.isOpen && menuItem && menuItem.children && menuItem.children.length > 0) {
+      this.onSidebarToggle();
+    }
+    
     // Check if this is a different menu from the last viewed menu
     const isDifferentMenu = this.lastViewedMenuId !== null && this.lastViewedMenuId !== menuId;
     
