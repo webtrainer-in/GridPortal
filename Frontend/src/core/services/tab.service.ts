@@ -11,10 +11,13 @@ export class TabService {
   private tabs$ = new BehaviorSubject<Tab[]>([]);
   private activeTabId$ = new BehaviorSubject<string>('');
   private contextMap: { [key: string]: string } = {};
+  private ambiguousNames: Set<string> = new Set(); // Dynamically detected ambiguous item names
 
   constructor(private router: Router, private menuDataService: MenuDataService) {
     // Initialize context map from menu configuration
     this.initializeContextMap();
+    // Initialize ambiguous names detection
+    this.initializeAmbiguousNames();
   }
 
   /**
@@ -27,6 +30,16 @@ export class TabService {
       items.forEach(item => {
         this.contextMap[item.id] = item.label;
       });
+    });
+  }
+
+  /**
+   * Detect and load ambiguous item names dynamically from the menu structure
+   * Items that appear multiple times across different contexts are marked as ambiguous
+   */
+  private initializeAmbiguousNames(): void {
+    this.menuDataService.getAmbiguousItemNames().subscribe(ambiguousNames => {
+      this.ambiguousNames = new Set(ambiguousNames);
     });
   }
 
@@ -193,10 +206,8 @@ export class TabService {
   }
 
   private generateTabTitle(itemLabel: string, menuType?: string, parentPath?: string): string {
-    // For certain common item names, include context to avoid confusion
-    const ambiguousNames = ['Overview', 'General', 'Reports', 'Settings', 'Permissions', 'Access Control', 'Chart Widgets', 'Data Widgets'];
-    
-    if (ambiguousNames.includes(itemLabel)) {
+    // For item names that appear multiple times across different contexts, include context to avoid confusion
+    if (this.ambiguousNames.has(itemLabel)) {
       // First priority: use parent path if available (for nested menu items)
       if (parentPath) {
         return `${parentPath} ${itemLabel}`;

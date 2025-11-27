@@ -87,4 +87,51 @@ export class MenuDataService {
     const content = this.configLoader.getTabContent(menuType, tabType);
     return of(content);
   }
+
+  /**
+   * Detect and return ambiguous item names that appear multiple times across different menu contexts
+   * An item name is considered ambiguous if it appears in multiple different menu locations
+   * This allows automatic detection without hardcoding
+   * 
+   * @returns Observable<string[]> - Array of ambiguous item labels
+   */
+  getAmbiguousItemNames(): Observable<string[]> {
+    return this.configLoader.loadMenuConfig().pipe(
+      map(config => {
+        // Collect all item labels from all menus, with their occurrences count
+        const labelOccurrences: { [label: string]: number } = {};
+        
+        // Recursively scan all menu items
+        const scanMenuItems = (items: any[]): void => {
+          items.forEach(item => {
+            if (item.label) {
+              labelOccurrences[item.label] = (labelOccurrences[item.label] || 0) + 1;
+            }
+            // Also scan tab contents
+            if (item.tabs && Array.isArray(item.tabs)) {
+              item.tabs.forEach((tab: any) => {
+                if (tab.content && Array.isArray(tab.content)) {
+                  scanMenuItems(tab.content);
+                }
+              });
+            }
+            // Recursively scan children
+            if (item.children && Array.isArray(item.children)) {
+              scanMenuItems(item.children);
+            }
+          });
+        };
+        
+        // Start scanning from root menus
+        if (config.menus && Array.isArray(config.menus)) {
+          scanMenuItems(config.menus);
+        }
+        
+        // Return only labels that appear more than once (ambiguous)
+        return Object.entries(labelOccurrences)
+          .filter(([label, count]) => count > 1)
+          .map(([label]) => label);
+      })
+    );
+  }
 }
