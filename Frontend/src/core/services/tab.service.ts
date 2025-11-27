@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Tab, TabMenuData } from '../models/menu.model';
 import { Router } from '@angular/router';
+import { MenuDataService } from './menu-data.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,9 +10,24 @@ import { Router } from '@angular/router';
 export class TabService {
   private tabs$ = new BehaviorSubject<Tab[]>([]);
   private activeTabId$ = new BehaviorSubject<string>('');
+  private contextMap: { [key: string]: string } = {};
 
-  constructor(private router: Router) {
-    // Tab will be initialized when user selects a menu item from sidebar
+  constructor(private router: Router, private menuDataService: MenuDataService) {
+    // Initialize context map from menu configuration
+    this.initializeContextMap();
+  }
+
+  /**
+   * Load menu context map dynamically from menu-config.json
+   * This replaces hardcoded menu type to label mappings
+   */
+  private initializeContextMap(): void {
+    this.menuDataService.getMenuItems().subscribe(items => {
+      this.contextMap = {};
+      items.forEach(item => {
+        this.contextMap[item.id] = item.label;
+      });
+    });
   }
 
   getTabs(): Observable<Tab[]> {
@@ -185,21 +201,10 @@ export class TabService {
       if (parentPath) {
         return `${parentPath} ${itemLabel}`;
       }
-      // Second priority: use menu type context
+      // Second priority: use menu type context from dynamically loaded context map
       if (menuType) {
-        const contextMap: { [key: string]: string } = {
-          'dashboard': 'Dashboard',
-          'users': 'User',
-          'settings': 'System',
-          'analytics': 'Analytics',
-          'reports': 'Report',
-          'home': 'Home',
-          'projects': 'Project',
-          'engineering': 'Engineering',
-          'planning': 'Planning'
-        };
-        
-        const contextName = contextMap[menuType] || menuType;
+        // Load from dynamically built context map (loaded from menu-config.json)
+        const contextName = this.contextMap[menuType] || menuType;
         return `${contextName} ${itemLabel}`;
       }
     }
