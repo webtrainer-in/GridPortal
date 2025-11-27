@@ -27,6 +27,7 @@ export class SidebarComponent implements OnInit {
   @Output() widthChange = new EventEmitter<number>();
 
   selectedMenuItem: string | null = null;
+  lastViewedMenuId: string | null = null; // Track the last viewed menu for proper tab clearing
   menuItems: SidebarMenuItem[] = [];
   expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
   
@@ -157,14 +158,17 @@ export class SidebarComponent implements OnInit {
     // For regular menu items without children
     event.preventDefault();
     
-    // Check if this is a different menu from currently selected
-    const isDifferentMenu = this.selectedMenuItem !== null && this.selectedMenuItem !== menuId;
+    // Check if this is a different menu from the last viewed menu
+    const isDifferentMenu = this.lastViewedMenuId !== null && this.lastViewedMenuId !== menuId;
     const isCurrentlySelected = this.selectedMenuItem === menuId;
     
-    // Clear all tabs only when switching to a completely different main menu
+    // Clear all tabs when switching to a completely different main menu
     if (isDifferentMenu) {
       this.tabService.clearAllTabs();
     }
+    
+    // Update the last viewed menu ID for tracking
+    this.lastViewedMenuId = menuId;
     
     // For any menu item with a route, create a tab
     if (menuItem && menuItem.routerLink) {
@@ -189,14 +193,24 @@ export class SidebarComponent implements OnInit {
       }
     }
     
-    // Toggle secondary panel
-    this.selectedMenuItem = isCurrentlySelected ? null : menuId;
-    
-    // Emit event to parent component
-    this.secondaryPanelToggle.emit({
-      isOpen: !isCurrentlySelected,
-      menuId: this.selectedMenuItem
-    });
+    // Only toggle secondary panel if the menu has tabs defined
+    const hasTabsForMenu = this.menuDataService.hasTabsForMenu(menuId);
+    if (hasTabsForMenu) {
+      this.selectedMenuItem = isCurrentlySelected ? null : menuId;
+      
+      // Emit event to parent component
+      this.secondaryPanelToggle.emit({
+        isOpen: !isCurrentlySelected,
+        menuId: this.selectedMenuItem
+      });
+    } else {
+      // If menu has no tabs, close the secondary panel
+      this.selectedMenuItem = null;
+      this.secondaryPanelToggle.emit({
+        isOpen: false,
+        menuId: null
+      });
+    }
 
     // Close sidebar on mobile
     if (window.innerWidth <= 768) {
@@ -216,6 +230,32 @@ export class SidebarComponent implements OnInit {
    * Handle menu selection change from recursive component
    */
   onMenuSelectionChange(menuId: string, isOpen: boolean): void {
+    // Check if this is a different menu from the last viewed menu
+    const isDifferentMenu = this.lastViewedMenuId !== null && this.lastViewedMenuId !== menuId;
+    
+    // Clear all tabs when switching to a different menu
+    if (isDifferentMenu && isOpen) {
+      this.tabService.clearAllTabs();
+    }
+    
+    // Update the last viewed menu ID for tracking
+    if (isOpen) {
+      this.lastViewedMenuId = menuId;
+    }
+    
+    // Check if the menu has tabs before allowing it to be selected
+    const hasTabsForMenu = this.menuDataService.hasTabsForMenu(menuId);
+    
+    if (!hasTabsForMenu) {
+      // If menu has no tabs, close the secondary panel
+      this.selectedMenuItem = null;
+      this.secondaryPanelToggle.emit({
+        isOpen: false,
+        menuId: null
+      });
+      return;
+    }
+    
     this.selectedMenuItem = isOpen ? menuId : null;
     
     this.secondaryPanelToggle.emit({
@@ -262,7 +302,30 @@ export class SidebarComponent implements OnInit {
     event.preventDefault();
     event.stopPropagation();
     
-    // Toggle secondary panel for submenu items
+    // Check if this is a different menu from the last viewed menu
+    const isDifferentMenu = this.lastViewedMenuId !== null && this.lastViewedMenuId !== menuId;
+    
+    // Clear all tabs when switching to a different menu
+    if (isDifferentMenu) {
+      this.tabService.clearAllTabs();
+    }
+    
+    // Update the last viewed menu ID for tracking
+    this.lastViewedMenuId = menuId;
+    
+    // Only toggle secondary panel if the menu has tabs defined
+    const hasTabsForMenu = this.menuDataService.hasTabsForMenu(menuId);
+    if (!hasTabsForMenu) {
+      // If menu has no tabs, close the secondary panel
+      this.selectedMenuItem = null;
+      this.secondaryPanelToggle.emit({
+        isOpen: false,
+        menuId: null
+      });
+      return;
+    }
+    
+    // Toggle secondary panel for submenu items with tabs
     const isCurrentlySelected = this.selectedMenuItem === menuId;
     this.selectedMenuItem = isCurrentlySelected ? null : menuId;
     
