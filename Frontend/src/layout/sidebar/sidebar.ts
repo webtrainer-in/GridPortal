@@ -167,17 +167,21 @@ export class SidebarComponent implements OnInit {
     
     // For any menu item with a route, create a tab
     if (menuItem && menuItem.routerLink) {
+      // Check if Ctrl/Cmd key is pressed for new tab
+      const mouseEvent = event as MouseEvent;
+      const isCtrlClick = mouseEvent.ctrlKey || mouseEvent.metaKey;
+      
       // Create tab data
       const tabData = {
         menuType: menuId,
         itemLabel: menuItem.label,
         route: menuItem.routerLink,
-        icon: menuItem.icon
+        icon: menuItem.icon,
+        isPrimary: menuItem.isPrimary || false,
+        isNewTab: isCtrlClick // Mark Ctrl+click tabs as new tabs (always closable)
       };
       
-      // Check if Ctrl/Cmd key is pressed for new tab
-      const mouseEvent = event as MouseEvent;
-      if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
+      if (isCtrlClick) {
         this.tabService.openMenuItemInNewTab(tabData);
       } else {
         this.tabService.openMenuItem(tabData);

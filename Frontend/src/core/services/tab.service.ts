@@ -85,70 +85,35 @@ export class TabService {
   }
 
   openMenuItemInNewTab(menuData: TabMenuData): void {
-    const tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
-    const tabTitle = this.generateTabTitle(menuData.itemLabel, menuData.menuType);
+    // Generate base tab ID
+    let tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType, menuData.parentPath);
     
-    const tab: Tab = {
-      id: tabId,
-      title: tabTitle,
-      route: menuData.route,
-      icon: menuData.icon || 'pi pi-file',
-      isActive: true,
-      canClose: true,
-      data: menuData
-    };
-    
-    this.addTab(tab);
-  }
-
-  openMenuItemInSamePanel(menuData: TabMenuData): void {
-    // Update the active tab with the new content
+    // Check if tab already exists
     const currentTabs = this.tabs$.value;
-    const activeTabId = this.activeTabId$.value;
+    let existingTab = currentTabs.find(t => t.id === tabId);
     
-    if (activeTabId && currentTabs.length > 0) {
-      const activeTab = currentTabs.find(t => t.id === activeTabId);
-      
-      if (activeTab) {
-        // Generate new tab data
-        const newTabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
-        const newTabTitle = this.generateTabTitle(menuData.itemLabel, menuData.menuType);
-        
-        // Update the active tab with new information
-        const updatedTabs = currentTabs.map(tab => {
-          if (tab.id === activeTabId) {
-            return {
-              ...tab,
-              id: newTabId,
-              title: newTabTitle,
-              route: menuData.route,
-              icon: menuData.icon || tab.icon,
-              data: menuData
-            };
-          }
-          return tab;
-        });
-        
-        this.tabs$.next(updatedTabs);
-        this.activeTabId$.next(newTabId);
-      }
+    if (existingTab) {
+      // Tab already exists, just activate it instead of creating a duplicate
+      this.setActiveTab(tabId);
+      return;
     }
     
-    // Navigate to the route
-    this.router.navigate([menuData.route]);
-  }
-
-  openMenuItem(menuData: TabMenuData): void {
-    // Open menu item in existing tab (replace current tab or activate existing)
-    const tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType);
+    // Check if there are other tabs with the same label (but different route/context)
+    // If yes, add a counter to make the display title unique
+    const tabsWithSameLabel = currentTabs.filter(t => 
+      t.title === this.generateTabTitle(menuData.itemLabel, menuData.menuType, menuData.parentPath)
+    );
     
-    // For main menu items, use the label directly without adding context prefix
-    const mainMenuItems = ['dashboard', 'users', 'settings', 'analytics', 'reports'];
-    const isMainMenuItem = mainMenuItems.includes(menuData.menuType);
-    const tabTitle = isMainMenuItem ? menuData.itemLabel : this.generateTabTitle(menuData.itemLabel, menuData.menuType);
+    let tabTitle = this.generateTabTitle(menuData.itemLabel, menuData.menuType, menuData.parentPath);
+    if (tabsWithSameLabel.length > 0) {
+      // Add sequence number to differentiate tabs with same name from different contexts
+      tabTitle = `${tabTitle} (${tabsWithSameLabel.length + 1})`;
+      tabId = `${tabId}-${tabsWithSameLabel.length + 1}`;
+    }
     
-    // Main menu items should not be closable
-    const canClose = !isMainMenuItem;
+    // When opened via Ctrl+click (isNewTab=true), always allow closing
+    // Otherwise respect the isPrimary flag
+    const canClose = menuData.isNewTab === true || menuData.isPrimary !== true;
     
     const tab: Tab = {
       id: tabId,
@@ -163,44 +128,80 @@ export class TabService {
     this.addTab(tab);
   }
 
-  initializeMainMenuTab(menuId: string, label: string, route: string, icon: string): void {
-    // Initialize or activate main menu tab (non-closable)
+  openMenuItem(menuData: TabMenuData): void {
+    // Open menu item in existing tab (replace current tab or activate existing)
+    const tabId = this.generateTabId(menuData.route, menuData.itemLabel, menuData.menuType, menuData.parentPath);
+    
+    // Use the isPrimary flag from the menu data to determine if tab can be closed
+    // Primary menus should not be closable
+    const tabTitle = this.generateTabTitle(menuData.itemLabel, menuData.menuType, menuData.parentPath);
+    const canClose = menuData.isPrimary !== true;
+    
+    const tab: Tab = {
+      id: tabId,
+      title: tabTitle,
+      route: menuData.route,
+      icon: menuData.icon || 'pi pi-file',
+      isActive: true,
+      canClose: canClose,
+      data: menuData
+    };
+    
+    this.addTab(tab);
+  }
+
+  initializeMainMenuTab(menuId: string, label: string, route: string, icon: string, isPrimary: boolean = true): void {
+    // Initialize or activate main menu tab
+    // Primary menus (isPrimary = true) cannot be closed
     const tab: Tab = {
       id: menuId,
       title: label,
       route: route,
       icon: icon,
       isActive: true,
-      canClose: false
+      canClose: !isPrimary
     };
     
     this.addTab(tab);
   }
 
-  private generateTabId(route: string, label: string, menuType?: string): string {
+  private generateTabId(route: string, label: string, menuType?: string, parentPath?: string): string {
     // Include menu context to make tab IDs unique across different menu contexts
     const contextPrefix = menuType ? `${menuType}-` : '';
     const routePart = route.replace(/\//g, '-');
     const labelPart = label.replace(/\s+/g, '-').toLowerCase();
+    // Include parent path in ID to distinguish tabs from different nested contexts
+    const parentPart = parentPath ? parentPath.replace(/\s+/g, '-').replace(/>/g, '').toLowerCase() : '';
     
-    return `${contextPrefix}${routePart}-${labelPart}`;
+    return `${contextPrefix}${routePart}-${labelPart}${parentPart ? '-' + parentPart : ''}`;
   }
 
-  private generateTabTitle(itemLabel: string, menuType?: string): string {
+  private generateTabTitle(itemLabel: string, menuType?: string, parentPath?: string): string {
     // For certain common item names, include context to avoid confusion
-    const ambiguousNames = ['Overview', 'General', 'Reports', 'Settings', 'Permissions', 'Access Control'];
+    const ambiguousNames = ['Overview', 'General', 'Reports', 'Settings', 'Permissions', 'Access Control', 'Chart Widgets', 'Data Widgets'];
     
-    if (ambiguousNames.includes(itemLabel) && menuType) {
-      const contextMap: { [key: string]: string } = {
-        'dashboard': 'Dashboard',
-        'users': 'User',
-        'settings': 'System',
-        'analytics': 'Analytics',
-        'reports': 'Report'
-      };
-      
-      const contextName = contextMap[menuType] || menuType;
-      return `${contextName} ${itemLabel}`;
+    if (ambiguousNames.includes(itemLabel)) {
+      // First priority: use parent path if available (for nested menu items)
+      if (parentPath) {
+        return `${parentPath} ${itemLabel}`;
+      }
+      // Second priority: use menu type context
+      if (menuType) {
+        const contextMap: { [key: string]: string } = {
+          'dashboard': 'Dashboard',
+          'users': 'User',
+          'settings': 'System',
+          'analytics': 'Analytics',
+          'reports': 'Report',
+          'home': 'Home',
+          'projects': 'Project',
+          'engineering': 'Engineering',
+          'planning': 'Planning'
+        };
+        
+        const contextName = contextMap[menuType] || menuType;
+        return `${contextName} ${itemLabel}`;
+      }
     }
     
     return itemLabel;

@@ -37,6 +37,7 @@ export class MenuDataService {
             icon: menu.icon,
             routerLink: menu.routerLink,
             isExpanded: menu.isExpanded,
+            isPrimary: menu.isPrimary || false, // Add isPrimary flag from config, default to false
             children: menu.children
           })) as SidebarMenuItem[];
       })

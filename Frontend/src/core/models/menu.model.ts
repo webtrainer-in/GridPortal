@@ -28,6 +28,9 @@ export interface TabMenuData {
   itemLabel: string;
   route: string;
   icon?: string;
+  isPrimary?: boolean; // Whether the source menu is a primary menu
+  isNewTab?: boolean; // Whether this tab was opened via Ctrl+click (always closable)
+  parentPath?: string; // Full path of parent items for nested menus (e.g., "Widgets > Chart Widgets")
 }
 
 /**
@@ -62,6 +65,7 @@ export interface MenuItem {
  * @property routerLink - Navigation route for this menu
  * @property children - Submenu items (collapsible)
  * @property isExpanded - State tracking for expanded/collapsed submenus
+ * @property isPrimary - Whether this is a primary menu (non-closable tab). Defaults to false
  */
 export interface SidebarMenuItem {
   id: string;
@@ -70,6 +74,7 @@ export interface SidebarMenuItem {
   routerLink?: string;
   children?: SidebarMenuItem[];
   isExpanded?: boolean;
+  isPrimary?: boolean; // If true, tabs opened from this menu cannot be closed
 }
 
 /**
