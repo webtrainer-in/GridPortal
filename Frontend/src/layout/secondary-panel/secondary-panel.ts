@@ -5,12 +5,13 @@ import { PanelDragService, PanelPosition } from '../../core/services/panel-drag.
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
 import { TabMenuData, MenuItem, TabConfig } from '../../core/models/menu.model';
+import { RecursiveMenuTreeComponent } from './recursive-menu-tree';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-secondary-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RecursiveMenuTreeComponent],
   templateUrl: './secondary-panel.html',
   styleUrl: './secondary-panel.scss'
 })
@@ -21,12 +22,13 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
   @Output() widthChange = new EventEmitter<number>();
   
   panelPosition: PanelPosition = 'next-to-sidebar';
-  activeTab = 'main'; // Default to main tab
+  activeTab = ''; // Will be set dynamically when menu item is selected
   panelWidth = 280; // Default width
   minWidth = 200;
   maxWidth = 600;
   isResizing = false;
   isCtrlPressed = false;
+  expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
 
   private subscription = new Subscription();
   private boundAdjustForScreenSize = this.adjustForScreenSize.bind(this);
@@ -67,10 +69,16 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedMenuItem'] && !changes['selectedMenuItem'].firstChange) {
-      // Reset to main tab when selectedMenuItem changes
-      this.activeTab = 'main';
       // Reload menu data for new selected menu item
       this.loadMenuData();
+      
+      // Set active tab to the first tab of the new menu item
+      if (this.selectedMenuItem) {
+        const tabs = this.menuDataService.getTabsForMenu(this.selectedMenuItem);
+        if (tabs.length > 0) {
+          this.activeTab = tabs[0].id;
+        }
+      }
     }
   }
   
@@ -111,7 +119,8 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     this.panelClose.emit();
   }
 
-  onMenuItemClick(item: MenuItem, event?: MouseEvent): void {
+  onMenuItemClick(data: {item: MenuItem, event?: MouseEvent}): void {
+    const {item, event} = data;
     // Handle Ctrl+click to create tabs
     if (event && (event.ctrlKey || event.metaKey)) {
       // First, check if we need to initialize the main menu tab
@@ -154,6 +163,22 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
         icon: item.icon
       };
       this.tabService.openMenuItemInSamePanel(menuData);
+    }
+  }
+
+  /**
+   * Handle toggle expand for menu items
+   * Called when user clicks the expand/collapse button on a folder
+   */
+  onToggleMenuExpand(item: MenuItem): void {
+    // Generate unique key for this item based on its label
+    const itemKey = item.label;
+    
+    // Toggle expanded state
+    if (this.expandedMenuItems.has(itemKey)) {
+      this.expandedMenuItems.delete(itemKey);
+    } else {
+      this.expandedMenuItems.add(itemKey);
     }
   }
 

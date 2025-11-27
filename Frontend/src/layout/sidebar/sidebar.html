@@ -1,11 +1,21 @@
-<div class="sidebar" [class.collapsed]="!isOpen">
+<div class="sidebar" 
+     [class.collapsed]="!isOpen"
+     [class.resizing]="isResizing"
+     [style.width.px]="sidebarWidth">
+  
+  <!-- Resize handle (right edge) - only show when expanded -->
+  <div *ngIf="isOpen" class="resize-handle" 
+       (mousedown)="onResizeStart($event)"
+       title="Drag to resize sidebar">
+  </div>
+
   <div class="sidebar-header">
     <div *ngIf="isOpen" class="expanded-header">
       <p-button 
         icon="pi pi-bars"
         severity="secondary"
         [text]="true"
-        (onClick)="onToggleSidebar()"
+        (onClick)="onSidebarToggle()"
         class="sidebar-toggle"
         [title]="'Collapse Menu'"
       ></p-button>
@@ -14,50 +24,23 @@
         <span>Menu</span>
       </h3>
     </div>
-    <div *ngIf="!isOpen" class="collapsed-header" (click)="onToggleSidebar()" title="Expand Menu">
+    <div *ngIf="!isOpen" class="collapsed-header" (click)="onSidebarToggle()" title="Expand Menu">
       <i class="pi pi-bars sidebar-icon"></i>
     </div>
   </div>
   
   <div class="sidebar-content">
     <nav class="sidebar-nav">
-      <ul class="menu-list">
-        <li *ngFor="let item of menuItems" class="menu-item">
-          <!-- Main menu item -->
-          <a 
-            [routerLink]="item.children && item.children.length > 0 ? null : item.routerLink" 
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: item.children ? true : false }"
-            class="menu-link"
-            [class.selected]="selectedMenuItem === item.id"
-            [class.has-children]="item.children && item.children.length > 0"
-            [title]="!isOpen ? item.label : ''"
-            (click)="onMenuItemSelect(item.id, $event)">
-            <i [class]="item.icon" class="menu-icon"></i>
-            <span class="menu-text" [class.hidden]="!isOpen">{{ item.label }}</span>
-            <!-- Arrow icon for expandable items -->
-            <i *ngIf="item.children && item.children.length > 0 && isOpen" 
-               class="pi pi-chevron-down submenu-arrow"
-               [class.expanded]="item.isExpanded"></i>
-          </a>
-          
-          <!-- Submenu items -->
-          <ul *ngIf="item.children && item.children.length > 0 && item.isExpanded && isOpen" 
-              class="submenu-list">
-            <li *ngFor="let child of item.children" class="submenu-item">
-              <a 
-                [routerLink]="child.routerLink" 
-                routerLinkActive="active"
-                class="submenu-link"
-                [class.selected]="selectedMenuItem === child.id"
-                (click)="onSubmenuItemSelect(child.id, $event)">
-                <i [class]="child.icon" class="submenu-icon"></i>
-                <span class="submenu-text">{{ child.label }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-      </ul>
+      <app-recursive-sidebar-menu 
+        [items]="menuItems" 
+        [level]="0"
+        [isOpen]="isOpen"
+        [expandedItems]="expandedMenuItems"
+        [selectedMenuItem]="selectedMenuItem"
+        (itemSelect)="onMenuItemSelect($event.menuId, $event.event)"
+        (toggleExpand)="onToggleMenuExpand($event)"
+        (selectionChange)="onMenuSelectionChange($event.menuId, $event.isOpen)">
+      </app-recursive-sidebar-menu>
     </nav>
   </div>
 </div>

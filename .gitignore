@@ -60,6 +60,80 @@ Frontend/.env.production
 .DS_Store
 Thumbs.db
 
+# .NET related files
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.so
+*.dylib
+*.su
+*.o
+*.a
+*.lib
+*.lai
+*.la
+*.a
+*.o
+*.obj
+*.slo
+*.lo
+*.o
+*.a
+*.lib
+*.lai
+*.la
+*.so
+*.dylib
+
+# Visual Studio
+.vs/
+.vscode/
+*.sln.iml
+*.user
+*.userprefs
+*.suo
+*.user.props
+*.VC.db
+*.VC.VC.opendb
+
+# ReSharper
+.idea/
+*.resharper
+*.resharper.user
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+
+# Test Results
+TestResults/
+*.trx
+*.coverage
+
+# Entity Framework
+Migrations/
+
+# Code coverage
+opencover/
+codecov/
+
 /API
 /Docs
 /Lib
