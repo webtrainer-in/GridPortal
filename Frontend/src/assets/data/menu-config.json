@@ -688,7 +688,7 @@
       "id": "engineering",
       "label": "Engineering",
       "icon": "pi pi-user-edit",
-      "routerLink": "/dash",
+      "routerLink": "/engineering",
       "isExpanded": false,
       "children": [
         {
@@ -1413,7 +1413,7 @@
       "id": "protection",
       "label": "Protection",
       "icon": "pi pi-stopwatch",
-      "routerLink": "/settings",
+      "routerLink": "/protection",
       "isExpanded": false,
       "children": [
         {

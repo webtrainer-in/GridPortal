@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
@@ -39,6 +39,7 @@ export class SidebarComponent implements OnInit {
   constructor(
     private tabService: TabService,
     private menuDataService: MenuDataService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
 

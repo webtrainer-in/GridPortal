@@ -42,6 +42,18 @@ export const routes: Routes = [
       {
         path: 'reports',
         loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder
+      },
+      {
+        path: 'engineering',
+        loadComponent: () => import('../features/users/pages/users/users').then(m => m.UsersComponent) // Placeholder for Engineering parent
+      },
+      {
+        path: 'protection',
+        loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder for Protection parent
+      },
+      {
+        path: 'operations',
+        loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder for Operations parent
       }
     ]
   },

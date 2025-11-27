@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { SidebarMenuItem } from '../../core/models/menu.model';
 
 /**
@@ -30,6 +30,8 @@ export class RecursiveSidebarMenuComponent implements OnInit {
   // Map to track expanded state by item ID
   private expandedMap: Map<string, boolean> = new Map();
   
+  constructor(private router: Router) {}
+  
   ngOnInit(): void {
     this.updateExpandedMap();
   }
@@ -55,14 +57,33 @@ export class RecursiveSidebarMenuComponent implements OnInit {
   
   /**
    * Handle item click
+   * If item has children AND a routerLink, navigate to the route but still allow expand/collapse
+   * If item has children but NO routerLink, only toggle expansion
+   * If item has no children, navigate or emit selection
    */
   onItemClick(item: SidebarMenuItem, event: Event): void {
     event.preventDefault();
     
-    // If item has children, toggle expansion
+    // If item has children and a route, navigate to parent route and emit selection
+    if (this.hasChildren(item) && item.routerLink) {
+      // Navigate to parent route
+      this.router.navigate([item.routerLink]);
+      
+      // Emit item selection for tab/secondary panel handling
+      this.itemSelect.emit({ menuId: item.id, event });
+      this.selectionChange.emit({ menuId: item.id, isOpen: true });
+      return;
+    }
+    
+    // If item has children but no route, only toggle expansion
     if (this.hasChildren(item)) {
       this.onToggleExpand(item, event);
       return;
+    }
+    
+    // For items without children, navigate if route exists
+    if (item.routerLink) {
+      this.router.navigate([item.routerLink]);
     }
     
     // Emit item selection
