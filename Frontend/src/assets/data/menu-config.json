@@ -1064,8 +1064,8 @@
               "children": 
               [
                 {
-              "id": "lines",
-              "label": "Lines",
+              "id": "region",
+              "label": "Region",
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "isExpanded": false,
@@ -1126,8 +1126,8 @@
               "children": 
               [
                 {
-              "id": "lines",
-              "label": "Lines",
+              "id": "East",
+              "label": "East",
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "displayTitle": "Transmission Lines - Details",

@@ -77,8 +77,8 @@ export class MenuConfigLoaderService {
 
   /**
    * Find a specific menu by ID
-   * Searches top-level menus first, then recursively searches in children arrays
-   * This allows second-level menu items (like submenu items) to be found and configured
+   * Recursively searches through all nesting levels of menus
+   * This allows menu items at any depth (top-level, second-level, third-level, etc.) to be found and configured
    * 
    * @param menuId - The ID of the menu to find
    * @returns any - The menu definition or undefined
@@ -87,17 +87,38 @@ export class MenuConfigLoaderService {
     // Search top-level menus first
     let menu = this.cachedConfig?.menus.find((m: any) => m.id === menuId);
     
-    // If not found, search recursively in children (second-level items)
+    // If not found, search recursively through all children levels
     if (!menu) {
-      for (let topMenu of this.cachedConfig?.menus || []) {
-        if (topMenu.children && topMenu.children.length > 0) {
-          menu = topMenu.children.find((child: any) => child.id === menuId);
-          if (menu) break;
+      menu = this.searchMenuRecursively(menuId, this.cachedConfig?.menus || []);
+    }
+    
+    return menu;
+  }
+
+  /**
+   * Recursively search through menu items at all nesting levels
+   * 
+   * @param menuId - The ID of the menu to find
+   * @param items - Array of menu items to search through
+   * @returns any - The menu definition or undefined
+   */
+  private searchMenuRecursively(menuId: string, items: any[]): any {
+    for (const item of items) {
+      // Check if this item matches
+      if (item.id === menuId) {
+        return item;
+      }
+      
+      // Recursively search in children if they exist
+      if (item.children && item.children.length > 0) {
+        const found = this.searchMenuRecursively(menuId, item.children);
+        if (found) {
+          return found;
         }
       }
     }
     
-    return menu;
+    return undefined;
   }
 
   /**
