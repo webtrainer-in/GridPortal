@@ -75,6 +75,7 @@ export interface SidebarMenuItem {
   children?: SidebarMenuItem[];
   isExpanded?: boolean;
   isPrimary?: boolean; // If true, tabs opened from this menu cannot be closed
+  requiredRoles?: string[]; // Roles required to view this menu item
 }
 
 /**

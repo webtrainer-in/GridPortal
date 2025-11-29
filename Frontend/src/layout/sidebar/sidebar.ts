@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
+import { AuthService } from '../../core/services/auth.service';
 import { SidebarMenuItem } from '../../core/models/menu.model';
 import { RecursiveSidebarMenuComponent } from './recursive-sidebar-menu';
 
@@ -40,6 +41,7 @@ export class SidebarComponent implements OnInit {
   constructor(
     private tabService: TabService,
     private menuDataService: MenuDataService,
+    private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -51,8 +53,32 @@ export class SidebarComponent implements OnInit {
 
   loadMenuItems(): void {
     this.menuDataService.getMenuItems().subscribe(items => {
-      this.menuItems = items;
+      this.menuItems = this.filterMenuItemsByRole(items);
       this.cdr.markForCheck();
+    });
+  }
+
+  /**
+   * Filter menu items based on user roles
+   * Recursively filters both parent and child menu items
+   */
+  private filterMenuItemsByRole(items: SidebarMenuItem[]): SidebarMenuItem[] {
+    return items.filter(item => {
+      // Check if item has role requirements
+      if (item.requiredRoles && item.requiredRoles.length > 0) {
+        // Check if user has any of the required roles
+        const hasAccess = this.authService.hasAnyRole(item.requiredRoles);
+        if (!hasAccess) {
+          return false; // Filter out this item
+        }
+      }
+      
+      // Recursively filter children if they exist
+      if (item.children && item.children.length > 0) {
+        item.children = this.filterMenuItemsByRole(item.children);
+      }
+      
+      return true; // Include this item
     });
   }
 

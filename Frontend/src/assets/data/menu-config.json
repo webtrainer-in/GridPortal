@@ -1415,6 +1415,7 @@
       "icon": "pi pi-stopwatch",
       "routerLink": "/protection",
       "isExpanded": false,
+      "requiredRoles": ["Operator"],
       "children": [
         {
           "id": "standards",
