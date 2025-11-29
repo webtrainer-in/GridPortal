@@ -69,15 +69,16 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
+        // Try to find user by username or email
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Username == request.Username);
+            .FirstOrDefaultAsync(u => u.Username == request.UsernameOrEmail || u.Email == request.UsernameOrEmail);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             return new AuthResponse
             {
                 Success = false,
-                Message = "Invalid username or password"
+                Message = "Invalid username/email or password"
             };
         }
 

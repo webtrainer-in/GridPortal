@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Login with existing credentials
     /// </summary>
-    /// <param name="request">Login credentials</param>
+    /// <param name="request">Login credentials (username or email)</param>
     /// <returns>Authentication response with JWT token</returns>
     [HttpPost("login")]
     [AllowAnonymous]
