@@ -134,6 +134,5 @@ Migrations/
 opencover/
 codecov/
 
-/API
 /Docs
 /Lib
