@@ -40,12 +40,30 @@ public class AuthService : IAuthService
             Email = request.Email,
             FirstName = request.FirstName,
             LastName = request.LastName,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = "User"
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        // Assign default "User" role
+        var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+        if (defaultRole != null)
+        {
+            var userRole = new UserRole
+            {
+                UserId = user.Id,
+                RoleId = defaultRole.Id
+            };
+            _context.UserRoles.Add(userRole);
+            await _context.SaveChangesAsync();
+        }
+
+        // Reload user with roles
+        user = await _context.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstAsync(u => u.Id == user.Id);
 
         var token = GenerateJwtToken(user);
 
@@ -62,15 +80,17 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = GetUserRoles(user)
             }
         };
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
-        // Try to find user by username or email
+        // Try to find user by username or email with roles
         var user = await _context.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Username == request.UsernameOrEmail || u.Email == request.UsernameOrEmail);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
@@ -109,7 +129,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = GetUserRoles(user)
             }
         };
     }
@@ -136,7 +156,10 @@ public class AuthService : IAuthService
             };
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Username == username);
         if (user == null)
         {
             return new AuthResponse
@@ -161,7 +184,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = GetUserRoles(user)
             }
         };
     }
@@ -177,9 +200,15 @@ public class AuthService : IAuthService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Add multiple role claims
+        var userRoles = GetUserRoles(user);
+        foreach (var role in userRoles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         if (!string.IsNullOrEmpty(user.Email))
             claims.Add(new Claim(ClaimTypes.Email, user.Email));
@@ -202,6 +231,17 @@ public class AuthService : IAuthService
         );
 
         return (new JwtSecurityTokenHandler().WriteToken(token), expiration);
+    }
+
+    private List<string> GetUserRoles(User user)
+    {
+        if (user.UserRoles == null || !user.UserRoles.Any())
+            return new List<string> { "User" };
+
+        return user.UserRoles
+            .Where(ur => ur.Role != null && ur.Role.IsActive)
+            .Select(ur => ur.Role.Name)
+            .ToList();
     }
 
     private ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)

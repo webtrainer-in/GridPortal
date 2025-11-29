@@ -8,8 +8,10 @@ public class User
     public string? Email { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string Role { get; set; } = "User";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // Navigation property for many-to-many relationship
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }
