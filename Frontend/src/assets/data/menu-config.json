@@ -9,6 +9,7 @@
       "displayTitle": "GridPortal Home",
       "isPrimary": true,
       "hasTabs": true,
+      "requiredRoles": ["Admin"],
       "tabs": [
         {
           "id": "main",
@@ -698,6 +699,7 @@
           "routerLink": "/dash",
           "displayTitle": "Settings Panel",
           "hasTabs": true,
+          "requiredRoles": ["Operator"],
           "tabs": [
         {
           "id": "main",
