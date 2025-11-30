@@ -26,7 +26,8 @@ export class SidebarComponent implements OnInit {
   @Output() secondaryPanelToggle = new EventEmitter<{isOpen: boolean, menuId: string | null}>();
   @Output() widthChange = new EventEmitter<number>();
 
-  selectedMenuItem: string | null = null;
+  selectedMenuItem: string | null = null; // Visual selection for highlighting
+  activeSecondaryPanel: string | null = null; // Secondary panel state (separate from visual selection)
   lastViewedMenuId: string | null = null; // Track the last viewed menu for proper tab clearing
   menuItems: SidebarMenuItem[] = [];
   expandedMenuItems: Set<string> = new Set(); // Track expanded menu items
@@ -237,6 +238,10 @@ export class SidebarComponent implements OnInit {
   onMenuSelectionChange(menuId: string, isOpen: boolean): void {
     const menuItem = this.findMenuItemRecursive(menuId, this.menuItems);
     
+    // Always update visual selection for highlighting
+    this.selectedMenuItem = isOpen ? menuId : null;
+    this.cdr.markForCheck();
+    
     // If sidebar is collapsed and menu item has children, auto-expand sidebar
     if (!this.isOpen && menuItem && menuItem.children && menuItem.children.length > 0) {
       this.onSidebarToggle();
@@ -255,25 +260,24 @@ export class SidebarComponent implements OnInit {
       this.lastViewedMenuId = menuId;
     }
     
-    // Check if the menu has tabs before allowing it to be selected
+    // Check if the menu has tabs before opening secondary panel
     const hasTabsForMenu = this.menuDataService.hasTabsForMenu(menuId);
     
     if (!hasTabsForMenu) {
-      // If menu has no tabs, close the secondary panel
-      this.selectedMenuItem = null;
+      // If menu has no tabs, close the secondary panel but keep visual selection
+      this.activeSecondaryPanel = null;
       this.secondaryPanelToggle.emit({
         isOpen: false,
         menuId: null
       });
-      return;
+    } else {
+      // Menu has tabs, update secondary panel state
+      this.activeSecondaryPanel = isOpen ? menuId : null;
+      this.secondaryPanelToggle.emit({
+        isOpen: isOpen,
+        menuId: this.activeSecondaryPanel
+      });
     }
-    
-    this.selectedMenuItem = isOpen ? menuId : null;
-    
-    this.secondaryPanelToggle.emit({
-      isOpen: isOpen,
-      menuId: this.selectedMenuItem
-    });
 
     // Close sidebar on mobile
     if (window.innerWidth <= 768) {
