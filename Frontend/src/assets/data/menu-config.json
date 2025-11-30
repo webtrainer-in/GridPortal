@@ -7,6 +7,7 @@
       "icon": "pi pi-home",
       "routerLink": "/dash",
       "displayTitle": "GridPortal Home",
+      "isPrimary": true,
       "hasTabs": true,
       "tabs": [
         {
@@ -687,7 +688,7 @@
       "id": "engineering",
       "label": "Engineering",
       "icon": "pi pi-user-edit",
-      "routerLink": "/dash",
+      "routerLink": "/engineering",
       "isExpanded": false,
       "children": [
         {
@@ -1063,8 +1064,8 @@
               "children": 
               [
                 {
-              "id": "lines",
-              "label": "Lines",
+              "id": "region",
+              "label": "Region",
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "isExpanded": false,
@@ -1125,8 +1126,8 @@
               "children": 
               [
                 {
-              "id": "lines",
-              "label": "Lines",
+              "id": "East",
+              "label": "East",
               "icon": "pi pi-history",
               "routerLink": "/dash",
               "displayTitle": "Transmission Lines - Details",
@@ -1412,7 +1413,7 @@
       "id": "protection",
       "label": "Protection",
       "icon": "pi pi-stopwatch",
-      "routerLink": "/settings",
+      "routerLink": "/protection",
       "isExpanded": false,
       "children": [
         {

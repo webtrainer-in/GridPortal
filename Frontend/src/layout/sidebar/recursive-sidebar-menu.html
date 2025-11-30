@@ -11,7 +11,9 @@
       (click)="onItemClick(item, $event)">
       
       <!-- Toggle Arrow (only for items with children and when sidebar is open) -->
-      <span *ngIf="hasChildren(item) && isOpen" class="menu-arrow">
+      <span *ngIf="hasChildren(item) && isOpen" 
+            class="menu-arrow"
+            (click)="onToggleExpand(item, $event)">
         <i class="pi pi-chevron-right" 
            [class.rotated]="isExpanded(item)"></i>
       </span>
@@ -43,3 +45,4 @@
     </div>
   </li>
 </ul>
+

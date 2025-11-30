@@ -19,8 +19,9 @@ export class RecursiveMenuTreeComponent implements OnInit {
   @Input() items: MenuItem[] = [];
   @Input() level: number = 0; // Track nesting level for styling
   @Input() expandedItems: Set<string> = new Set(); // Track which items are expanded
+  @Input() currentPath: string = ''; // Track the path of parent items (e.g., "Widgets")
   
-  @Output() itemClick = new EventEmitter<{item: MenuItem, event?: MouseEvent}>();
+  @Output() itemClick = new EventEmitter<{item: MenuItem, event?: MouseEvent, parentPath?: string}>();
   @Output() toggleExpand = new EventEmitter<MenuItem>();
   
   // Map to track expanded state by item label (using label as unique identifier)
@@ -67,7 +68,7 @@ export class RecursiveMenuTreeComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.itemClick.emit({item, event});
+    this.itemClick.emit({item, event, parentPath: this.currentPath});
   }
   
   /**
@@ -99,7 +100,18 @@ export class RecursiveMenuTreeComponent implements OnInit {
   getNextLevel(): number {
     return this.level + 1;
   }
-  
+
+  /**
+   * Build the path for the next level of recursion
+   * Appends current item label to parent path
+   */
+  getNextPath(item: MenuItem): string {
+    if (this.currentPath) {
+      return `${this.currentPath} > ${item.label}`;
+    }
+    return item.label;
+  }
+
   /**
    * Track by function for ngFor optimization
    */

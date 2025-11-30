@@ -119,8 +119,8 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
     this.panelClose.emit();
   }
 
-  onMenuItemClick(data: {item: MenuItem, event?: MouseEvent}): void {
-    const {item, event} = data;
+  onMenuItemClick(data: {item: MenuItem, event?: MouseEvent, parentPath?: string}): void {
+    const {item, event, parentPath} = data;
     // Handle Ctrl+click to create tabs
     if (event && (event.ctrlKey || event.metaKey)) {
       // First, check if we need to initialize the main menu tab
@@ -135,34 +135,37 @@ export class SecondaryPanelComponent implements OnInit, OnDestroy, OnChanges {
               mainMenuItem.id,
               mainMenuItem.label,
               mainMenuItem.routerLink,
-              mainMenuItem.icon
+              mainMenuItem.icon,
+              mainMenuItem.isPrimary
             );
           }
         });
       }
 
       // Then create the tab for the clicked item
-      const menuData: TabMenuData = {
-        menuType: this.selectedMenuItem || 'general',
-        itemLabel: item.label,
-        route: item.route || '/dashboard',
-        icon: item.icon
-      };
-      this.tabService.openMenuItemInNewTab(menuData);
+      // Get the isPrimary flag from the currently selected menu item
+      this.menuDataService.getMenuItems().subscribe(menuItems => {
+        const selectedMenu = menuItems.find(m => m.id === this.selectedMenuItem);
+        const menuData: TabMenuData = {
+          menuType: this.selectedMenuItem || 'general',
+          itemLabel: item.label,
+          route: item.route || '/dashboard',
+          icon: item.icon,
+          isPrimary: selectedMenu?.isPrimary || false,
+          isNewTab: true, // Always mark Ctrl+click tabs as new tabs (always closable)
+          parentPath: parentPath // Pass the parent path hierarchy
+        };
+        this.tabService.openMenuItemInNewTab(menuData);
+      });
       return;
     }
 
-    // Regular click: Navigate in same panel without creating tabs
+    // Regular click: Navigate to the route (don't modify tab system)
     const route = item.route;
     if (route) {
       console.log('Navigating to route:', route);
-      const menuData: TabMenuData = {
-        menuType: this.selectedMenuItem || 'general',
-        itemLabel: item.label,
-        route: route,
-        icon: item.icon
-      };
-      this.tabService.openMenuItemInSamePanel(menuData);
+      // Just navigate without modifying tabs
+      this.router.navigate([route]);
     }
   }
 

@@ -42,6 +42,7 @@
         [items]="item.children!" 
         [level]="getNextLevel()"
         [expandedItems]="expandedItems"
+        [currentPath]="getNextPath(item)"
         (itemClick)="itemClick.emit($event)"
         (toggleExpand)="toggleExpand.emit($event)">
       </app-recursive-menu-tree>
