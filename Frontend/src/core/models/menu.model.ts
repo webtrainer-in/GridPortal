@@ -55,6 +55,15 @@ export interface MenuItem {
 }
 
 /**
+ * Role-specific access configuration
+ * Allows defining different access behaviors for different roles
+ */
+export interface RoleAccess {
+  role: string;
+  accessType: 'allow' | 'disable' | 'hide';
+}
+
+/**
  * Represents a main sidebar menu item
  * These are the top-level navigation items displayed in the sidebar
  * Used by: MenuDataService, SidebarComponent
@@ -66,6 +75,8 @@ export interface MenuItem {
  * @property children - Submenu items (collapsible)
  * @property isExpanded - State tracking for expanded/collapsed submenus
  * @property isPrimary - Whether this is a primary menu (non-closable tab). Defaults to false
+ * @property roleAccess - Fine-grained role-based access control
+ * @property isDisabled - Runtime flag indicating if menu item is disabled due to role restrictions
  */
 export interface SidebarMenuItem {
   id: string;
@@ -75,7 +86,8 @@ export interface SidebarMenuItem {
   children?: SidebarMenuItem[];
   isExpanded?: boolean;
   isPrimary?: boolean; // If true, tabs opened from this menu cannot be closed
-  requiredRoles?: string[]; // Roles required to view this menu item
+  roleAccess?: RoleAccess[]; // Fine-grained role-based access control
+  isDisabled?: boolean; // Runtime flag indicating if menu item is disabled due to role restrictions
 }
 
 /**

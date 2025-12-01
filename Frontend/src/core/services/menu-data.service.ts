@@ -37,7 +37,7 @@ export class MenuDataService {
   }
 
   /**
-   * Recursively map menu items to ensure all properties including requiredRoles are preserved
+   * Recursively map menu items to ensure all properties including roleAccess are preserved
    */
   private mapMenuItem(menu: any): SidebarMenuItem {
     const item: SidebarMenuItem = {
@@ -47,7 +47,7 @@ export class MenuDataService {
       routerLink: menu.routerLink,
       isExpanded: menu.isExpanded,
       isPrimary: menu.isPrimary || false,
-      requiredRoles: menu.requiredRoles
+      roleAccess: menu.roleAccess // Fine-grained role access configuration
     };
 
     // Recursively map children if they exist

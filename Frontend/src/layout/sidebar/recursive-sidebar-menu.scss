@@ -27,6 +27,18 @@
     // Dynamic padding based on nesting level
     padding-left: calc(16px + (var(--nesting-level, 0) * 16px));
     
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+      
+      .menu-icon,
+      .menu-label,
+      .menu-arrow i {
+        color: #9ca3af !important;
+      }
+    }
+    
     &:hover {
       background-color: #f9fafb;
       color: #10b981;
