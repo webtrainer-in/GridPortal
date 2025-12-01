@@ -9,7 +9,6 @@
       "displayTitle": "GridPortal Home",
       "isPrimary": true,
       "hasTabs": true,
-      "requiredRoles": ["Admin", "Manager", "Operator"],
       "roleAccess": [
         { "role": "Operator", "accessType": "allow" },
         { "role": "Manager", "accessType": "hide" },
@@ -704,8 +703,11 @@
           "icon": "pi pi-sliders-h",
           "routerLink": "/dash",
           "displayTitle": "Settings Panel",
+          "roleAccess": [
+            { "role": "Operator", "accessType": "allow" },
+            { "role": "Admin", "accessType": "hide" }
+          ],
           "hasTabs": true,
-          "requiredRoles": ["Operator"],
           "tabs": [
         {
           "id": "main",
