@@ -9,6 +9,7 @@ interface LoginResponse {
   success: boolean;
   message: string;
   roles?: string[];
+  user?: User;  // Backend returns user data with roles
 }
 
 export interface User {
@@ -85,6 +86,26 @@ export class AuthService {
             this.userRolesSubject.next(response.roles);
           }
           
+          // Store user data with roles for menu filtering
+          if (response.user) {
+            // Ensure user object has roles from response
+            const userData: User = {
+              ...response.user,
+              roles: response.user.roles || response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
+          } else {
+            // Fallback: create minimal user object from available data
+            const userData: User = {
+              id: 0,
+              username: username,
+              roles: response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
+          }
+          
           // Update BehaviorSubjects
           this.isAuthenticatedSubject.next(true);
           
@@ -123,6 +144,16 @@ export class AuthService {
           if (response.roles) {
             localStorage.setItem('roles', JSON.stringify(response.roles));
             this.userRolesSubject.next(response.roles);
+          }
+          
+          // Store user data with roles for menu filtering
+          if (response.user) {
+            const userData: User = {
+              ...response.user,
+              roles: response.user.roles || response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
           }
           
           // Update BehaviorSubjects
