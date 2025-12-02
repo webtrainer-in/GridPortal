@@ -128,12 +128,23 @@ TestResults/
 *.coverage
 
 # Entity Framework
-Migrations/
+# Migrations/ # Uncomment to ignore migrations
+*.db
+*.db-shm
+*.db-wal
+
+# PostgreSQL
+*.pgsql
+
+# API Configuration (contains sensitive data)
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
 
 # Code coverage
 opencover/
 codecov/
 
-/API
 /Docs
 /Lib

@@ -9,6 +9,12 @@
       "displayTitle": "GridPortal Home",
       "isPrimary": true,
       "hasTabs": true,
+      "roleAccess": [
+        { "role": "Operator", "accessType": "allow" },
+        { "role": "Manager", "accessType": "hide" },
+        { "role": "Admin", "accessType": "disable" }
+
+      ],
       "tabs": [
         {
           "id": "main",
@@ -697,6 +703,10 @@
           "icon": "pi pi-sliders-h",
           "routerLink": "/dash",
           "displayTitle": "Settings Panel",
+          "roleAccess": [
+            { "role": "Operator", "accessType": "allow" },
+            { "role": "Admin", "accessType": "hide" }
+          ],
           "hasTabs": true,
           "tabs": [
         {
@@ -1415,6 +1425,12 @@
       "icon": "pi pi-stopwatch",
       "routerLink": "/protection",
       "isExpanded": false,
+      "roleAccess": [
+        { "role": "Operator", "accessType": "allow" },
+        { "role": "Manager", "accessType": "hide" },
+        { "role": "User", "accessType": "hide" },
+        { "role": "Admin", "accessType": "disable" }
+      ],
       "children": [
         {
           "id": "standards",
@@ -1433,6 +1449,7 @@
           "label": "Fault Analysis",
           "icon": "pi pi-history",
           "routerLink": "/settings/backup-history"
+          
         }
       ],
       "displayTitle": "Settings Panel",
