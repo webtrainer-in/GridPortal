@@ -14,7 +14,7 @@ export class LoginGuard implements CanActivate {
   ) {}
 
   canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (this.authService.isUserAuthenticated()) {
+    if (this.authService.isAuthenticated()) {
       // If user is already authenticated, redirect to dashboard
       console.log('User already authenticated, redirecting to dashboard');
       return this.router.createUrlTree(['/dashboard']);

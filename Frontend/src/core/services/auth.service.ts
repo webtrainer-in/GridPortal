@@ -1,9 +1,15 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, catchError, of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+
+interface LoginResponse {
+  token: string;
+  success: boolean;
+  message: string;
+  roles?: string[];
+}
 
 export interface User {
   id: number;
@@ -34,7 +40,13 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'user_data';
   private readonly LOGIN_STATE_KEY = 'isLoggedIn';
-  private readonly apiUrl = `${environment.apiUrl}/Auth`;
+  //private readonly apiUrl = `${environment.apiUrl}/Auth`;
+
+  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  
+  private userRolesSubject = new BehaviorSubject<string[]>([]);
+  public userRoles$ = this.userRolesSubject.asObservable();
 
   // Reactive signals for authentication state
   private _isLoggedIn = signal<boolean>(this.hasValidToken());
@@ -46,57 +58,96 @@ export class AuthService {
   public readonly isAuthenticated = computed(() => this._isLoggedIn());
 
   constructor(
-    private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private router: Router
   ) {
-    // Initialize authentication state from localStorage on service creation
-    this.initializeAuthState();
+    this.isAuthenticatedSubject.next(!!this.getToken());
+    const roles = this.getRoles();
+    if (roles) {
+      this.userRolesSubject.next(roles);
+    }
   }
 
-  /**
-   * Authenticate user with username/email and password
-   */
-  login(usernameOrEmail: string, password: string): Observable<{success: boolean, message?: string}> {
-    const loginRequest: LoginRequest = {
-      usernameOrEmail: usernameOrEmail,
-      password: password
-    };
-
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, loginRequest).pipe(
+  login(username: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiEndpoint}/api/Auth/login`, {
+      UsernameOrEmail: username,  // Backend expects PascalCase
+      Password: password          // Backend expects PascalCase
+    }).pipe(
       tap(response => {
-        if (response.success && response.token && response.user) {
-          // Store authentication data
-          this.setAuthenticationData(response.user, response.token);
+        if (response.success) {
+          // Store token using consistent keys
+          localStorage.setItem(this.TOKEN_KEY, response.token);
+          localStorage.setItem('token', response.token); // Keep for backward compatibility
+          localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
+          
+          if (response.roles) {
+            localStorage.setItem('roles', JSON.stringify(response.roles));
+            this.userRolesSubject.next(response.roles);
+          }
+          
+          // Update BehaviorSubjects
+          this.isAuthenticatedSubject.next(true);
+          
+          // Update signals
+          this._isLoggedIn.set(true);
+          
+          this.router.navigate(['/dash']);
         }
       }),
-      map(response => ({
-        success: response.success,
-        message: response.message
-      })),
-      catchError(error => {
-        console.error('Login error:', error);
-        const errorMessage = error.error?.message || error.message || 'An error occurred during login. Please try again.';
-        return of({ 
-          success: false, 
-          message: errorMessage
-        });
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          this.logout();
+        }
+        throw error;
       })
     );
   }
 
   /**
-   * Log out the current user
+   * Windows Authentication login - auto authenticates with current Windows credentials
+   * This uses the Windows Authentication endpoint that requires no credentials
+   * and relies on the Windows Authentication configured in IIS/backend
    */
-  logout(): void {
-    this.clearAuthenticationData();
-    this.router.navigate(['/login']);
+  windowsAuth(): Observable<any> {
+    // The endpoint should be configured to use Windows Authentication
+    return this.http.get<any>(`${environment.apiEndpoint}/api/Auth/windows`, { 
+      withCredentials: true // Important: sends Windows credentials
+    }).pipe(
+      tap(response => {
+        if (response.success) {
+          // Store token using consistent keys
+          localStorage.setItem(this.TOKEN_KEY, response.token);
+          localStorage.setItem('token', response.token); // Keep for backward compatibility
+          localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
+          
+          if (response.roles) {
+            localStorage.setItem('roles', JSON.stringify(response.roles));
+            this.userRolesSubject.next(response.roles);
+          }
+          
+          // Update BehaviorSubjects
+          this.isAuthenticatedSubject.next(true);
+          
+          // Update signals
+          this._isLoggedIn.set(true);
+          
+          this.router.navigate(['/dashboard']);
+        }
+      }),
+      catchError(error => {
+        console.error('Windows auth error:', error);
+        return throwError(() => new Error('Windows authentication failed. Please use username/password login.'));
+      })
+    );
   }
 
-  /**
-   * Check if user is authenticated
-   */
-  isUserAuthenticated(): boolean {
-    return this.hasValidToken() && this._isLoggedIn();
+  logout(): void {
+    // Call the backend logout endpoint first
+    this.http.get(`${environment.apiEndpoint}/api/Auth/logout`)
+      .subscribe({
+        next: () => this.handleLogoutSuccess(),
+        error: () => this.handleLogoutSuccess() // Continue with logout even if API call fails
+      });
   }
 
   /**
@@ -106,68 +157,37 @@ export class AuthService {
     return this._currentUser();
   }
 
-  /**
-   * Check if user has a specific role
-   */
-  hasRole(role: string): boolean {
-    const user = this._currentUser();
-    return user?.roles?.includes(role) || false;
-  }
-
-  /**
-   * Check if user has any of the specified roles
-   */
-  hasAnyRole(roles: string[]): boolean {
-    const user = this._currentUser();
-    if (!user?.roles) return false;
-    return roles.some(role => user.roles.includes(role));
-  }
-
-  /**
-   * Get auth token for API requests
-   */
-  getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-
-  /**
-   * Refresh authentication state (useful after token refresh)
-   */
-  refreshAuthState(): void {
-    this.initializeAuthState();
-  }
-
-  // Private methods
-
-  private initializeAuthState(): void {
-    const hasToken = this.hasValidToken();
-    const storedUser = this.getStoredUser();
-    
-    this._isLoggedIn.set(hasToken && !!storedUser);
-    this._currentUser.set(storedUser);
-  }
-
-  private setAuthenticationData(user: User, token: string): void {
-    // Store data in localStorage
-    localStorage.setItem(this.TOKEN_KEY, token);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
-    
-    // Update reactive signals
-    this._isLoggedIn.set(true);
-    this._currentUser.set(user);
-  }
-
-  private clearAuthenticationData(): void {
-    // Remove data from localStorage
+  // Handle logout process after API call (success or error)
+  private handleLogoutSuccess(): void {
+    // Clear all authentication tokens and data
+    localStorage.removeItem('token');
+    localStorage.removeItem('roles');
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem(this.LOGIN_STATE_KEY);
-    localStorage.removeItem('userEmail'); // Legacy cleanup
     
-    // Update reactive signals
+    // Update BehaviorSubjects (old system)
+    this.userRolesSubject.next([]);
+    this.isAuthenticatedSubject.next(false);
+    
+    // Update signals (new system)
     this._isLoggedIn.set(false);
     this._currentUser.set(null);
+    
+    this.router.navigate(['/login']);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  getRoles(): string[] | null {
+    const rolesString = localStorage.getItem('roles');
+    return rolesString ? JSON.parse(rolesString) : null;
+  }
+
+  handleUnauthorized(): void {
+    this.logout();
   }
 
   private hasValidToken(): boolean {
