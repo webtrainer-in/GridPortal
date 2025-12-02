@@ -9,6 +9,7 @@ interface LoginResponse {
   success: boolean;
   message: string;
   roles?: string[];
+  user?: User;  // Backend returns user data with roles
 }
 
 export interface User {
