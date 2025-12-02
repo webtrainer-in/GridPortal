@@ -22,7 +22,7 @@ export class AuthGuard implements CanActivate, CanActivateChild {
   }
 
   private checkAuthentication(): boolean | UrlTree {
-    if (this.authService.isUserAuthenticated()) {
+    if (this.authService.isAuthenticated()) {
       return true;
     } else {
       // Redirect to login page if not authenticated

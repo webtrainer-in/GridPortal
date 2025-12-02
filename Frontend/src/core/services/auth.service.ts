@@ -1,9 +1,15 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, catchError, of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+
+interface LoginResponse {
+  token: string;
+  success: boolean;
+  message: string;
+  roles?: string[];
+}
 
 export interface User {
   id: number;
@@ -34,7 +40,13 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'user_data';
   private readonly LOGIN_STATE_KEY = 'isLoggedIn';
-  private readonly apiUrl = `${environment.apiUrl}/Auth`;
+  //private readonly apiUrl = `${environment.apiUrl}/Auth`;
+
+  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  
+  private userRolesSubject = new BehaviorSubject<string[]>([]);
+  public userRoles$ = this.userRolesSubject.asObservable();
 
   // Reactive signals for authentication state
   private _isLoggedIn = signal<boolean>(this.hasValidToken());
@@ -164,11 +176,13 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  /**
-   * Check if user is authenticated
-   */
-  isUserAuthenticated(): boolean {
-    return this.hasValidToken() && this._isLoggedIn();
+  logout(): void {
+    // Call the backend logout endpoint first
+    this.http.get(`${environment.apiEndpoint}/api/Auth/logout`)
+      .subscribe({
+        next: () => this.handleLogoutSuccess(),
+        error: () => this.handleLogoutSuccess() // Continue with logout even if API call fails
+      });
   }
 
   /**
@@ -178,68 +192,37 @@ export class AuthService {
     return this._currentUser();
   }
 
-  /**
-   * Check if user has a specific role
-   */
-  hasRole(role: string): boolean {
-    const user = this._currentUser();
-    return user?.roles?.includes(role) || false;
-  }
-
-  /**
-   * Check if user has any of the specified roles
-   */
-  hasAnyRole(roles: string[]): boolean {
-    const user = this._currentUser();
-    if (!user?.roles) return false;
-    return roles.some(role => user.roles.includes(role));
-  }
-
-  /**
-   * Get auth token for API requests
-   */
-  getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-
-  /**
-   * Refresh authentication state (useful after token refresh)
-   */
-  refreshAuthState(): void {
-    this.initializeAuthState();
-  }
-
-  // Private methods
-
-  private initializeAuthState(): void {
-    const hasToken = this.hasValidToken();
-    const storedUser = this.getStoredUser();
-    
-    this._isLoggedIn.set(hasToken && !!storedUser);
-    this._currentUser.set(storedUser);
-  }
-
-  private setAuthenticationData(user: User, token: string): void {
-    // Store data in localStorage
-    localStorage.setItem(this.TOKEN_KEY, token);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
-    
-    // Update reactive signals
-    this._isLoggedIn.set(true);
-    this._currentUser.set(user);
-  }
-
-  private clearAuthenticationData(): void {
-    // Remove data from localStorage
+  // Handle logout process after API call (success or error)
+  private handleLogoutSuccess(): void {
+    // Clear all authentication tokens and data
+    localStorage.removeItem('token');
+    localStorage.removeItem('roles');
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem(this.LOGIN_STATE_KEY);
-    localStorage.removeItem('userEmail'); // Legacy cleanup
     
-    // Update reactive signals
+    // Update BehaviorSubjects (old system)
+    this.userRolesSubject.next([]);
+    this.isAuthenticatedSubject.next(false);
+    
+    // Update signals (new system)
     this._isLoggedIn.set(false);
     this._currentUser.set(null);
+    
+    this.router.navigate(['/login']);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  getRoles(): string[] | null {
+    const rolesString = localStorage.getItem('roles');
+    return rolesString ? JSON.parse(rolesString) : null;
+  }
+
+  handleUnauthorized(): void {
+    this.logout();
   }
 
   private hasValidToken(): boolean {
