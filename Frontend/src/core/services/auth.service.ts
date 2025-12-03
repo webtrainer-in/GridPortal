@@ -172,10 +172,6 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this.clearAuthenticationData();
-    this.router.navigate(['/login']);
-  }
 
   logout(): void {
     // Call the backend logout endpoint first
