@@ -33,7 +33,7 @@ export class LoginComponent {
     private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required]],
+      username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
@@ -43,10 +43,10 @@ export class LoginComponent {
       this.isLoading.set(true);
       this.errorMessage.set('');
 
-      const { email, password } = this.loginForm.value;
+      const { username, password } = this.loginForm.value;
 
       // Use AuthService for authentication
-      this.authService.login(email, password).subscribe({
+      this.authService.login(username, password).subscribe({
         next: (result) => {
           if (result.success) {
             this.router.navigate(['/dashboard']);
@@ -70,7 +70,7 @@ export class LoginComponent {
     const field = this.loginForm.get(fieldName);
     if (field && field.invalid && field.touched) {
       if (field.errors?.['required']) {
-        return `${fieldName === 'email' ? 'Username or Email' : 'Password'} is required`;
+        return `${fieldName === 'username' ? 'Username' : 'Password'} is required`;
       }
       if (field.errors?.['minlength']) {
         return 'Password must be at least 6 characters long';
@@ -88,7 +88,7 @@ export class LoginComponent {
 
   clearForm() {
     this.loginForm.reset({
-      email: '',
+      username: '',
       password: ''
     });
     this.errorMessage.set('');

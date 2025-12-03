@@ -87,18 +87,18 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
-        // Try to find user by username or email with roles
+        // Find user by username only (email login removed)
         var user = await _context.Users
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Username == request.UsernameOrEmail || u.Email == request.UsernameOrEmail);
+            .FirstOrDefaultAsync(u => u.Username == request.Username);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             return new AuthResponse
             {
                 Success = false,
-                Message = "Invalid username/email or password"
+                Message = "Invalid username or password"
             };
         }
 
