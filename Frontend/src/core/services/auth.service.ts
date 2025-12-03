@@ -3,9 +3,25 @@ import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
 export interface User {
-  email: string;
-  name?: string;
-  role?: string;
+  id: number;
+  username: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  roles: string[];
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  tokenExpiration?: string;
+  user?: User;
 }
 
 @Injectable({
@@ -25,45 +41,120 @@ export class AuthService {
   public readonly currentUser = this._currentUser.asReadonly();
   public readonly isAuthenticated = computed(() => this._isLoggedIn());
 
-  constructor(private router: Router) {
-    // Initialize authentication state from localStorage on service creation
-    this.initializeAuthState();
+  constructor(
+    private http: HttpClient,
+    private router: Router
+  ) {
+    this.isAuthenticatedSubject.next(!!this.getToken());
+    const roles = this.getRoles();
+    if (roles) {
+      this.userRolesSubject.next(roles);
+    }
   }
 
-  /**
-   * Authenticate user with email and password
-   */
-  login(email: string, password: string): Observable<{success: boolean, message?: string}> {
-    // Simulate API call (replace with actual API call in production)
-    return new Observable(observer => {
-      setTimeout(() => {
-        // Simple validation - replace with actual API authentication
-        if (email === 'admin@gridportal.com' && password === 'admin123') {
-          const user: User = {
-            email: email,
-            name: 'Administrator',
-            role: 'admin'
-          };
+  login(username: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiEndpoint}/api/Auth/login`, {
+      Username: username,  // Backend expects PascalCase
+      Password: password   // Backend expects PascalCase
+    }).pipe(
+      tap(response => {
+        if (response.success) {
+          // Store token using consistent keys
+          localStorage.setItem(this.TOKEN_KEY, response.token);
+          localStorage.setItem('token', response.token); // Keep for backward compatibility
+          localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
           
-          // Store authentication data
-          this.setAuthenticationData(user);
+          if (response.roles) {
+            localStorage.setItem('roles', JSON.stringify(response.roles));
+            this.userRolesSubject.next(response.roles);
+          }
           
-          observer.next({ success: true });
-          observer.complete();
-        } else {
-          observer.next({ 
-            success: false, 
-            message: 'Invalid email or password. Please try again.' 
-          });
-          observer.complete();
+          // Store user data with roles for menu filtering
+          if (response.user) {
+            // Ensure user object has roles from response
+            const userData: User = {
+              ...response.user,
+              roles: response.user.roles || response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
+          } else {
+            // Fallback: create minimal user object from available data
+            const userData: User = {
+              id: 0,
+              username: username,
+              roles: response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
+          }
+          
+          // Update BehaviorSubjects
+          this.isAuthenticatedSubject.next(true);
+          
+          // Update signals
+          this._isLoggedIn.set(true);
+          
+          this.router.navigate(['/dash']);
         }
-      }, 1000); // Simulate network delay
-    });
+      }),
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          this.logout();
+        }
+        throw error;
+      })
+    );
   }
 
   /**
-   * Log out the current user
+   * Windows Authentication login - auto authenticates with current Windows credentials
+   * This uses the Windows Authentication endpoint that requires no credentials
+   * and relies on the Windows Authentication configured in IIS/backend
    */
+  windowsAuth(): Observable<any> {
+    // The endpoint should be configured to use Windows Authentication
+    return this.http.get<any>(`${environment.apiEndpoint}/api/Auth/windows`, { 
+      withCredentials: true // Important: sends Windows credentials
+    }).pipe(
+      tap(response => {
+        if (response.success) {
+          // Store token using consistent keys
+          localStorage.setItem(this.TOKEN_KEY, response.token);
+          localStorage.setItem('token', response.token); // Keep for backward compatibility
+          localStorage.setItem(this.LOGIN_STATE_KEY, 'true');
+          
+          if (response.roles) {
+            localStorage.setItem('roles', JSON.stringify(response.roles));
+            this.userRolesSubject.next(response.roles);
+          }
+          
+          // Store user data with roles for menu filtering
+          if (response.user) {
+            const userData: User = {
+              ...response.user,
+              roles: response.user.roles || response.roles || []
+            };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+            this._currentUser.set(userData);
+          }
+          
+          // Update BehaviorSubjects
+          this.isAuthenticatedSubject.next(true);
+          
+          // Update signals
+          this._isLoggedIn.set(true);
+          
+          this.router.navigate(['/dashboard']);
+        }
+      }),
+      catchError(error => {
+        console.error('Windows auth error:', error);
+        return throwError(() => new Error('Windows authentication failed. Please use username/password login.'));
+      })
+    );
+  }
+
   logout(): void {
     this.clearAuthenticationData();
     this.router.navigate(['/login']);

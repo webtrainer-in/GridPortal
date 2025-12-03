@@ -697,6 +697,10 @@
           "icon": "pi pi-sliders-h",
           "routerLink": "/dash",
           "displayTitle": "Settings Panel",
+          "roleAccess": [
+            { "role": "Operator", "accessType": "disable" },
+            { "role": "Admin", "accessType": "hide" }
+          ],
           "hasTabs": true,
           "tabs": [
         {

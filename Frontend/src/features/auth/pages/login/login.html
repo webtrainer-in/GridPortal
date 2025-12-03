@@ -8,16 +8,16 @@
       
       <!-- Username Field -->
       <div class="field">
-        <label for="email">Username:</label>
+        <label for="username">Username:</label>
         <input 
           pInputText 
-          id="email" 
-          type="email"
-          formControlName="email"
+          id="username" 
+          type="text"
+          formControlName="username"
           placeholder="Enter your username"
         />
-        @if (getFieldError('email')) {
-          <small class="error-text">{{ getFieldError('email') }}</small>
+        @if (getFieldError('username')) {
+          <small class="error-text">{{ getFieldError('username') }}</small>
         }
       </div>
 
