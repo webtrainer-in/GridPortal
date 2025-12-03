@@ -124,6 +124,40 @@
         color: #1f2937;
       }
     }
+    
+    // Disabled state styling
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      
+      .tree-label {
+        color: #9ca3af;
+      }
+      
+      .tree-icon {
+        color: #9ca3af;
+      }
+      
+      .tree-icon-image {
+        filter: opacity(0.4) grayscale(1);
+      }
+      
+      &:hover {
+        background-color: transparent;
+        
+        .tree-icon {
+          color: #9ca3af;
+        }
+        
+        .tree-icon-image {
+          filter: opacity(0.4) grayscale(1);
+        }
+        
+        .tree-label {
+          color: #9ca3af;
+        }
+      }
+    }
   }
 }
 
