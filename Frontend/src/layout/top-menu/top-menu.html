@@ -3,7 +3,7 @@
   <nav class="top-menu-bar">
     <ul class="menu-list">
       <li 
-        *ngFor="let menuItem of menuItems" 
+        *ngFor="let menuItem of menuItems$ | async" 
         class="menu-item"
         [class.active]="selectedMenu === menuItem.id">
         <button 
@@ -54,7 +54,7 @@
        class="ribbon-container" 
        [class.show]="selectedMenu">
     <div class="ribbon-content">
-      <div class="ribbon-panel" *ngFor="let menuItem of menuItems">
+      <div class="ribbon-panel" *ngFor="let menuItem of menuItems$ | async">
         <div *ngIf="selectedMenu === menuItem.id" class="sub-menu-items">
           <div class="sub-items-grid">
             <button 

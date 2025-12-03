@@ -6,7 +6,7 @@ import { MenubarModule } from 'primeng/menubar';
 import { ButtonModule } from 'primeng/button';
 import { TopBarModeService, TopBarMode } from '../../core/services/top-bar-mode.service';
 import { TopBarMenuItem } from '../../core/services/top-bar-config-loader.service';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-top-menu',
@@ -24,19 +24,15 @@ import { Subscription } from 'rxjs';
 export class TopMenuComponent implements OnInit, OnDestroy {
   currentMode: TopBarMode = 'dropdown';
   selectedMenu: string | null = null;
-  menuItems: TopBarMenuItem[] = [];
+  menuItems$: Observable<TopBarMenuItem[]>;
   private subscription = new Subscription();
   
-  constructor(private topBarModeService: TopBarModeService) {}
+  constructor(private topBarModeService: TopBarModeService) {
+    // Initialize the observable in constructor to ensure it's available immediately
+    this.menuItems$ = this.topBarModeService.getMenuItems();
+  }
   
   ngOnInit(): void {
-    // Load menu items from configuration
-    this.subscription.add(
-      this.topBarModeService.getMenuItems().subscribe(items => {
-        this.menuItems = items;
-      })
-    );
-    
     // Subscribe to mode changes
     this.subscription.add(
       this.topBarModeService.mode$.subscribe(mode => {
