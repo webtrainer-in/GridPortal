@@ -6,7 +6,8 @@
       [class.has-children]="hasChildren(item)"
       [class.expanded]="hasChildren(item) && isExpanded(item)"
       [class.selected]="selectedMenuItem === item.id"
-      [title]="!isOpen && level === 0 ? item.label : ''"
+      [class.disabled]="item.isDisabled"
+      [title]="item.isDisabled ? 'Access restricted - Required role not assigned' : (!isOpen && level === 0 ? item.label : '')"
       [style.--nesting-level]="level"
       (click)="onItemClick(item, $event)">
       

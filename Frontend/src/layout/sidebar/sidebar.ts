@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TabService } from '../../core/services/tab.service';
 import { MenuDataService } from '../../core/services/menu-data.service';
+import { AuthService } from '../../core/services/auth.service';
 import { SidebarMenuItem } from '../../core/models/menu.model';
 import { RecursiveSidebarMenuComponent } from './recursive-sidebar-menu';
 
@@ -41,6 +42,7 @@ export class SidebarComponent implements OnInit {
   constructor(
     private tabService: TabService,
     private menuDataService: MenuDataService,
+    private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -52,9 +54,78 @@ export class SidebarComponent implements OnInit {
 
   loadMenuItems(): void {
     this.menuDataService.getMenuItems().subscribe(items => {
-      this.menuItems = items;
+      this.menuItems = this.filterMenuItemsByRole(items);
       this.cdr.markForCheck();
     });
+  }
+
+  /**
+   * Filter menu items based on user roles
+   * Recursively filters both parent and child menu items
+   * Uses roleAccess configuration to determine if menu should be visible, disabled, or hidden
+   */
+  private filterMenuItemsByRole(items: SidebarMenuItem[]): SidebarMenuItem[] {
+    const currentUser = this.authService.getCurrentUser();
+    const userRoles = currentUser?.roles || [];
+    
+    return items.map(item => {
+      // Create a copy to avoid mutating the original
+      const processedItem = { ...item };
+      
+      // Check roleAccess configuration
+      if (processedItem.roleAccess && processedItem.roleAccess.length > 0) {
+        const accessConfig = this.evaluateRoleAccess(processedItem.roleAccess, userRoles);
+        
+        if (accessConfig === 'hide') {
+          return null; // Hidden - remove from menu
+        } else if (accessConfig === 'disable') {
+          processedItem.isDisabled = true; // Visible but disabled
+        }
+        // 'allow' - no action needed, item is accessible
+      }
+      // No roleAccess configuration - accessible to all users
+      
+      // Recursively filter children if they exist
+      if (processedItem.children && processedItem.children.length > 0) {
+        processedItem.children = this.filterMenuItemsByRole(processedItem.children)
+          .filter((child): child is SidebarMenuItem => child !== null);
+      }
+      
+      return processedItem;
+    }).filter((item): item is SidebarMenuItem => item !== null);
+  }
+
+  /**
+   * Evaluate role-based access configuration for the current user
+   * Returns the most permissive access level that matches any of the user's roles
+   * Priority: allow > disable > hide
+   * If no matching role found, defaults to 'hide'
+   */
+  private evaluateRoleAccess(roleAccessConfig: any[], userRoles: string[]): 'allow' | 'disable' | 'hide' {
+    let matchedAccess: 'allow' | 'disable' | 'hide' = 'hide'; // Default to most restrictive
+    
+    // Check each user role against the access configuration
+    for (const userRole of userRoles) {
+      const roleConfig = roleAccessConfig.find(
+        (config: any) => config.role.toLowerCase() === userRole.toLowerCase()
+      );
+      
+      if (roleConfig) {
+        const accessType = roleConfig.accessType;
+        
+        // If we find 'allow', that's the most permissive - return immediately
+        if (accessType === 'allow') {
+          return 'allow';
+        }
+        // If we find 'disable' and current is 'hide', upgrade to 'disable'
+        else if (accessType === 'disable' && matchedAccess === 'hide') {
+          matchedAccess = 'disable';
+        }
+        // 'hide' is already the default, no need to downgrade
+      }
+    }
+    
+    return matchedAccess;
   }
 
   loadSavedWidth(): void {

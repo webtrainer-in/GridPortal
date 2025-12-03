@@ -63,6 +63,11 @@ export class RecursiveSidebarMenuComponent implements OnInit {
   onItemClick(item: SidebarMenuItem, event: Event): void {
     event.preventDefault();
     
+    // Prevent interaction with disabled items
+    if (item.isDisabled) {
+      return;
+    }
+    
     // If item has children, expand it
     if (this.hasChildren(item)) {
       // Expand the menu item if not already expanded

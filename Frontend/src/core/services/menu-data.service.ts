@@ -31,17 +31,31 @@ export class MenuDataService {
       map(config => {
         return config.menus
           .filter((menu: any) => !menu.tabs || menu.tabs.length > 0 || !menu.hasTabs)
-          .map((menu: any) => ({
-            id: menu.id,
-            label: menu.label,
-            icon: menu.icon,
-            routerLink: menu.routerLink,
-            isExpanded: menu.isExpanded,
-            isPrimary: menu.isPrimary || false, // Add isPrimary flag from config, default to false
-            children: menu.children
-          })) as SidebarMenuItem[];
+          .map((menu: any) => this.mapMenuItem(menu)) as SidebarMenuItem[];
       })
     );
+  }
+
+  /**
+   * Recursively map menu items to ensure all properties including roleAccess are preserved
+   */
+  private mapMenuItem(menu: any): SidebarMenuItem {
+    const item: SidebarMenuItem = {
+      id: menu.id,
+      label: menu.label,
+      icon: menu.icon,
+      routerLink: menu.routerLink,
+      isExpanded: menu.isExpanded,
+      isPrimary: menu.isPrimary || false,
+      roleAccess: menu.roleAccess // Fine-grained role access configuration
+    };
+
+    // Recursively map children if they exist
+    if (menu.children && Array.isArray(menu.children)) {
+      item.children = menu.children.map((child: any) => this.mapMenuItem(child));
+    }
+
+    return item;
   }
 
   /**
