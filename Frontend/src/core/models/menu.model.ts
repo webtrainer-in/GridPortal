@@ -44,6 +44,8 @@ export interface TabMenuData {
  * @property type - Whether this is a leaf item or folder with children
  * @property route - Navigation route for this menu item
  * @property children - Nested menu items (for folders)
+ * @property roleAccess - Fine-grained role-based access control
+ * @property isDisabled - Runtime flag indicating if menu item is disabled due to role restrictions
  */
 export interface MenuItem {
   label: string;
@@ -52,6 +54,8 @@ export interface MenuItem {
   type?: 'item' | 'folder';
   route?: string; // The route to navigate to when clicked
   children?: MenuItem[];
+  roleAccess?: RoleAccess[]; // Fine-grained role-based access control
+  isDisabled?: boolean; // Runtime flag indicating if menu item is disabled due to role restrictions
 }
 
 /**

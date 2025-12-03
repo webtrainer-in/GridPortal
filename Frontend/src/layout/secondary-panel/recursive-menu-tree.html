@@ -3,9 +3,10 @@
     <div class="tree-node" 
          [class.folder]="item.type === 'folder'"
          [class.expanded]="hasChildren(item) && isExpanded(item)"
+         [class.disabled]="item.isDisabled"
          [style.--nesting-level]="level"
-         (click)="onItemClick(item, $event)"
-         [title]="hasChildren(item) ? 'Click to toggle or navigate' : 'Click to navigate'">
+         (click)="!item.isDisabled && onItemClick(item, $event)"
+         [title]="item.isDisabled ? 'Access restricted' : (hasChildren(item) ? 'Click to toggle or navigate' : 'Click to navigate')">
       
       <!-- Folder Toggle Button (only for folders with children) -->
       <button *ngIf="hasChildren(item)" 
