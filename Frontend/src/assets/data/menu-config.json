@@ -1715,12 +1715,22 @@
         "id": "file",
         "label": "File",
         "icon": "pi pi-file",
+        "roleAccess": [
+          { "role": "Operator", "accessType": "hide" },
+          { "role": "Manager", "accessType": "hide" },
+          { "role": "Admin", "accessType": "allow" }
+        ],
         "children": [
           {
             "id": "new",
             "label": "New",
             "icon": "pi pi-plus",
-            "action": "/Feature/load-stuty.py"
+            "action": "/Feature/load-stuty.py",
+            "roleAccess": [
+              { "role": "Operator", "accessType": "hide" },
+              { "role": "Manager", "accessType": "hide" },
+              { "role": "Admin", "accessType": "disable" }
+            ]
           },
           {
             "id": "open",
@@ -1732,7 +1742,12 @@
             "id": "save",
             "label": "Save",
             "icon": "pi pi-save",
-            "action": "save"
+            "action": "save",
+            "roleAccess": [
+              { "role": "Operator", "accessType": "disable" },
+              { "role": "Manager", "accessType": "allow" },
+              { "role": "Admin", "accessType": "allow" }
+            ]
           },
           {
             "id": "separator1",
@@ -1753,7 +1768,12 @@
             "icon": "pi pi-plus",
             "type": "button",
             "group": "file",
-            "size": "large"
+            "size": "large",
+            "roleAccess": [
+              { "role": "Operator", "accessType": "hide" },
+              { "role": "Manager", "accessType": "hide" },
+              { "role": "Admin", "accessType": "hide" }
+            ]
           },
           {
             "id": "open",
@@ -1785,6 +1805,11 @@
         "id": "edit",
         "label": "Edit",
         "icon": "pi pi-pencil",
+        "roleAccess": [
+          { "role": "Operator", "accessType": "disable" },
+          { "role": "Manager", "accessType": "allow" },
+          { "role": "Admin", "accessType": "allow" }
+        ],
         "children": [
           {
             "id": "cut",

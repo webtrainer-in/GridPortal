@@ -9,7 +9,9 @@
         <button 
           class="menu-button"
           (click)="onMenuClick(menuItem.id)"
-          [class.selected]="selectedMenu === menuItem.id">
+          [class.selected]="selectedMenu === menuItem.id"
+          [class.disabled]="menuItem.isDisabled"
+          [disabled]="menuItem.isDisabled">
           <i [class]="menuItem.icon" class="menu-icon"></i>
           <span class="menu-label">{{ menuItem.label }}</span>
           <i *ngIf="currentMode === 'dropdown'" class="pi pi-chevron-down dropdown-indicator"></i>
@@ -23,7 +25,9 @@
                 class="dropdown-item">
               <button *ngIf="!subItem.separator" 
                       class="dropdown-button"
-                      (click)="onDropdownAction(subItem.action || '')">
+                      (click)="onDropdownAction(subItem.action || '')"
+                      [class.disabled]="subItem.isDisabled"
+                      [disabled]="subItem.isDisabled">
                 <i [class]="subItem.icon" class="dropdown-icon"></i>
                 <span class="dropdown-label">{{ subItem.label }}</span>
               </button>
@@ -57,7 +61,9 @@
               *ngFor="let item of menuItem.ribbonItems"
               class="sub-item"
               (click)="onMenuAction(item.action || '')"
-              [title]="item.icon">
+              [title]="item.icon"
+              [class.disabled]="item.isDisabled"
+              [disabled]="item.isDisabled">
               <i [class]="item.icon" class="sub-item-icon" [attr.data-icon]="item.icon"></i>
               <span class="sub-item-label">{{ item.label }}</span>
             </button>
