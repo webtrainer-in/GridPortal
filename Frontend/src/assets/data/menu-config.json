@@ -2012,7 +2012,8 @@
             "icon": "pi pi-star",
             "type": "button",
             "group": "configure",
-            "size": "small"
+            "size": "small",
+            "action": "plugins"
           }
         ]
       },

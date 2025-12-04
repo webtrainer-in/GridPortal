@@ -1,0 +1,40 @@
+<div class="plugins-container">
+  <h1>Plugins Management</h1>
+  <p class="subtitle">Manage and configure available plugins</p>
+
+  <div class="plugins-grid">
+    <p-card *ngFor="let plugin of plugins" class="plugin-card" [class.inactive]="plugin.status === 'inactive'">
+      <ng-template pTemplate="header">
+        <div class="plugin-header">
+          <span class="plugin-name">{{ plugin.name }}</span>
+          <span class="plugin-status" [class.active]="plugin.status === 'active'" [class.inactive]="plugin.status === 'inactive'">
+            {{ plugin.status | uppercase }}
+          </span>
+        </div>
+      </ng-template>
+
+      <div class="plugin-content">
+        <p class="plugin-description">{{ plugin.description }}</p>
+        <div class="plugin-actions">
+          <button 
+            pButton 
+            [label]="plugin.status === 'active' ? 'Disable' : 'Enable'"
+            [severity]="plugin.status === 'active' ? 'danger' : 'success'"
+            (click)="togglePlugin(plugin)"
+            class="action-button">
+          </button>
+          <button 
+            pButton 
+            label="Configure"
+            severity="info"
+            class="action-button">
+          </button>
+        </div>
+      </div>
+    </p-card>
+  </div>
+
+  <div class="no-plugins" *ngIf="plugins.length === 0">
+    <p>No plugins available</p>
+  </div>
+</div>

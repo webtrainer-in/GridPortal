@@ -1,0 +1,136 @@
+.plugins-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  h1 {
+    color: #1f2937;
+    margin-bottom: 8px;
+    font-size: 28px;
+    font-weight: 600;
+  }
+
+  .subtitle {
+    color: #6b7280;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+}
+
+.plugins-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+
+  .plugin-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: #10b981;
+    }
+
+    &.inactive {
+      opacity: 0.6;
+      background: #f9fafb;
+    }
+
+    ::ng-deep .p-card {
+      height: 100%;
+    }
+
+    ::ng-deep .p-card-body {
+      padding: 16px;
+    }
+
+    ::ng-deep .p-card-header {
+      padding: 0;
+      border-bottom: none;
+      margin-bottom: 12px;
+    }
+  }
+}
+
+.plugin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 8px 8px 0 0;
+
+  .plugin-name {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 16px;
+  }
+
+  .plugin-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &.active {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    &.inactive {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+  }
+}
+
+.plugin-content {
+  padding: 12px 0;
+
+  .plugin-description {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+  }
+
+  .plugin-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+
+    .action-button {
+      flex: 1;
+      min-width: 100px;
+      font-size: 12px;
+
+      ::ng-deep {
+        .p-button {
+          width: 100%;
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+.no-plugins {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+
+  p {
+    font-size: 16px;
+    margin: 0;
+  }
+}

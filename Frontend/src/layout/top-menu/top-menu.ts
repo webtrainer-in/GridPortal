@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { MenuModule } from 'primeng/menu';
 import { MenubarModule } from 'primeng/menubar';
 import { ButtonModule } from 'primeng/button';
@@ -27,7 +27,10 @@ export class TopMenuComponent implements OnInit, OnDestroy {
   menuItems$: Observable<TopBarMenuItem[]>;
   private subscription = new Subscription();
   
-  constructor(private topBarModeService: TopBarModeService) {
+  constructor(
+    private topBarModeService: TopBarModeService,
+    private router: Router
+  ) {
     // Initialize the observable in constructor to ensure it's available immediately
     this.menuItems$ = this.topBarModeService.getMenuItems();
   }
@@ -79,7 +82,15 @@ export class TopMenuComponent implements OnInit, OnDestroy {
   
   onMenuAction(action: string): void {
     console.log('Action triggered:', action);
-    // Implement actual actions here
+    
+    // Handle specific actions for components
+    if (action === 'plugins') {
+      this.router.navigate(['/plugins']);
+      this.selectedMenu = null;
+      return;
+    }
+    
+    // Implement other actions here
     
     // Close ribbon after action in ribbon mode
     if (this.currentMode === 'ribbon') {
@@ -89,7 +100,15 @@ export class TopMenuComponent implements OnInit, OnDestroy {
   
   onDropdownAction(action: string): void {
     console.log('Dropdown action triggered:', action);
-    // Implement actual actions here
+    
+    // Handle specific actions for components
+    if (action === 'plugins') {
+      this.router.navigate(['/plugins']);
+      this.selectedMenu = null;
+      return;
+    }
+    
+    // Implement other actions here
     
     // Close dropdown after action
     this.selectedMenu = null;
