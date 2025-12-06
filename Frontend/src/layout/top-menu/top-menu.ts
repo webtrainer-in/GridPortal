@@ -81,36 +81,15 @@ export class TopMenuComponent implements OnInit, OnDestroy {
   }
   
   onMenuAction(action: string): void {
-    console.log('Action triggered:', action);
-    
-    // Handle specific actions for components
-    if (action === 'plugins') {
-      this.router.navigate(['/plugins']);
-      this.selectedMenu = null;
-      return;
-    }
-    
-    // Implement other actions here
-    
-    // Close ribbon after action in ribbon mode
-    if (this.currentMode === 'ribbon') {
-      this.selectedMenu = null;
-    }
+    console.log('Action triggered:', action);    
+    this.router.navigate([action]);
+    this.selectedMenu = null;
   }
   
   onDropdownAction(action: string): void {
     console.log('Dropdown action triggered:', action);
-    
-    // Handle specific actions for components
-    if (action === 'plugins') {
-      this.router.navigate(['/plugins']);
-      this.selectedMenu = null;
-      return;
-    }
-    
-    // Implement other actions here
-    
-    // Close dropdown after action
+
+    this.router.navigate([action]);
     this.selectedMenu = null;
   }
 }
