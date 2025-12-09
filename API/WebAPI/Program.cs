@@ -56,6 +56,7 @@ builder.Services.AddAuthorization();
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDynamicGridService, DynamicGridService>();
 
 builder.Services.AddControllers();
 
