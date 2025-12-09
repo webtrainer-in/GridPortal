@@ -1,20 +1,53 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DynamicGrid, GridRow } from './dynamic-grid';
-import { ColDef } from 'ag-grid-community';
+import { FormsModule } from '@angular/forms';
+import { DynamicGrid } from './dynamic-grid';
+import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/dynamic-grid.service';
 
 @Component({
   selector: 'app-dynamic-grid-demo',
   standalone: true,
-  imports: [CommonModule, DynamicGrid],
+  imports: [CommonModule, FormsModule, DynamicGrid],
   template: `
     <div class="demo-container">
-      <h2>AG Grid Demo - Sample Data</h2>
-      <app-dynamic-grid
-        [columnDefs]="columnDefs"
-        [rowData]="rowData"
-        [paginationPageSize]="15"
-      ></app-dynamic-grid>
+      <div class="header">
+        <h2>Dynamic Grid Demo</h2>
+        <div class="controls">
+          <label for="procedure-select">Select Grid:</label>
+          <select 
+            id="procedure-select" 
+            [(ngModel)]="selectedProcedure" 
+            (change)="onProcedureChange()"
+            class="procedure-selector">
+            <option value="">-- Select a grid --</option>
+            @for (proc of availableProcedures; track proc.id) {
+              <option [value]="proc.procedureName">
+                {{ proc.displayName }} @if (proc.category) { ({{ proc.category }}) }
+              </option>
+            }
+          </select>
+          
+          @if (selectedProcedure) {
+            <button (click)="refreshGrid()" class="btn-refresh">
+              🔄 Refresh
+            </button>
+          }
+        </div>
+      </div>
+      
+      @if (selectedProcedure) {
+        @if (gridKey) {
+          <app-dynamic-grid
+            [procedureName]="selectedProcedure"
+            [enableRowEditing]="true"
+            [pageSize]="100"
+          ></app-dynamic-grid>
+        }
+      } @else {
+        <div class="empty-state">
+          <p>👆 Please select a grid from the dropdown above</p>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -30,186 +63,126 @@ import { ColDef } from 'ag-grid-community';
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 15px;
       box-sizing: border-box;
-
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      
       h2 {
         margin: 0;
-        flex-shrink: 0;
       }
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      
+      label {
+        font-weight: 500;
+      }
+      
+      .procedure-selector {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        min-width: 250px;
+        cursor: pointer;
+        
+        &:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+      }
+      
+      .btn-refresh {
+        padding: 8px 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.2s;
+        
+        &:hover {
+          background: #0056b3;
+        }
+      }
+    }
 
-      app-dynamic-grid {
-        height: 600px;
-        display: block;
+    app-dynamic-grid {
+      flex: 1;
+      display: block;
+      min-height: 500px;
+    }
+    
+    .empty-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border: 2px dashed #dee2e6;
+      border-radius: 8px;
+      
+      p {
+        font-size: 18px;
+        color: #6c757d;
+        margin: 0;
       }
     }
   `]
 })
 export class DynamicGridDemoComponent implements OnInit {
-  columnDefs: ColDef[] = [];
-  rowData: GridRow[] = [];
+  availableProcedures: StoredProcedureInfo[] = [];
+  selectedProcedure: string = '';
+  gridKey: number = 1;  // Start with 1 to ensure grid renders
 
-  constructor() {
-    // Initialize data in constructor instead of ngOnInit to ensure it's available
-    // before the child component initializes
-    this.initializeGrid();
-  }
+  constructor(private gridService: DynamicGridService) {}
 
   ngOnInit(): void {
-    this.initializeGrid();
+    this.loadAvailableProcedures();
   }
 
-  private initializeGrid(): void {
-    // Define columns
-    this.columnDefs = [
-      {
-        field: 'id',
-        headerName: 'ID',
-        width: 70,
-        sortable: true,
-        filter: true
+  loadAvailableProcedures(): void {
+    this.gridService.getAvailableProcedures().subscribe({
+      next: (procedures) => {
+        this.availableProcedures = procedures;
+        
+        // Auto-select first procedure if available
+        if (procedures.length > 0 && !this.selectedProcedure) {
+          this.selectedProcedure = procedures[0].procedureName;
+          this.gridKey = 1;  // Ensure grid renders
+        }
       },
-      {
-        field: 'name',
-        headerName: 'Name',
-        flex: 1,
-        minWidth: 150,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'email',
-        headerName: 'Email',
-        flex: 1,
-        minWidth: 200,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'department',
-        headerName: 'Department',
-        flex: 1,
-        minWidth: 150,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'salary',
-        headerName: 'Salary',
-        flex: 1,
-        minWidth: 120,
-        sortable: true,
-        filter: true,
-        type: 'numericColumn'
-      },
-      {
-        field: 'joinDate',
-        headerName: 'Join Date',
-        flex: 1,
-        minWidth: 130,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'status',
-        headerName: 'Status',
-        flex: 1,
-        minWidth: 100,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'phone',
-        headerName: 'Phone',
-        flex: 1,
-        minWidth: 140,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'location',
-        headerName: 'Location',
-        flex: 1,
-        minWidth: 130,
-        sortable: true,
-        filter: true
-      },
-      {
-        field: 'performanceRating',
-        headerName: 'Performance',
-        flex: 1,
-        minWidth: 120,
-        sortable: true,
-        filter: true,
-        type: 'numericColumn'
-      },
-      {
-        field: 'yearsExperience',
-        headerName: 'Experience (Yrs)',
-        flex: 1,
-        minWidth: 140,
-        sortable: true,
-        filter: true,
-        type: 'numericColumn'
-      },
-      {
-        field: 'reportingManager',
-        headerName: 'Manager',
-        flex: 1,
-        minWidth: 150,
-        sortable: true,
-        filter: true
+      error: (error) => {
+        console.error('Error loading procedures:', error);
       }
-    ];
+    });
+  }
 
-    // Sample dummy data - generate 115 records
-    const firstNames = ['John', 'Jane', 'Mike', 'Sarah', 'Robert', 'Emily', 'David', 'Lisa', 'James', 'Jennifer', 
-                        'Christopher', 'Amanda', 'Kevin', 'Michelle', 'Daniel', 'Laura', 'Brian', 'Nicole', 'Ryan', 'Ashley',
-                        'Matthew', 'Jessica', 'Andrew', 'Elizabeth', 'Joshua', 'Melissa', 'Steven', 'Stephanie', 'Thomas', 'Rebecca',
-                        'Joseph', 'Rachel', 'Charles', 'Kimberly', 'William', 'Karen', 'Richard', 'Nancy', 'Paul', 'Betty'];
-    
-    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson',
-                       'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson', 'Clark',
-                       'Rodriguez', 'Lewis', 'Lee', 'Walker', 'Hall', 'Allen', 'Young', 'King', 'Wright', 'Lopez'];
-    
-    const departments = ['Engineering', 'Product', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Design', 'Support', 'Legal'];
-    const statuses = ['Active', 'Active', 'Active', 'Active', 'Inactive']; // 80% active, 20% inactive
-    const locations = ['New York', 'San Francisco', 'Austin', 'Seattle', 'Boston', 'Denver', 'Chicago', 'Los Angeles', 'Miami', 'Portland'];
-    const managers = ['Alice Johnson', 'Bob Smith', 'Carol White', 'David Brown', 'Eve Davis', 'Frank Miller', 'Grace Lee', 'Henry Wilson'];
+  onProcedureChange(): void {
+    // Force grid refresh by toggling gridKey
+    this.gridKey = 0;
+    setTimeout(() => {
+      this.gridKey = Date.now();
+    }, 0);
+  }
 
-    this.rowData = [];
-    for (let i = 1; i <= 115; i++) {
-      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      const name = `${firstName} ${lastName}`;
-      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`;
-      const department = departments[Math.floor(Math.random() * departments.length)];
-      const salary = Math.floor(Math.random() * 60000) + 60000; // 60k to 120k
-      const year = Math.floor(Math.random() * 3) + 2022; // 2022-2024
-      const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
-      const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
-      const joinDate = `${year}-${month}-${day}`;
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const phone = `+1-${Math.floor(Math.random() * 900) + 200}-${Math.floor(Math.random() * 900) + 100}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-      const location = locations[Math.floor(Math.random() * locations.length)];
-      const performanceRating = (Math.random() * 3 + 2).toFixed(1); // 2.0 to 5.0
-      const yearsExperience = Math.floor(Math.random() * 20) + 1; // 1 to 20 years
-      const reportingManager = managers[Math.floor(Math.random() * managers.length)];
-
-      this.rowData.push({
-        id: i,
-        name,
-        email,
-        department,
-        salary,
-        joinDate,
-        status,
-        phone,
-        location,
-        performanceRating,
-        yearsExperience,
-        reportingManager
-      });
-    }
+  refreshGrid(): void {
+    // Force grid refresh by changing key
+    this.gridKey = 0;
+    setTimeout(() => {
+      this.gridKey = Date.now();
+    }, 0);
   }
 }

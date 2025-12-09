@@ -10,7 +10,7 @@
       "isPrimary": true,
       "hasTabs": true,
       "roleAccess": [
-        { "role": "Operator", "accessType": "allow" },
+        { "role": "User", "accessType": "allow" },
         { "role": "Manager", "accessType": "hide" },
         { "role": "Admin", "accessType": "allow" }
 

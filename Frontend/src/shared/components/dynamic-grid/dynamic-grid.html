@@ -1,13 +1,14 @@
-<div class="ag-grid-container">
+<div class="dynamic-grid-container">
   <ag-grid-angular
+    class="ag-theme-quartz"
+    style="width: 100%; height: 600px;"
     [columnDefs]="columnDefs"
     [rowData]="rowData"
-    [defaultColDef]="defaultColDef"
-    [pagination]="pagination"
-    [paginationPageSize]="paginationPageSize"
-    [paginationPageSizeSelector]="paginationPageSizeSelector"
-    [domLayout]="domLayout"
+    [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [theme]="theme"
+    [pagination]="true"
+    [paginationPageSize]="15"
+    [paginationPageSizeSelector]="[15, 25, 50, 100]"
+    (gridReady)="onGridReady($event)"
   ></ag-grid-angular>
 </div>
