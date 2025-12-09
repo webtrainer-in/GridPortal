@@ -64,14 +64,24 @@ public class DynamicGridController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("UpdateRow called with ProcedureName: {ProcedureName}, RowId: {RowId}", 
+                request.ProcedureName, request.RowId);
+            _logger.LogInformation("Changes: {Changes}", System.Text.Json.JsonSerializer.Serialize(request.Changes));
+            
             var userRoles = User.Claims
                 .Where(c => c.Type == ClaimTypes.Role)
                 .Select(c => c.Value)
                 .ToArray();
             
+            _logger.LogInformation("User roles: {Roles}", string.Join(", ", userRoles));
+            
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            _logger.LogInformation("User ID: {UserId}", userId);
 
             var response = await _gridService.UpdateRowAsync(request, userRoles, userId);
+            
+            _logger.LogInformation("Update response - Success: {Success}, Message: {Message}", 
+                response.Success, response.Message);
             
             if (response.Success)
             {
@@ -79,6 +89,8 @@ public class DynamicGridController : ControllerBase
             }
             else
             {
+                _logger.LogWarning("Update failed: {Message}, ErrorCode: {ErrorCode}", 
+                    response.Message, response.ErrorCode);
                 return BadRequest(response);
             }
         }

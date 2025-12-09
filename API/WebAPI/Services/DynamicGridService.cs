@@ -129,18 +129,28 @@ public class DynamicGridService : IDynamicGridService
 
     public async Task<RowUpdateResponse> UpdateRowAsync(RowUpdateRequest request, string[] userRoles, int userId)
     {
+        _logger.LogInformation("UpdateRowAsync called - ProcedureName: {ProcedureName}, RowId: {RowId}, UserId: {UserId}", 
+            request.ProcedureName, request.RowId, userId);
+        _logger.LogInformation("User roles: {Roles}", string.Join(", ", userRoles));
+        
         // Validate access to the grid procedure
         if (!await ValidateProcedureAccessAsync(request.ProcedureName, userRoles))
         {
+            _logger.LogWarning("Access denied to grid procedure: {ProcedureName}", request.ProcedureName);
             throw new UnauthorizedAccessException("Access denied to update this data");
         }
 
         // Determine update procedure name
         var updateProcedureName = request.ProcedureName.Replace("sp_Grid_", "sp_Grid_Update_");
+        _logger.LogInformation("Derived update procedure name: {UpdateProcedureName}", updateProcedureName);
         
         // Validate update procedure exists and user has access
-        if (!await ValidateProcedureAccessAsync(updateProcedureName, userRoles))
+        var hasUpdateAccess = await ValidateProcedureAccessAsync(updateProcedureName, userRoles);
+        _logger.LogInformation("Update procedure validation result: {HasAccess}", hasUpdateAccess);
+        
+        if (!hasUpdateAccess)
         {
+            _logger.LogWarning("Update procedure not found or access denied: {UpdateProcedureName}", updateProcedureName);
             return new RowUpdateResponse
             {
                 Success = false,
@@ -154,14 +164,26 @@ public class DynamicGridService : IDynamicGridService
             // Convert changes dictionary to JSON
             var changesJson = JsonSerializer.Serialize(request.Changes);
             
+            // Convert RowId to int (it comes as JsonElement from JSON deserialization)
+            int rowId;
+            if (request.RowId is System.Text.Json.JsonElement jsonElement)
+            {
+                rowId = jsonElement.GetInt32();
+            }
+            else
+            {
+                rowId = Convert.ToInt32(request.RowId);
+            }
+            _logger.LogInformation("Converted RowId to int: {RowId}", rowId);
+            
             // Execute update function
             var sql = $"SELECT {updateProcedureName}(@p_Id, @p_ChangesJson, @p_UserId)";
             
             var parameters = new[]
             {
-                new NpgsqlParameter("p_Id", request.RowId),
-                new NpgsqlParameter("p_ChangesJson", changesJson),
-                new NpgsqlParameter("p_UserId", userId)
+                new NpgsqlParameter("p_Id", NpgsqlTypes.NpgsqlDbType.Integer) { Value = rowId },
+                new NpgsqlParameter("p_ChangesJson", NpgsqlTypes.NpgsqlDbType.Text) { Value = changesJson },
+                new NpgsqlParameter("p_UserId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = userId }
             };
 
             var connection = _context.Database.GetDbConnection();
