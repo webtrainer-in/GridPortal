@@ -14,6 +14,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
 
+    // Dynamic Grid Framework
+    public DbSet<StoredProcedureRegistry> StoredProcedureRegistry { get; set; }
+    public DbSet<GridColumnState> GridColumnStates { get; set; }
+    
+    // Example Data
+    public DbSet<Department> Departments { get; set; }
+    public DbSet<Employee> Employees { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -56,6 +64,58 @@ public class ApplicationDbContext : DbContext
                 .WithMany(r => r.UserRoles)
                 .HasForeignKey(ur => ur.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // StoredProcedureRegistry configuration
+        modelBuilder.Entity<StoredProcedureRegistry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ProcedureName).IsUnique();
+            entity.HasIndex(e => new { e.Category, e.IsActive });
+            entity.Property(e => e.ProcedureName).IsRequired();
+            entity.Property(e => e.DisplayName).IsRequired();
+            entity.Property(e => e.AllowedRoles).IsRequired().HasDefaultValue("[]");
+        });
+
+        // GridColumnState configuration
+        modelBuilder.Entity<GridColumnState>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.ProcedureName }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ProcedureName);
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Department configuration
+        modelBuilder.Entity<Department>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.Name).IsRequired();
+        });
+
+        // Employee configuration
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.DepartmentId);
+            entity.HasIndex(e => new { e.Status, e.IsActive });
+            
+            entity.Property(e => e.FirstName).IsRequired();
+            entity.Property(e => e.LastName).IsRequired();
+            entity.Property(e => e.Email).IsRequired();
+            entity.Property(e => e.Status).HasDefaultValue("Active");
+            
+            entity.HasOne(e => e.Department)
+                .WithMany(d => d.Employees)
+                .HasForeignKey(e => e.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed default roles
