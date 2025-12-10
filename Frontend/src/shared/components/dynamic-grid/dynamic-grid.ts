@@ -38,6 +38,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   currentSortColumn: string | null = null;
   currentSortDirection: 'ASC' | 'DESC' = 'ASC';
   
+  // Filtering state (for server-side pagination)
+  currentFilterModel: any = null;
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -86,6 +89,25 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
     // Reload current page with new sort
     this.loadPageData(this.currentPage);
+  }
+
+  onFilterChanged(): void {
+    // Only handle filtering for server-side pagination
+    if (!this.isServerSidePagination || !this.gridApi) {
+      return;
+    }
+
+    const filterModel = this.gridApi.getFilterModel();
+    this.currentFilterModel = Object.keys(filterModel).length > 0 ? filterModel : null;
+    
+    if (this.currentFilterModel) {
+      console.log('🔍 Filter changed:', JSON.stringify(this.currentFilterModel));
+    } else {
+      console.log('🔍 Filter cleared');
+    }
+
+    // Reload from page 1 with new filter
+    this.loadPageData(1);
   }
 
   private setLoading(loading: boolean): void {
@@ -249,6 +271,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
     if (this.currentSortColumn) {
       console.log(`🔽 Sorting by: ${this.currentSortColumn} ${this.currentSortDirection}`);
     }
+    if (this.currentFilterModel) {
+      console.log(`🔍 Filtering with:`, this.currentFilterModel);
+    }
     this.isLoading = true;
     
     const request: GridDataRequest = {
@@ -256,7 +281,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageNumber: page,
       pageSize: this.pageSize,
       sortColumn: this.currentSortColumn || undefined,
-      sortDirection: this.currentSortDirection
+      sortDirection: this.currentSortDirection,
+      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined
     };
 
     this.gridService.executeGridProcedure(request)
