@@ -178,17 +178,24 @@ export class DynamicGrid implements OnInit, OnDestroy {
             this.updateColumnDefinitions(response.columns);
           }
           
-          // Store all data for client-side pagination
+          // Store all data - AG Grid will handle sorting/filtering
           this.allRowData = response.rows || [];
+          this.rowData = this.allRowData; // Give AG Grid ALL data for client-side operations
           this.totalCount = this.allRowData.length;
           this.totalPages = Math.ceil(this.totalCount / this.pageSize);
           this.currentPage = 1;
           
-          console.log(`✅ Stored ${this.allRowData.length} rows in allRowData`);
+          console.log(`✅ Loaded ${this.allRowData.length} rows for client-side operations`);
           console.log(`✅ Total pages: ${this.totalPages}`);
           
-          // Show first page
-          this.updatePagedData();
+          // Set grid data
+          if (this.gridApi) {
+            this.gridApi.setGridOption('rowData', this.rowData);
+            // Enable AG Grid's pagination for client-side mode
+            this.gridApi.setGridOption('pagination', true);
+            this.gridApi.setGridOption('paginationPageSize', this.pageSize);
+          }
+          
           this.setLoading(false);
         },
         error: (error) => {

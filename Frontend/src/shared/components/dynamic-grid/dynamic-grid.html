@@ -20,25 +20,15 @@
     [rowData]="rowData"
     [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [pagination]="false"
+    [pagination]="!isServerSidePagination"
+    [paginationPageSize]="pageSize"
+    [paginationPageSizeSelector]="[15, 25, 50, 100]"
     (gridReady)="onGridReady($event)"
   ></ag-grid-angular>
 
-  <!-- Custom pagination controls (shown for both modes) -->
-  <div class="custom-pagination">
-    <button 
-      class="pagination-btn" 
-      [disabled]="!canGoPrevious || isLoading" 
-      (click)="previousPage()">
-      ← Previous
-    </button>
-    
-    <div class="pagination-info-text">
-      <span>Page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong></span>
-      <span class="separator">|</span>
-      <span>Showing {{ getStartRecord() }} - {{ getEndRecord() }} of {{ totalCount }}</span>
-    </div>
-    
+  <!-- Custom pagination controls (shown only for server-side pagination) -->
+  <div *ngIf="isServerSidePagination" class="custom-pagination">
+    <!-- Page Size Selector (leftmost) -->
     <div class="page-size-selector">
       <label for="page-size">Page Size:</label>
       <select 
@@ -53,11 +43,50 @@
       </select>
     </div>
     
+    <!-- Record Range Info -->
+    <div class="pagination-info-text">
+      <span>{{ getStartRecord() }} to {{ getEndRecord() }} of {{ totalCount }}</span>
+    </div>
+    
+    <!-- First Page Button -->
     <button 
-      class="pagination-btn" 
+      class="pagination-btn icon-btn" 
+      [disabled]="currentPage === 1 || isLoading"
+      (click)="goToPage(1)"
+      title="First Page">
+      ⏮
+    </button>
+    
+    <!-- Previous Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="!canGoPrevious || isLoading" 
+      (click)="previousPage()"
+      title="Previous Page">
+      ◀
+    </button>
+    
+    <!-- Page Info -->
+    <div class="pagination-info-text">
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    </div>
+    
+    <!-- Next Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
       [disabled]="!canGoNext || isLoading" 
-      (click)="nextPage()">
-      Next →
+      (click)="nextPage()"
+      title="Next Page">
+      ▶
+    </button>
+    
+    <!-- Last Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="currentPage === totalPages || isLoading"
+      (click)="goToPage(totalPages)"
+      title="Last Page">
+      ⏭
     </button>
   </div>
 </div>
