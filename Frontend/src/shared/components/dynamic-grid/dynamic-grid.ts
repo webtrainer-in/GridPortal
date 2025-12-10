@@ -34,6 +34,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
   isServerSidePagination: boolean = false;
   isLoading: boolean = false;
   
+  // Sorting state (for server-side pagination)
+  currentSortColumn: string | null = null;
+  currentSortDirection: 'ASC' | 'DESC' = 'ASC';
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -59,6 +63,29 @@ export class DynamicGrid implements OnInit, OnDestroy {
     console.log('🎯 Grid Ready! Procedure:', this.procedureName);
     this.gridApi = params.api;
     this.loadGridData();
+  }
+
+  onSortChanged(): void {
+    // Only handle sorting for server-side pagination
+    if (!this.isServerSidePagination || !this.gridApi) {
+      return;
+    }
+
+    const columnState = this.gridApi.getColumnState();
+    const sortedColumn = columnState.find(col => col.sort != null);
+
+    if (sortedColumn) {
+      this.currentSortColumn = sortedColumn.colId;
+      this.currentSortDirection = sortedColumn.sort === 'asc' ? 'ASC' : 'DESC';
+      console.log(`🔽 Sort changed: ${this.currentSortColumn} ${this.currentSortDirection}`);
+    } else {
+      this.currentSortColumn = null;
+      this.currentSortDirection = 'ASC';
+      console.log('🔽 Sort cleared');
+    }
+
+    // Reload current page with new sort
+    this.loadPageData(this.currentPage);
   }
 
   private setLoading(loading: boolean): void {
@@ -219,12 +246,17 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   private loadPageData(page: number): void {
     console.log(`📄 Loading page ${page} of ${this.totalPages}...`);
+    if (this.currentSortColumn) {
+      console.log(`🔽 Sorting by: ${this.currentSortColumn} ${this.currentSortDirection}`);
+    }
     this.isLoading = true;
     
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: page,
-      pageSize: this.pageSize
+      pageSize: this.pageSize,
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection
     };
 
     this.gridService.executeGridProcedure(request)
