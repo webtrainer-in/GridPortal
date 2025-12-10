@@ -41,6 +41,20 @@
       <span>Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalCount) }} of {{ totalCount }}</span>
     </div>
     
+    <div class="page-size-selector">
+      <label for="page-size">Page Size:</label>
+      <select 
+        id="page-size" 
+        [(ngModel)]="pageSize" 
+        (change)="onPageSizeChange()"
+        [disabled]="isLoading">
+        <option [value]="15">15</option>
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+      </select>
+    </div>
+    
     <button 
       class="pagination-btn" 
       [disabled]="!canGoNext || isLoading" 

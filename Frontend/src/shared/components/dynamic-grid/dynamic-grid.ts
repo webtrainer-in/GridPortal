@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community';
 import { DynamicGridService, GridDataRequest, ColumnDefinition } from '../../../core/services/dynamic-grid.service';
@@ -9,7 +10,7 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-dynamic-grid',
   standalone: true,
-  imports: [CommonModule, AgGridAngular],
+  imports: [CommonModule, FormsModule, AgGridAngular],
   templateUrl: './dynamic-grid.html',
   styleUrls: ['./dynamic-grid.scss']
 })
@@ -356,5 +357,15 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   get canGoPrevious(): boolean {
     return this.currentPage > 1;
+  }
+
+  onPageSizeChange(): void {
+    console.log('📏 Page size changed to:', this.pageSize);
+    // Recalculate total pages
+    this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+    // Reset to first page
+    this.currentPage = 1;
+    // Reload data with new page size
+    this.loadPageData(1);
   }
 }
