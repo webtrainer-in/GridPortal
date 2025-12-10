@@ -1,4 +1,19 @@
 <div class="dynamic-grid-container">
+  <!-- Loading indicator -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <span>Loading data...</span>
+  </div>
+
+  <!-- Pagination mode indicator -->
+  <div class="pagination-info">
+    <span class="mode-badge" [class.client-side]="!isServerSidePagination" [class.server-side]="isServerSidePagination">
+      {{ isServerSidePagination ? 'Server-Side Pagination' : 'Client-Side Pagination' }}
+    </span>
+    <span class="record-count">Total Records: {{ totalCount }}</span>
+  </div>
+
+  <!-- AG Grid -->
   <ag-grid-angular
     class="ag-theme-quartz"
     style="width: 100%; height: 600px;"
@@ -6,9 +21,32 @@
     [rowData]="rowData"
     [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [pagination]="true"
-    [paginationPageSize]="15"
+    [pagination]="!isServerSidePagination"
+    [paginationPageSize]="pageSize"
     [paginationPageSizeSelector]="[15, 25, 50, 100]"
     (gridReady)="onGridReady($event)"
   ></ag-grid-angular>
+
+  <!-- Custom pagination controls (shown only for server-side pagination) -->
+  <div *ngIf="isServerSidePagination" class="custom-pagination">
+    <button 
+      class="pagination-btn" 
+      [disabled]="!canGoPrevious || isLoading" 
+      (click)="previousPage()">
+      ← Previous
+    </button>
+    
+    <div class="pagination-info-text">
+      <span>Page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong></span>
+      <span class="separator">|</span>
+      <span>Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalCount) }} of {{ totalCount }}</span>
+    </div>
+    
+    <button 
+      class="pagination-btn" 
+      [disabled]="!canGoNext || isLoading" 
+      (click)="nextPage()">
+      Next →
+    </button>
+  </div>
 </div>

@@ -90,6 +90,26 @@ export class DynamicGridService {
   }
 
   /**
+   * Get total count for a procedure (for pagination mode detection)
+   */
+  getTotalCount(procedureName: string): Observable<number> {
+    const request: GridDataRequest = {
+      procedureName,
+      pageNumber: 1,
+      pageSize: 1 // Fetch minimal data, we only need the count
+    };
+    return new Observable<number>(observer => {
+      this.executeGridProcedure(request).subscribe({
+        next: (response) => {
+          observer.next(response.totalCount);
+          observer.complete();
+        },
+        error: (err) => observer.error(err)
+      });
+    });
+  }
+
+  /**
    * Update a row in the grid
    */
   updateRow(request: RowUpdateRequest): Observable<RowUpdateResponse> {

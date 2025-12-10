@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community';
@@ -16,7 +16,8 @@ import { Subject, takeUntil } from 'rxjs';
 export class DynamicGrid implements OnInit, OnDestroy {
   @Input() procedureName: string = '';
   @Input() enableRowEditing: boolean = true;
-  @Input() pageSize: number = 100;
+  @Input() pageSize: number = 15;
+  @Input() paginationThreshold: number = 1000; // Switch to server-side if > 1000 records
   
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
@@ -24,9 +25,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
   theme = themeQuartz;
   editingRows: Set<any> = new Set();
   
+  // Pagination state
+  totalCount: number = 0;
+  currentPage: number = 1;
+  totalPages: number = 0;
+  isServerSidePagination: boolean = false;
+  isLoading: boolean = false;
+  
   private destroy$ = new Subject<void>();
 
-  constructor(private gridService: DynamicGridService) {}
+  // Make Math available in template
+  Math = Math;
+
+  constructor(
+    private gridService: DynamicGridService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     if (!this.procedureName) {
@@ -45,9 +59,25 @@ export class DynamicGrid implements OnInit, OnDestroy {
     this.loadGridData();
   }
 
+  private setLoading(loading: boolean): void {
+    this.isLoading = loading;
+    this.cdr.detectChanges();
+    console.log(`🔄 Loading state set to: ${loading} (change detection triggered)`);
+  }
+
   private loadGridData(): void {
     console.log('📊 Loading grid data...');
+    this.setLoading(true);
     
+    // Safety timeout - force clear loading after 10 seconds
+    setTimeout(() => {
+      if (this.isLoading) {
+        console.warn('⚠️ Force clearing loading state after timeout');
+        this.setLoading(false);
+      }
+    }, 10000);
+    
+    // Load initial page to get total count
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: 1,
@@ -58,28 +88,133 @@ export class DynamicGrid implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('✅ Grid data received:', response);
-          console.log('  - Rows:', response.rows?.length || 0);
-          console.log('  - Columns:', response.columns?.length || 0);
-          console.log('  - Total Count:', response.totalCount);
+          console.log('📦 Response received:', response);
+          this.totalCount = response.totalCount || 0;
+          console.log(`📈 Total records: ${this.totalCount}`);
+          console.log(`📊 Rows in response: ${response.rows?.length || 0}`);
+          
+          // Determine pagination mode based on threshold
+          if (this.totalCount < this.paginationThreshold) {
+            console.log('✅ Using CLIENT-SIDE pagination (dataset < threshold)');
+            this.isServerSidePagination = false;
+            
+            // If we need all data and haven't loaded it yet
+            if (response.rows.length < this.totalCount) {
+              console.log(`🔄 Need to load all ${this.totalCount} records (currently have ${response.rows.length})`);
+              this.loadAllData();
+            } else {
+              console.log('✅ Already have all data in first response');
+              // We already have all the data
+              this.setupGridWithData(response);
+            }
+          } else {
+            console.log('✅ Using SERVER-SIDE pagination (dataset >= threshold)');
+            this.isServerSidePagination = true;
+            this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+            this.currentPage = 1;
+            this.setupGridWithData(response);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error loading grid data:', error);
+          this.setLoading(false);
+        }
+      });
+  }
+
+  private setupGridWithData(response: any): void {
+    console.log('🔧 setupGridWithData called');
+    
+    try {
+      if (this.columnDefs.length === 0 && response.columns) {
+        console.log('📋 Setting up column definitions...');
+        this.updateColumnDefinitions(response.columns);
+      }
+      
+      this.rowData = response.rows || [];
+      console.log(`✅ Setting rowData with ${this.rowData.length} rows`);
+      
+      this.setLoading(false);
+      console.log('✅ Loading state cleared');
+      
+      if (this.gridApi) {
+        this.gridApi.setGridOption('rowData', this.rowData);
+        console.log('✅ Grid API updated');
+      } else {
+        console.warn('⚠️ Grid API not available yet');
+      }
+      
+      console.log('✅ Grid setup complete with', this.rowData.length, 'rows');
+    } catch (error) {
+      console.error('❌ Error in setupGridWithData:', error);
+      this.setLoading(false);
+    }
+  }
+
+  private loadAllData(): void {
+    console.log('📥 Loading ALL data for client-side pagination...');
+    
+    const request: GridDataRequest = {
+      procedureName: this.procedureName,
+      pageNumber: 1,
+      pageSize: this.totalCount || 10000 // Load all records
+    };
+
+    this.gridService.executeGridProcedure(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('✅ All data loaded:', response.rows?.length || 0, 'rows');
           
           if (this.columnDefs.length === 0 && response.columns) {
-            console.log('📋 Setting up column definitions...');
             this.updateColumnDefinitions(response.columns);
           }
           
           this.rowData = response.rows || [];
+          this.setLoading(false);
           
-          // Force AG Grid to update
           if (this.gridApi) {
             this.gridApi.setGridOption('rowData', this.rowData);
           }
-          
-          console.log('✅ Data loaded into grid successfully');
-          console.log('✅ Grid now has', this.rowData.length, 'rows');
         },
         error: (error) => {
-          console.error('❌ Error loading grid data:', error);
+          console.error('❌ Error loading all data:', error);
+          this.setLoading(false);
+        }
+      });
+  }
+
+  private loadPageData(page: number): void {
+    console.log(`📄 Loading page ${page} of ${this.totalPages}...`);
+    this.isLoading = true;
+    
+    const request: GridDataRequest = {
+      procedureName: this.procedureName,
+      pageNumber: page,
+      pageSize: this.pageSize
+    };
+
+    this.gridService.executeGridProcedure(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log(`✅ Page ${page} loaded:`, response.rows?.length || 0, 'rows');
+          
+          if (this.columnDefs.length === 0 && response.columns) {
+            this.updateColumnDefinitions(response.columns);
+          }
+          
+          this.rowData = response.rows || [];
+          this.currentPage = page;
+          this.setLoading(false);
+          
+          if (this.gridApi) {
+            this.gridApi.setGridOption('rowData', this.rowData);
+          }
+        },
+        error: (error) => {
+          console.error(`❌ Error loading page ${page}:`, error);
+          this.setLoading(false);
         }
       });
   }
@@ -195,4 +330,31 @@ export class DynamicGrid implements OnInit, OnDestroy {
     }
     return undefined;
   };
+
+  // Pagination navigation methods
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.loadPageData(this.currentPage + 1);
+    }
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.loadPageData(this.currentPage - 1);
+    }
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.loadPageData(page);
+    }
+  }
+
+  get canGoNext(): boolean {
+    return this.currentPage < this.totalPages;
+  }
+
+  get canGoPrevious(): boolean {
+    return this.currentPage > 1;
+  }
 }
