@@ -62,10 +62,12 @@ import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/
     .demo-container {
       padding: 20px;
       width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       gap: 15px;
       box-sizing: border-box;
+      overflow: hidden;
     }
     
     .header {
@@ -122,8 +124,10 @@ import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/
 
     app-dynamic-grid {
       flex: 1;
-      display: block;
-      min-height: 500px;
+      display: flex;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
     }
     
     .empty-state {
