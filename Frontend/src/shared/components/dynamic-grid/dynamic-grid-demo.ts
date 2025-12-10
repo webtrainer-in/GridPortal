@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DynamicGrid } from './dynamic-grid';
@@ -148,7 +148,10 @@ export class DynamicGridDemoComponent implements OnInit {
   selectedProcedure: string = '';
   gridKey: number = 1;  // Start with 1 to ensure grid renders
 
-  constructor(private gridService: DynamicGridService) {}
+  constructor(
+    private gridService: DynamicGridService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadAvailableProcedures();
@@ -163,6 +166,7 @@ export class DynamicGridDemoComponent implements OnInit {
         if (procedures.length > 0 && !this.selectedProcedure) {
           this.selectedProcedure = procedures[0].procedureName;
           this.gridKey = 1;  // Ensure grid renders
+          this.cdr.detectChanges();
         }
       },
       error: (error) => {
@@ -172,18 +176,27 @@ export class DynamicGridDemoComponent implements OnInit {
   }
 
   onProcedureChange(): void {
+    console.log('📝 Procedure changed to:', this.selectedProcedure);
     // Force grid refresh by toggling gridKey
     this.gridKey = 0;
+    this.cdr.detectChanges();
+    
     setTimeout(() => {
       this.gridKey = Date.now();
+      this.cdr.detectChanges();
+      console.log('✅ Grid recreated with key:', this.gridKey);
     }, 0);
   }
 
   refreshGrid(): void {
-    // Force grid refresh by changing key
+    console.log('🔄 Refreshing grid...');
     this.gridKey = 0;
+    this.cdr.detectChanges();
+    
     setTimeout(() => {
       this.gridKey = Date.now();
+      this.cdr.detectChanges();
+      console.log('✅ Grid refreshed with key:', this.gridKey);
     }, 0);
   }
 }
