@@ -32,14 +32,14 @@ public class DynamicGridService : IDynamicGridService
             throw new ArgumentException("Invalid procedure name format");
         }
 
-        // Validate page size
-        var procedure = await _context.StoredProcedureRegistry
-            .FirstOrDefaultAsync(p => p.ProcedureName == request.ProcedureName);
-        
-        if (procedure != null && request.PageSize > procedure.MaxPageSize)
-        {
-            request.PageSize = procedure.MaxPageSize;
-        }
+        // Validate page size - REMOVED: Frontend controls this via paginationThreshold
+        // var procedure = await _context.StoredProcedureRegistry
+        //     .FirstOrDefaultAsync(p => p.ProcedureName == request.ProcedureName);
+        // 
+        // if (procedure != null && request.PageSize > procedure.MaxPageSize)
+        // {
+        //     request.PageSize = procedure.MaxPageSize;
+        // }
 
         try
         {

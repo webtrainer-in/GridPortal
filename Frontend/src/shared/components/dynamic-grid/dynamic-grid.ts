@@ -155,18 +155,24 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   private loadAllData(): void {
     console.log('📥 Loading ALL data for client-side pagination...');
+    console.log(`📊 Total count from initial response: ${this.totalCount}`);
     
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: 1,
-      pageSize: this.totalCount || 10000 // Load all records
+      pageSize: this.totalCount // Use the total count from initial response
     };
+
+    console.log(`🔍 Requesting ${request.pageSize} records from API...`);
 
     this.gridService.executeGridProcedure(request)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('✅ All data loaded:', response.rows?.length || 0, 'rows');
+          console.log('📦 API Response received:');
+          console.log('  - response.rows.length:', response.rows?.length || 0);
+          console.log('  - response.totalCount:', response.totalCount);
+          console.log('  - Requested pageSize:', request.pageSize);
           
           if (this.columnDefs.length === 0 && response.columns) {
             this.updateColumnDefinitions(response.columns);
@@ -177,6 +183,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
           this.totalCount = this.allRowData.length;
           this.totalPages = Math.ceil(this.totalCount / this.pageSize);
           this.currentPage = 1;
+          
+          console.log(`✅ Stored ${this.allRowData.length} rows in allRowData`);
+          console.log(`✅ Total pages: ${this.totalPages}`);
           
           // Show first page
           this.updatePagedData();
