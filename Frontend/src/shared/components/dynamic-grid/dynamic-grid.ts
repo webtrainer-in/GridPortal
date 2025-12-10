@@ -22,6 +22,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
+  allRowData: any[] = []; // Store all data for client-side pagination
   gridApi!: GridApi;
   theme = themeQuartz;
   editingRows: Set<any> = new Set();
@@ -171,18 +172,33 @@ export class DynamicGrid implements OnInit, OnDestroy {
             this.updateColumnDefinitions(response.columns);
           }
           
-          this.rowData = response.rows || [];
-          this.setLoading(false);
+          // Store all data for client-side pagination
+          this.allRowData = response.rows || [];
+          this.totalCount = this.allRowData.length;
+          this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+          this.currentPage = 1;
           
-          if (this.gridApi) {
-            this.gridApi.setGridOption('rowData', this.rowData);
-          }
+          // Show first page
+          this.updatePagedData();
+          this.setLoading(false);
         },
         error: (error) => {
           console.error('❌ Error loading all data:', error);
           this.setLoading(false);
         }
       });
+  }
+
+  private updatePagedData(): void {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.rowData = this.allRowData.slice(startIndex, endIndex);
+    
+    if (this.gridApi) {
+      this.gridApi.setGridOption('rowData', this.rowData);
+    }
+    
+    console.log(`✅ Showing page ${this.currentPage}: rows ${startIndex + 1}-${Math.min(endIndex, this.totalCount)}`);
   }
 
   private loadPageData(page: number): void {
@@ -335,19 +351,34 @@ export class DynamicGrid implements OnInit, OnDestroy {
   // Pagination navigation methods
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
-      this.loadPageData(this.currentPage + 1);
+      this.currentPage++;
+      if (this.isServerSidePagination) {
+        this.loadPageData(this.currentPage);
+      } else {
+        this.updatePagedData();
+      }
     }
   }
 
   previousPage(): void {
     if (this.currentPage > 1) {
-      this.loadPageData(this.currentPage - 1);
+      this.currentPage--;
+      if (this.isServerSidePagination) {
+        this.loadPageData(this.currentPage);
+      } else {
+        this.updatePagedData();
+      }
     }
   }
 
   goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
-      this.loadPageData(page);
+      this.currentPage = page;
+      if (this.isServerSidePagination) {
+        this.loadPageData(page);
+      } else {
+        this.updatePagedData();
+      }
     }
   }
 
@@ -365,7 +396,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
     this.totalPages = Math.ceil(this.totalCount / this.pageSize);
     // Reset to first page
     this.currentPage = 1;
-    // Reload data with new page size
-    this.loadPageData(1);
+    
+    if (this.isServerSidePagination) {
+      // Reload data with new page size
+      this.loadPageData(1);
+    } else {
+      // Just update the paged data slice
+      this.updatePagedData();
+    }
+  }
+
+  getStartRecord(): number {
+    if (this.totalCount === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  getEndRecord(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalCount);
   }
 }

@@ -20,14 +20,12 @@
     [rowData]="rowData"
     [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [pagination]="!isServerSidePagination"
-    [paginationPageSize]="pageSize"
-    [paginationPageSizeSelector]="[15, 25, 50, 100]"
+    [pagination]="false"
     (gridReady)="onGridReady($event)"
   ></ag-grid-angular>
 
-  <!-- Custom pagination controls (shown only for server-side pagination) -->
-  <div *ngIf="isServerSidePagination" class="custom-pagination">
+  <!-- Custom pagination controls (shown for both modes) -->
+  <div class="custom-pagination">
     <button 
       class="pagination-btn" 
       [disabled]="!canGoPrevious || isLoading" 
@@ -38,7 +36,7 @@
     <div class="pagination-info-text">
       <span>Page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong></span>
       <span class="separator">|</span>
-      <span>Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalCount) }} of {{ totalCount }}</span>
+      <span>Showing {{ getStartRecord() }} - {{ getEndRecord() }} of {{ totalCount }}</span>
     </div>
     
     <div class="page-size-selector">
