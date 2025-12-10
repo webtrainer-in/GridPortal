@@ -21,6 +21,11 @@ DECLARE
     v_Data JSONB;
     v_Columns JSONB;
     v_TotalCount INT;
+    v_FilterWhere TEXT := '';
+    v_FilterJson JSONB;
+    v_FilterKeys TEXT[];
+    v_FilterKey TEXT;
+    v_FilterValue JSONB;
 BEGIN
     -- Determine offset and fetch size
     IF p_StartRow IS NOT NULL AND p_EndRow IS NOT NULL THEN
@@ -36,50 +41,153 @@ BEGIN
     IF v_FetchSize < 1 THEN v_FetchSize := 100; END IF;
     IF p_SortDirection NOT IN ('ASC', 'DESC') THEN p_SortDirection := 'ASC'; END IF;
     
-    -- Get total count
-    SELECT COUNT(*) INTO v_TotalCount
-    FROM "Employees" e
-    INNER JOIN "Departments" d ON e."DepartmentId" = d."Id"
-    WHERE (p_SearchTerm IS NULL OR 
-           e."FirstName" ILIKE '%' || p_SearchTerm || '%' OR 
-           e."LastName" ILIKE '%' || p_SearchTerm || '%' OR
-           e."Email" ILIKE '%' || p_SearchTerm || '%');
+    -- Build filter WHERE clause from JSON
+    IF p_FilterJson IS NOT NULL AND p_FilterJson != '' THEN
+        v_FilterJson := p_FilterJson::JSONB;
+        v_FilterKeys := ARRAY(SELECT jsonb_object_keys(v_FilterJson));
+        
+        FOREACH v_FilterKey IN ARRAY v_FilterKeys LOOP
+            v_FilterValue := v_FilterJson -> v_FilterKey;
+            
+            -- Handle 'set' filter (multi-select)
+            IF v_FilterValue ->> 'filterType' = 'set' THEN
+                DECLARE
+                    v_Values TEXT[];
+                    v_Value TEXT;
+                    v_ValueConditions TEXT := '';
+                BEGIN
+                    v_Values := ARRAY(SELECT jsonb_array_elements_text(v_FilterValue -> 'values'));
+                    
+                    FOREACH v_Value IN ARRAY v_Values LOOP
+                        IF v_ValueConditions != '' THEN
+                            v_ValueConditions := v_ValueConditions || ' OR ';
+                        END IF;
+                        
+                        -- Map column names to actual database columns
+                        CASE v_FilterKey
+                            WHEN 'Department' THEN
+                                v_ValueConditions := v_ValueConditions || format('d."Name" = %L', v_Value);
+                            WHEN 'Status' THEN
+                                v_ValueConditions := v_ValueConditions || format('e."Status" = %L', v_Value);
+                            WHEN 'Location' THEN
+                                v_ValueConditions := v_ValueConditions || format('e."Location" = %L', v_Value);
+                            WHEN 'FullName' THEN
+                                -- FullName is computed, search in FirstName and LastName
+                                v_ValueConditions := v_ValueConditions || format('(e."FirstName" || '' '' || e."LastName") ILIKE %L', '%' || v_Value || '%');
+                            ELSE
+                                v_ValueConditions := v_ValueConditions || format('e.%I = %L', v_FilterKey, v_Value);
+                        END CASE;
+                    END LOOP;
+                    
+                    IF v_ValueConditions != '' THEN
+                        IF v_FilterWhere != '' THEN
+                            v_FilterWhere := v_FilterWhere || ' AND ';
+                        END IF;
+                        v_FilterWhere := v_FilterWhere || '(' || v_ValueConditions || ')';
+                    END IF;
+                END;
+            END IF;
+            
+            -- Handle 'text' filter (contains, equals, etc.)
+            IF v_FilterValue ->> 'filterType' = 'text' THEN
+                DECLARE
+                    v_FilterText TEXT := v_FilterValue ->> 'filter';
+                    v_FilterType TEXT := v_FilterValue ->> 'type';
+                    v_Condition TEXT;
+                BEGIN
+                    IF v_FilterWhere != '' THEN
+                        v_FilterWhere := v_FilterWhere || ' AND ';
+                    END IF;
+                    
+                    -- Handle FullName specially (it's a computed column)
+                    IF v_FilterKey = 'FullName' THEN
+                        CASE v_FilterType
+                            WHEN 'contains' THEN
+                                v_Condition := format('(e."FirstName" || '' '' || e."LastName") ILIKE %L', '%' || v_FilterText || '%');
+                            WHEN 'equals' THEN
+                                v_Condition := format('(e."FirstName" || '' '' || e."LastName") = %L', v_FilterText);
+                            WHEN 'startsWith' THEN
+                                v_Condition := format('(e."FirstName" || '' '' || e."LastName") ILIKE %L', v_FilterText || '%');
+                            WHEN 'endsWith' THEN
+                                v_Condition := format('(e."FirstName" || '' '' || e."LastName") ILIKE %L', '%' || v_FilterText);
+                            ELSE
+                                v_Condition := format('(e."FirstName" || '' '' || e."LastName") ILIKE %L', '%' || v_FilterText || '%');
+                        END CASE;
+                    ELSE
+                        CASE v_FilterType
+                            WHEN 'contains' THEN
+                                v_Condition := format('e.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
+                            WHEN 'equals' THEN
+                                v_Condition := format('e.%I = %L', v_FilterKey, v_FilterText);
+                            WHEN 'startsWith' THEN
+                                v_Condition := format('e.%I ILIKE %L', v_FilterKey, v_FilterText || '%');
+                            WHEN 'endsWith' THEN
+                                v_Condition := format('e.%I ILIKE %L', v_FilterKey, '%' || v_FilterText);
+                            ELSE
+                                v_Condition := format('e.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
+                        END CASE;
+                    END IF;
+                    
+                    v_FilterWhere := v_FilterWhere || v_Condition;
+                END;
+            END IF;
+        END LOOP;
+    END IF;
     
-    -- Get data rows
-    SELECT jsonb_agg(row_to_json(t)) INTO v_Data
-    FROM (
-        SELECT 
-            e."Id",
-            e."FirstName" || ' ' || e."LastName" AS "FullName",
-            e."Email",
-            e."Phone",
-            d."Name" AS "Department",
-            e."Salary",
-            TO_CHAR(e."JoinDate", 'YYYY-MM-DD') AS "JoinDate",
-            e."Status",
-            e."Location",
-            e."PerformanceRating",
-            e."YearsExperience",
-            e."ReportingManager"
+    -- Get total count with filters
+    EXECUTE format('
+        SELECT COUNT(*) 
         FROM "Employees" e
         INNER JOIN "Departments" d ON e."DepartmentId" = d."Id"
-        WHERE (p_SearchTerm IS NULL OR 
-               e."FirstName" ILIKE '%' || p_SearchTerm || '%' OR 
-               e."LastName" ILIKE '%' || p_SearchTerm || '%' OR
-               e."Email" ILIKE '%' || p_SearchTerm || '%')
-        ORDER BY 
-            CASE WHEN p_SortColumn = 'FullName' AND p_SortDirection = 'ASC' THEN e."FirstName" END ASC,
-            CASE WHEN p_SortColumn = 'FullName' AND p_SortDirection = 'DESC' THEN e."FirstName" END DESC,
-            CASE WHEN p_SortColumn = 'Email' AND p_SortDirection = 'ASC' THEN e."Email" END ASC,
-            CASE WHEN p_SortColumn = 'Email' AND p_SortDirection = 'DESC' THEN e."Email" END DESC,
-            CASE WHEN p_SortColumn = 'Department' AND p_SortDirection = 'ASC' THEN d."Name" END ASC,
-            CASE WHEN p_SortColumn = 'Department' AND p_SortDirection = 'DESC' THEN d."Name" END DESC,
-            CASE WHEN p_SortColumn = 'Salary' AND p_SortDirection = 'ASC' THEN e."Salary" END ASC,
-            CASE WHEN p_SortColumn = 'Salary' AND p_SortDirection = 'DESC' THEN e."Salary" END DESC,
-            e."Id"
-        OFFSET v_Offset
-        LIMIT v_FetchSize
-    ) t;
+        WHERE (1=1)
+            AND ($1 IS NULL OR 
+                 e."FirstName" ILIKE ''%%'' || $1 || ''%%'' OR 
+                 e."LastName" ILIKE ''%%'' || $1 || ''%%'' OR
+                 e."Email" ILIKE ''%%'' || $1 || ''%%'')
+            %s',
+        CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
+    ) INTO v_TotalCount USING p_SearchTerm;
+    
+    -- Get data rows with filters
+    EXECUTE format('
+        SELECT jsonb_agg(row_to_json(t))
+        FROM (
+            SELECT 
+                e."Id",
+                e."FirstName" || '' '' || e."LastName" AS "FullName",
+                e."Email",
+                e."Phone",
+                d."Name" AS "Department",
+                e."Salary",
+                TO_CHAR(e."JoinDate", ''YYYY-MM-DD'') AS "JoinDate",
+                e."Status",
+                e."Location",
+                e."PerformanceRating",
+                e."YearsExperience",
+                e."ReportingManager"
+            FROM "Employees" e
+            INNER JOIN "Departments" d ON e."DepartmentId" = d."Id"
+            WHERE (1=1)
+                AND ($1 IS NULL OR 
+                     e."FirstName" ILIKE ''%%'' || $1 || ''%%'' OR 
+                     e."LastName" ILIKE ''%%'' || $1 || ''%%'' OR
+                     e."Email" ILIKE ''%%'' || $1 || ''%%'')
+                %s
+            ORDER BY 
+                CASE WHEN $2 = ''FullName'' AND $3 = ''ASC'' THEN e."FirstName" END ASC,
+                CASE WHEN $2 = ''FullName'' AND $3 = ''DESC'' THEN e."FirstName" END DESC,
+                CASE WHEN $2 = ''Email'' AND $3 = ''ASC'' THEN e."Email" END ASC,
+                CASE WHEN $2 = ''Email'' AND $3 = ''DESC'' THEN e."Email" END DESC,
+                CASE WHEN $2 = ''Department'' AND $3 = ''ASC'' THEN d."Name" END ASC,
+                CASE WHEN $2 = ''Department'' AND $3 = ''DESC'' THEN d."Name" END DESC,
+                CASE WHEN $2 = ''Salary'' AND $3 = ''ASC'' THEN e."Salary" END ASC,
+                CASE WHEN $2 = ''Salary'' AND $3 = ''DESC'' THEN e."Salary" END DESC,
+                e."Id"
+            OFFSET $4
+            LIMIT $5
+        ) t',
+        CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
+    ) INTO v_Data USING p_SearchTerm, p_SortColumn, p_SortDirection, v_Offset, v_FetchSize;
     
     -- Get column definitions
     SELECT jsonb_agg(row_to_json(c)) INTO v_Columns
