@@ -327,6 +327,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
           
           this.rowData = response.rows || [];
           this.currentPage = page;
+          
+          // Update total count and pages from response
+          this.totalCount = response.totalCount || 0;
+          this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+          
           this.setLoading(false);
           
           if (this.gridApi) {
