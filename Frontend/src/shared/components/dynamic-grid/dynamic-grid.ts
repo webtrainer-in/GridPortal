@@ -67,6 +67,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   // Export menu state
   showExportMenu: boolean = false;
   
+  // Global search state
+  globalSearchTerm: string = '';
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -707,6 +710,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
   // Clear all filters
   clearAllFilters(): void {
     this.gridApi.setFilterModel(null);
+  }
+  
+  // Global search across all columns
+  onGlobalSearch(): void {
+    this.gridApi.setGridOption('quickFilterText', this.globalSearchTerm);
   }
   
   // Export methods

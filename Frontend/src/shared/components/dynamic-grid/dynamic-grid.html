@@ -33,6 +33,19 @@
         <span class="icon">📥</span> Export
       </button>
       
+      <!-- Global Search Input -->
+      <div class="search-container">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search all columns..." 
+          [(ngModel)]="globalSearchTerm"
+          (input)="onGlobalSearch()"
+          title="Search across all columns"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+      
       <!-- Export Dropdown Menu -->
       <div class="export-menu" *ngIf="showExportMenu" [@slideIn]>
         <div class="export-menu-header">

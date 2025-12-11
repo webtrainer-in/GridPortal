@@ -406,6 +406,41 @@
   padding: 0;
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+// Global search container
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  .search-input {
+    padding: 8px 36px 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 250px;
+    outline: none;
+    transition: all 0.2s;
+
+    &:focus {
+      border-color: #2196f3;
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    &::placeholder {
+      color: #999;
+    }
+  }
+
+  .search-icon {
+    position: absolute;
+    right: 12px;
+    font-size: 16px;
+    color: #666;
+    pointer-events: none;
+  }
 }
 
 // Freeze menu specific styling
