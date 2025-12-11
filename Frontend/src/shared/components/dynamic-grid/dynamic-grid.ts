@@ -311,7 +311,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageSize: this.pageSize,
       sortColumn: this.currentSortColumn || undefined,
       sortDirection: this.currentSortDirection,
-      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined
+      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      searchTerm: this.globalSearchTerm || undefined // Add global search term
     };
 
     this.gridService.executeGridProcedure(request)
@@ -714,7 +715,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
   
   // Global search across all columns
   onGlobalSearch(): void {
-    this.gridApi.setGridOption('quickFilterText', this.globalSearchTerm);
+    if (this.isServerSidePagination) {
+      // For server-side pagination, send search term to backend
+      this.currentPage = 1; // Reset to first page when searching
+      this.loadPageData(1);
+    } else {
+      // For client-side pagination, use AG Grid's quick filter
+      this.gridApi.setGridOption('quickFilterText', this.globalSearchTerm);
+    }
   }
   
   // Export methods

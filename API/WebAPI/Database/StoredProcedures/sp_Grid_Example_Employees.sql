@@ -144,7 +144,15 @@ BEGIN
             AND ($1 IS NULL OR 
                  e."FirstName" ILIKE ''%%'' || $1 || ''%%'' OR 
                  e."LastName" ILIKE ''%%'' || $1 || ''%%'' OR
-                 e."Email" ILIKE ''%%'' || $1 || ''%%'')
+                 e."Email" ILIKE ''%%'' || $1 || ''%%'' OR
+                 e."Phone" ILIKE ''%%'' || $1 || ''%%'' OR
+                 d."Name" ILIKE ''%%'' || $1 || ''%%'' OR
+                 e."Location" ILIKE ''%%'' || $1 || ''%%'' OR
+                 e."Status" ILIKE ''%%'' || $1 || ''%%'' OR
+                 e."ReportingManager" ILIKE ''%%'' || $1 || ''%%'' OR
+                 CAST(e."Salary" AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                 CAST(e."YearsExperience" AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                 CAST(e."PerformanceRating" AS TEXT) ILIKE ''%%'' || $1 || ''%%'')
             %s',
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
     ) INTO v_TotalCount USING p_SearchTerm;
@@ -172,7 +180,15 @@ BEGIN
                 AND ($1 IS NULL OR 
                      e."FirstName" ILIKE ''%%'' || $1 || ''%%'' OR 
                      e."LastName" ILIKE ''%%'' || $1 || ''%%'' OR
-                     e."Email" ILIKE ''%%'' || $1 || ''%%'')
+                     e."Email" ILIKE ''%%'' || $1 || ''%%'' OR
+                     e."Phone" ILIKE ''%%'' || $1 || ''%%'' OR
+                     d."Name" ILIKE ''%%'' || $1 || ''%%'' OR
+                     e."Location" ILIKE ''%%'' || $1 || ''%%'' OR
+                     e."Status" ILIKE ''%%'' || $1 || ''%%'' OR
+                     e."ReportingManager" ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(e."Salary" AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(e."YearsExperience" AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(e."PerformanceRating" AS TEXT) ILIKE ''%%'' || $1 || ''%%'')
                 %s
             ORDER BY 
                 CASE WHEN $2 = ''FullName'' AND $3 = ''ASC'' THEN e."FirstName" END ASC,
