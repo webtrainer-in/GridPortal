@@ -16,6 +16,12 @@ import { ICellRendererParams } from 'ag-grid-community';
           title="Edit row">
           ✏️ Edit
         </button>
+        <button 
+          class="btn-delete" 
+          (click)="onDeleteClick()"
+          title="Delete row">
+          🗑️ Delete
+        </button>
       } @else {
         <button 
           class="btn-save" 
@@ -60,6 +66,15 @@ import { ICellRendererParams } from 'ag-grid-community';
       background: #0056b3;
     }
     
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-delete:hover {
+      background: #c82333;
+    }
+    
     .btn-save {
       background: #28a745;
       color: white;
@@ -70,13 +85,13 @@ import { ICellRendererParams } from 'ag-grid-community';
     }
     
     .btn-cancel {
-      background: #dc3545;
+      background: #6c757d;
       color: white;
       padding: 4px 6px;
     }
     
     .btn-cancel:hover {
-      background: #c82333;
+      background: #5a6268;
     }
   `]
 })
@@ -85,6 +100,7 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
     onEdit: (rowData: any) => void;
     onSave: (rowData: any) => void;
     onCancel: (rowData: any) => void;
+    onDelete: (rowData: any) => void;
     isEditing: (rowData: any) => boolean;
   };
   
@@ -111,5 +127,11 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
 
   onCancelClick(): void {
     this.params.onCancel(this.params.data);
+  }
+  
+  onDeleteClick(): void {
+    if (confirm('Are you sure you want to delete this row?')) {
+      this.params.onDelete(this.params.data);
+    }
   }
 }

@@ -111,6 +111,59 @@ public class DynamicGridController : ControllerBase
     }
 
     /// <summary>
+    /// Delete a row from the grid
+    /// </summary>
+    [HttpPost("delete-row")]
+    public async Task<IActionResult> DeleteRow([FromBody] RowDeleteRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("DeleteRow called with ProcedureName: {ProcedureName}, RowId: {RowId}", 
+                request.ProcedureName, request.RowId);
+            
+            var userRoles = User.Claims
+                .Where(c => c.Type == ClaimTypes.Role)
+                .Select(c => c.Value)
+                .ToArray();
+            
+            _logger.LogInformation("User roles: {Roles}", string.Join(", ", userRoles));
+            
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            _logger.LogInformation("User ID: {UserId}", userId);
+
+            var response = await _gridService.DeleteRowAsync(request, userRoles, userId);
+            
+            _logger.LogInformation("Delete response - Success: {Success}, Message: {Message}", 
+                response.Success, response.Message);
+            
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            else
+            {
+                _logger.LogWarning("Delete failed: {Message}, ErrorCode: {ErrorCode}", 
+                    response.Message, response.ErrorCode);
+                return BadRequest(response);
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized row delete attempt");
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting row");
+            return StatusCode(500, new RowDeleteResponse 
+            { 
+                Success = false, 
+                Message = "An error occurred while deleting the row" 
+            });
+        }
+    }
+
+    /// <summary>
     /// Get list of available stored procedures for the current user
     /// </summary>
     [HttpGet("available-procedures")]

@@ -56,6 +56,17 @@ export interface RowUpdateResponse {
   errorCode?: string;
 }
 
+export interface RowDeleteRequest {
+  procedureName: string;
+  rowId: any;
+}
+
+export interface RowDeleteResponse {
+  success: boolean;
+  message?: string;
+  errorCode?: string;
+}
+
 export interface StoredProcedureInfo {
   id: number;
   procedureName: string;
@@ -114,6 +125,13 @@ export class DynamicGridService {
    */
   updateRow(request: RowUpdateRequest): Observable<RowUpdateResponse> {
     return this.http.post<RowUpdateResponse>(`${this.apiUrl}/update-row`, request);
+  }
+
+  /**
+   * Delete a row from the grid
+   */
+  deleteRow(request: RowDeleteRequest): Observable<RowDeleteResponse> {
+    return this.http.post<RowDeleteResponse>(`${this.apiUrl}/delete-row`, request);
   }
 
   /**

@@ -15,6 +15,11 @@ public interface IDynamicGridService
     Task<RowUpdateResponse> UpdateRowAsync(RowUpdateRequest request, string[] userRoles, int userId);
     
     /// <summary>
+    /// Delete a row using the corresponding delete stored procedure
+    /// </summary>
+    Task<RowDeleteResponse> DeleteRowAsync(RowDeleteRequest request, string[] userRoles, int userId);
+    
+    /// <summary>
     /// Get list of stored procedures the user has access to
     /// </summary>
     Task<List<StoredProcedureInfo>> GetAvailableProceduresAsync(string[] userRoles);

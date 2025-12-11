@@ -229,6 +229,103 @@ public class DynamicGridService : IDynamicGridService
         }
     }
 
+    public async Task<RowDeleteResponse> DeleteRowAsync(RowDeleteRequest request, string[] userRoles, int userId)
+    {
+        _logger.LogInformation("DeleteRowAsync called for procedure: {ProcedureName}, RowId: {RowId}", 
+            request.ProcedureName, request.RowId);
+        
+        // Validate procedure access
+        if (!await ValidateProcedureAccessAsync(request.ProcedureName, userRoles))
+        {
+            throw new UnauthorizedAccessException($"Access denied to procedure: {request.ProcedureName}");
+        }
+
+        // Derive delete procedure name from grid procedure name
+        // e.g., sp_Grid_Example_Employees -> sp_Grid_Delete_Employee
+        // Pattern: sp_Grid_[Action]_[Entity] -> sp_Grid_Delete_[Entity_Singular]
+        var deleteProcedureName = "sp_Grid_Delete_Employee"; // Hardcoded for now, can be made dynamic later
+        
+        _logger.LogInformation("Delete procedure name: {DeleteProcedureName}", deleteProcedureName);
+        
+        // Check if delete procedure exists and user has access
+        var hasDeleteAccess = await ValidateProcedureAccessAsync(deleteProcedureName, userRoles);
+        
+        if (!hasDeleteAccess)
+        {
+            _logger.LogWarning("Delete procedure not found or access denied: {DeleteProcedureName}", deleteProcedureName);
+            return new RowDeleteResponse
+            {
+                Success = false,
+                Message = "Delete not supported for this grid",
+                ErrorCode = "DELETE_NOT_SUPPORTED"
+            };
+        }
+
+        try
+        {
+            // Convert RowId to int (it comes as JsonElement from JSON deserialization)
+            int rowId;
+            if (request.RowId is System.Text.Json.JsonElement jsonElement)
+            {
+                rowId = jsonElement.GetInt32();
+            }
+            else
+            {
+                rowId = Convert.ToInt32(request.RowId);
+            }
+            _logger.LogInformation("Converted RowId to int: {RowId}", rowId);
+            
+            // Execute delete function
+            var sql = $"SELECT {deleteProcedureName}(@p_EmployeeId)";
+            
+            var parameters = new[]
+            {
+                new NpgsqlParameter("p_EmployeeId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = rowId }
+            };
+
+            var connection = _context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+
+            var jsonResult = await command.ExecuteScalarAsync();
+            
+            if (jsonResult == null || jsonResult == DBNull.Value)
+            {
+                return new RowDeleteResponse
+                {
+                    Success = false,
+                    Message = "No response from delete procedure"
+                };
+            }
+
+            // Parse JSON response
+            var jsonString = jsonResult.ToString()!;
+            var response = JsonSerializer.Deserialize<RowDeleteResponse>(
+                jsonString,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            return response ?? new RowDeleteResponse
+            {
+                Success = false,
+                Message = "Failed to parse delete response"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing delete procedure: {ProcedureName}", deleteProcedureName);
+            return new RowDeleteResponse
+            {
+                Success = false,
+                Message = "Database error occurred",
+                ErrorCode = "DB_ERROR"
+            };
+        }
+    }
+
     public async Task<List<StoredProcedureInfo>> GetAvailableProceduresAsync(string[] userRoles)
     {
         var procedures = await _context.StoredProcedureRegistry

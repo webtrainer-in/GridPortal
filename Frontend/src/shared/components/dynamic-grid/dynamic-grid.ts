@@ -360,6 +360,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
             onEdit: (rowData: any) => this.enableRowEdit(rowData),
             onSave: (rowData: any) => this.saveRow(rowData),
             onCancel: (rowData: any) => this.cancelRowEdit(rowData),
+            onDelete: (rowData: any) => this.deleteRow(rowData),
             isEditing: (rowData: any) => this.editingRows.has(rowData.Id)
           },
           editable: false,
@@ -447,6 +448,44 @@ export class DynamicGrid implements OnInit, OnDestroy {
     }
     this.editingRows.delete(rowData.Id);
     this.gridApi?.refreshCells({ force: true });
+  }
+  
+  deleteRow(rowData: any): void {
+    const deleteRequest = {
+      procedureName: this.procedureName,
+      rowId: rowData.Id
+    };
+    
+    this.gridService.deleteRow(deleteRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Remove from local data
+            if (this.isServerSidePagination) {
+              // Reload current page for server-side
+              this.loadPageData(this.currentPage);
+            } else {
+              // Remove from client-side data
+              const index = this.allRowData.findIndex(row => row.Id === rowData.Id);
+              if (index > -1) {
+                this.allRowData.splice(index, 1);
+                this.rowData = this.allRowData;
+                this.totalCount = this.allRowData.length;
+                this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+                this.gridApi?.setGridOption('rowData', this.rowData);
+              }
+            }
+            console.log('✅ Row deleted successfully');
+          } else {
+            alert(`❌ Delete failed: ${response.message}`);
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting row:', error);
+          alert('❌ Failed to delete. Please try again.');
+        }
+      });
   }
 
   getRowStyle = (params: any) => {
