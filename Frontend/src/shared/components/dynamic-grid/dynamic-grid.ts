@@ -330,14 +330,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   private updateColumnDefinitions(columns: ColumnDefinition[]): void {
-    console.log('🔧 updateColumnDefinitions called with', columns.length, 'columns');
-    console.log('📋 Column details:', columns);
-    
     const colDefs: ColDef[] = [];
     
     columns.forEach(col => {
-      console.log(`  - Processing column: ${col.field} (${col.headerName})`);
-      
       if (col.field === 'actions' && this.enableRowEditing) {
         colDefs.push({
           field: 'actions',
@@ -356,21 +351,25 @@ export class DynamicGrid implements OnInit, OnDestroy {
           filter: false
         });
       } else {
-        colDefs.push({
+        const colDef: any = {
           field: col.field,
           headerName: col.headerName,
           width: col.width,
           sortable: col.sortable,
           filter: col.filter,
-          editable: this.enableRowEditing ? (params) => this.editingRows.has(params.data.Id) : false
-        });
+          editable: this.enableRowEditing ? (params: any) => this.editingRows.has(params.data.Id) : false
+        };
+        
+        // Add column group if provided from database
+        if (col.columnGroup) {
+          colDef.columnGroup = col.columnGroup;
+        }
+        
+        colDefs.push(colDef);
       }
     });
     
     this.columnDefs = colDefs;
-    console.log('✅ Created', this.columnDefs.length, 'column definitions');
-    console.log('📋 Final columnDefs:', this.columnDefs.map(c => ({ field: c.field, header: c.headerName })));
-    
     this.gridApi?.setGridOption('columnDefs', this.columnDefs);
   }
 
