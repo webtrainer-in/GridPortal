@@ -700,6 +700,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
         colDef: col
       }));
   }
+  
+  // Clear all filters
+  clearAllFilters(): void {
+    this.gridApi.setFilterModel(null);
+  }
 }
 
 // Interfaces for column visibility

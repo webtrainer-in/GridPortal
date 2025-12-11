@@ -23,6 +23,11 @@
         <span class="icon">📌</span> Freeze
       </button>
       
+      <!-- Clear Filters Button -->
+      <button class="toolbar-btn" (click)="clearAllFilters()" title="Clear all column filters">
+        <span class="icon">🔍</span> Clear Filters
+      </button>
+      
       <!-- Column Visibility Dropdown -->
       <div class="column-menu" *ngIf="showColumnMenu" [@slideIn]>
         <div class="column-menu-header">
