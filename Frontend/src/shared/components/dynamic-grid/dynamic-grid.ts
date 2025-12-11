@@ -5,6 +5,7 @@ import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community';
 import { DynamicGridService, GridDataRequest, ColumnDefinition } from '../../../core/services/dynamic-grid.service';
 import { ActionButtonsRendererComponent } from './action-buttons-renderer.component';
+import { EditableCellRendererComponent } from './editable-cell-renderer.component';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
@@ -368,14 +369,27 @@ export class DynamicGrid implements OnInit, OnDestroy {
           filter: false
         });
       } else {
+        const isEditableColumn = this.enableRowEditing && col.field !== 'Id';
+        
         const colDef: any = {
           field: col.field,
           headerName: col.headerName,
           width: col.width,
           sortable: col.sortable,
           filter: col.filter,
-          editable: this.enableRowEditing ? (params: any) => this.editingRows.has(params.data.Id) : false
+          // ID column should never be editable
+          editable: false, // Disable AG Grid's built-in editing
+          singleClickEdit: false
         };
+        
+        // Use custom cell renderer for editable columns to show input fields
+        if (isEditableColumn) {
+          colDef.cellRenderer = EditableCellRendererComponent;
+          colDef.cellRendererParams = {
+            isEditing: (rowData: any) => this.editingRows.has(rowData.Id),
+            columnType: col.type // Pass column type for determining input type
+          };
+        }
         
         // Add column group if provided from database
         if (col.columnGroup) {
@@ -393,6 +407,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   enableRowEdit(rowData: any): void {
     rowData._originalData = { ...rowData };
     this.editingRows.add(rowData.Id);
+    // Refresh cells to trigger custom cell renderer to show input fields
     this.gridApi?.refreshCells({ force: true });
   }
 
