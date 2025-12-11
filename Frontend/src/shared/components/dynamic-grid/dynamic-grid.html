@@ -11,10 +11,16 @@
       {{ isServerSidePagination ? 'Server-Side Pagination' : 'Client-Side Pagination' }}
     </span>
     
-    <!-- Column Visibility Button (for both modes) -->
+    <!-- Toolbar buttons -->
     <div class="grid-toolbar-top">
+      <!-- Column Visibility Button -->
       <button class="toolbar-btn" (click)="toggleColumnMenu()" #columnMenuBtn>
         <span class="icon">☰</span> Columns
+      </button>
+      
+      <!-- Freeze Columns Button -->
+      <button class="toolbar-btn" (click)="toggleFreezeMenu()" #freezeMenuBtn>
+        <span class="icon">📌</span> Freeze
       </button>
       
       <!-- Column Visibility Dropdown -->
@@ -82,6 +88,34 @@
                   <span>{{ col.headerName }}</span>
                 </label>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Freeze Columns Dropdown -->
+      <div class="column-menu freeze-menu" *ngIf="showFreezeMenu" [@slideIn]>
+        <div class="column-menu-header">
+          <h4>Freeze Columns</h4>
+          <button class="close-btn" (click)="showFreezeMenu = false">✕</button>
+        </div>
+        
+        <div class="column-menu-actions">
+          <button (click)="unfreezeAllColumns()">Unfreeze All</button>
+        </div>
+        
+        <div class="column-menu-list">
+          <div class="freeze-info">
+            Click a column to pin it to the left side of the grid
+          </div>
+          
+          <!-- Freezable Columns -->
+          <div class="column-group">
+            <div *ngFor="let col of freezableColumns" class="column-item freeze-item">
+              <label (click)="toggleColumnFreeze(col)">
+                <span class="freeze-icon">{{ col.pinned ? '📌' : '○' }}</span>
+                <span>{{ col.headerName }}</span>
+              </label>
             </div>
           </div>
         </div>

@@ -404,6 +404,31 @@
 // Top toolbar (for both pagination modes)
 .grid-toolbar-top {
   padding: 0;
+  display: flex;
+  gap: 8px;
+}
+
+// Freeze menu specific styling
+.freeze-menu {
+  .freeze-info {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #666;
+    background: #f9f9f9;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+  }
+
+  .freeze-item {
+    label {
+      cursor: pointer;
+      
+      .freeze-icon {
+        font-size: 14px;
+        margin-right: 4px;
+      }
+    }
+  }
 }
 
 // Inline toolbar in pagination (bottom position for dropdown)

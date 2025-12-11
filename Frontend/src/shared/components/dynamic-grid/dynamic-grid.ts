@@ -60,6 +60,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
   filteredColumnGroups: ColumnGroup[] = [];
   filteredUngroupedColumns: ColumnInfo[] = [];
   
+  // Freeze columns state
+  showFreezeMenu: boolean = false;
+  freezableColumns: FreezeColumnInfo[] = [];
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -624,6 +628,78 @@ export class DynamicGrid implements OnInit, OnDestroy {
     this.buildColumnGroups();
     this.gridApi.setGridOption('columnDefs', this.columnDefs);
   }
+  
+  // Freeze columns methods
+  toggleFreezeMenu(): void {
+    this.showFreezeMenu = !this.showFreezeMenu;
+    if (this.showFreezeMenu) {
+      this.buildFreezableColumns();
+    }
+  }
+
+  buildFreezableColumns(): void {
+    this.freezableColumns = this.columnDefs
+      .filter(col => col.field !== 'actions') // Exclude actions column
+      .map(col => ({
+        field: col.field || '',
+        headerName: col.headerName || col.field || '',
+        pinned: col.pinned === 'left',
+        colDef: col
+      }));
+  }
+
+  toggleColumnFreeze(column: FreezeColumnInfo): void {
+    column.pinned = !column.pinned;
+    
+    // Use AG Grid's applyColumnState API for proper pinning
+    this.gridApi.applyColumnState({
+      state: [
+        {
+          colId: column.field,
+          pinned: column.pinned ? 'left' : null
+        }
+      ]
+    });
+    
+    // Update the column def
+    column.colDef.pinned = column.pinned ? 'left' : undefined;
+    
+    // Refresh the list
+    this.buildFreezableColumns();
+  }
+
+  unfreezeAllColumns(): void {
+    // Build state to unpin all columns EXCEPT actions (which comes pinned from DB)
+    const columnState = this.columnDefs
+      .filter(col => col.field !== 'actions') // Exclude actions from unfreezing
+      .map(col => ({
+        colId: col.field || '',
+        pinned: null
+      }));
+    
+    // Apply the state to AG Grid
+    this.gridApi.applyColumnState({
+      state: columnState
+    });
+    
+    // Update column defs (but keep actions pinned)
+    this.columnDefs.forEach(col => {
+      if (col.field !== 'actions') {
+        col.pinned = undefined;
+      }
+      // Actions column keeps its pinned state from DB
+    });
+    
+    // Rebuild the freezable columns list to reflect changes
+    this.freezableColumns = this.columnDefs
+      .filter(col => col.field !== 'actions')
+      .map(col => ({
+        field: col.field || '',
+        headerName: col.headerName || col.field || '',
+        pinned: false,
+        colDef: col
+      }));
+  }
 }
 
 // Interfaces for column visibility
@@ -638,4 +714,12 @@ interface ColumnGroup {
   name: string;
   columns: ColumnInfo[];
   expanded: boolean;
+}
+
+// Interface for freeze columns
+interface FreezeColumnInfo {
+  field: string;
+  headerName: string;
+  pinned: boolean;
+  colDef: ColDef;
 }
