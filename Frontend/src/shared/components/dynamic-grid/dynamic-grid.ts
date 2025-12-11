@@ -64,6 +64,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   showFreezeMenu: boolean = false;
   freezableColumns: FreezeColumnInfo[] = [];
   
+  // Export menu state
+  showExportMenu: boolean = false;
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -704,6 +707,125 @@ export class DynamicGrid implements OnInit, OnDestroy {
   // Clear all filters
   clearAllFilters(): void {
     this.gridApi.setFilterModel(null);
+  }
+  
+  // Export methods
+  toggleExportMenu(): void {
+    this.showExportMenu = !this.showExportMenu;
+  }
+
+  async exportToCSV(): Promise<void> {
+    this.showExportMenu = false;
+    
+    if (this.isServerSidePagination) {
+      // For server-side pagination, fetch all data first
+      await this.exportAllDataToCSV();
+    } else {
+      // For client-side pagination, export directly
+      const params = {
+        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.csv`,
+        columnKeys: this.getExportableColumns()
+      };
+      
+      this.gridApi.exportDataAsCsv(params);
+    }
+  }
+
+  async exportToExcel(): Promise<void> {
+    this.showExportMenu = false;
+    
+    if (this.isServerSidePagination) {
+      // For server-side pagination, fetch all data first
+      await this.exportAllDataToExcel();
+    } else {
+      // For client-side pagination, export directly
+      const params = {
+        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.xlsx`,
+        columnKeys: this.getExportableColumns(),
+        sheetName: this.procedureName || 'Data'
+      };
+      
+      this.gridApi.exportDataAsExcel(params);
+    }
+  }
+
+  private async exportAllDataToCSV(): Promise<void> {
+    try {
+      // Fetch all data from server
+      const allData = await this.fetchAllDataForExport();
+      
+      // Temporarily store current row data
+      const currentRowData = this.rowData;
+      
+      // Set all data to grid
+      this.rowData = allData;
+      this.gridApi.setGridOption('rowData', allData);
+      
+      // Export
+      const params = {
+        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.csv`,
+        columnKeys: this.getExportableColumns()
+      };
+      
+      this.gridApi.exportDataAsCsv(params);
+      
+      // Restore original data
+      this.rowData = currentRowData;
+      this.gridApi.setGridOption('rowData', currentRowData);
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  }
+
+  private async exportAllDataToExcel(): Promise<void> {
+    try {
+      // Fetch all data from server
+      const allData = await this.fetchAllDataForExport();
+      
+      // Temporarily store current row data
+      const currentRowData = this.rowData;
+      
+      // Set all data to grid
+      this.rowData = allData;
+      this.gridApi.setGridOption('rowData', allData);
+      
+      // Export
+      const params = {
+        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.xlsx`,
+        columnKeys: this.getExportableColumns(),
+        sheetName: this.procedureName || 'Data'
+      };
+      
+      this.gridApi.exportDataAsExcel(params);
+      
+      // Restore original data
+      this.rowData = currentRowData;
+      this.gridApi.setGridOption('rowData', currentRowData);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  }
+
+  private async fetchAllDataForExport(): Promise<any[]> {
+    // Fetch all data without pagination, sorting, or filtering
+    // Use a very large page size to ensure we get ALL records
+    const request: GridDataRequest = {
+      procedureName: this.procedureName,
+      pageNumber: 1,
+      pageSize: 999999999 // Very large number to get all records from database
+    };
+    
+    const response = await this.gridService.executeGridProcedure(request).toPromise();
+    return response?.rows || [];
+  }
+
+  private getExportableColumns(): string[] {
+    // Get all visible columns except the actions column
+    return this.columnDefs
+      .filter(col => col.field && col.field !== 'actions')
+      .map(col => col.field!);
   }
 }
 

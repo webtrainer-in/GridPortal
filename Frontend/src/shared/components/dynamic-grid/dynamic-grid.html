@@ -28,6 +28,37 @@
         <span class="icon">🔍</span> Clear Filters
       </button>
       
+      <!-- Export Button -->
+      <button class="toolbar-btn" (click)="toggleExportMenu()" #exportMenuBtn title="Export data">
+        <span class="icon">📥</span> Export
+      </button>
+      
+      <!-- Export Dropdown Menu -->
+      <div class="export-menu" *ngIf="showExportMenu" [@slideIn]>
+        <div class="export-menu-header">
+          <h4>Export Data</h4>
+          <button class="close-btn" (click)="showExportMenu = false">✕</button>
+        </div>
+        
+        <div class="export-menu-list">
+          <button class="export-option" (click)="exportToCSV()">
+            <span class="export-icon">📄</span>
+            <div class="export-details">
+              <span class="export-title">Export to CSV</span>
+              <span class="export-desc">Comma-separated values file</span>
+            </div>
+          </button>
+          
+          <button class="export-option" (click)="exportToExcel()">
+            <span class="export-icon">📊</span>
+            <div class="export-details">
+              <span class="export-title">Export to Excel</span>
+              <span class="export-desc">Microsoft Excel format (.xlsx)</span>
+            </div>
+          </button>
+        </div>
+      </div>
+      
       <!-- Column Visibility Dropdown -->
       <div class="column-menu" *ngIf="showColumnMenu" [@slideIn]>
         <div class="column-menu-header">
