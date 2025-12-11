@@ -13,6 +13,83 @@
     <span class="record-count">Total Records: {{ totalCount }}</span>
   </div>
 
+  <!-- Column Visibility Button -->
+  <div class="grid-toolbar">
+    <button class="toolbar-btn" (click)="toggleColumnMenu()" #columnMenuBtn>
+      <span class="icon">☰</span> Columns
+    </button>
+    
+    <!-- Column Visibility Dropdown -->
+    <div class="column-menu" *ngIf="showColumnMenu" [@slideIn]>
+      <div class="column-menu-header">
+        <h4>Show/Hide Columns</h4>
+        <button class="close-btn" (click)="showColumnMenu = false">✕</button>
+      </div>
+      
+      <div class="column-menu-search">
+        <input 
+          type="text" 
+          placeholder="Search columns..." 
+          [(ngModel)]="columnSearchTerm"
+          (input)="filterColumns()"
+        />
+      </div>
+      
+      <div class="column-menu-actions">
+        <button (click)="showAllColumns()">Show All</button>
+        <button (click)="hideAllColumns()">Hide All</button>
+      </div>
+      
+      <div class="column-menu-list">
+        <!-- Column Groups -->
+        <div *ngFor="let group of filteredColumnGroups" class="column-group">
+          <div class="group-header" (click)="toggleGroup(group)">
+            <input 
+              type="checkbox" 
+              [checked]="isGroupVisible(group)"
+              [indeterminate]="isGroupIndeterminate(group)"
+              (click)="$event.stopPropagation(); toggleGroupVisibility(group)"
+            />
+            <span class="group-name">{{ group.name }}</span>
+            <span class="expand-icon">{{ group.expanded ? '▼' : '▶' }}</span>
+          </div>
+          
+          <div class="group-columns" *ngIf="group.expanded">
+            <div *ngFor="let col of group.columns" class="column-item">
+              <label>
+                <input 
+                  type="checkbox" 
+                  [checked]="col.visible"
+                  (change)="toggleColumnVisibility(col)"
+                />
+                <span>{{ col.headerName }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Ungrouped Columns -->
+        <div *ngIf="filteredUngroupedColumns.length > 0" class="column-group">
+          <div class="group-header">
+            <span class="group-name">Other Columns</span>
+          </div>
+          <div class="group-columns">
+            <div *ngFor="let col of filteredUngroupedColumns" class="column-item">
+              <label>
+                <input 
+                  type="checkbox" 
+                  [checked]="col.visible"
+                  (change)="toggleColumnVisibility(col)"
+                />
+                <span>{{ col.headerName }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- AG Grid -->
   <ag-grid-angular
     class="ag-theme-quartz grid-container"

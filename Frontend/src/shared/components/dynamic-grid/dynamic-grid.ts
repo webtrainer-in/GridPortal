@@ -6,13 +6,25 @@ import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community'
 import { DynamicGridService, GridDataRequest, ColumnDefinition } from '../../../core/services/dynamic-grid.service';
 import { ActionButtonsRendererComponent } from './action-buttons-renderer.component';
 import { Subject, takeUntil } from 'rxjs';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
   selector: 'app-dynamic-grid',
   standalone: true,
   imports: [CommonModule, FormsModule, AgGridAngular],
   templateUrl: './dynamic-grid.html',
-  styleUrls: ['./dynamic-grid.scss']
+  styleUrls: ['./dynamic-grid.scss'],
+  animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-10px)' }),
+        animate('200ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('150ms ease-in', style({ opacity: 0, transform: 'translateY(-10px)' }))
+      ])
+    ])
+  ]
 })
 export class DynamicGrid implements OnInit, OnDestroy {
   @Input() procedureName: string = '';
@@ -40,6 +52,13 @@ export class DynamicGrid implements OnInit, OnDestroy {
   
   // Filtering state (for server-side pagination)
   currentFilterModel: any = null;
+  
+  // Column visibility state
+  showColumnMenu: boolean = false;
+  columnSearchTerm: string = '';
+  columnGroups: ColumnGroup[] = [];
+  filteredColumnGroups: ColumnGroup[] = [];
+  filteredUngroupedColumns: ColumnInfo[] = [];
   
   private destroy$ = new Subject<void>();
 
@@ -488,4 +507,136 @@ export class DynamicGrid implements OnInit, OnDestroy {
   getEndRecord(): number {
     return Math.min(this.currentPage * this.pageSize, this.totalCount);
   }
+
+  // Column visibility methods
+  toggleColumnMenu(): void {
+    this.showColumnMenu = !this.showColumnMenu;
+    if (this.showColumnMenu) {
+      this.buildColumnGroups();
+      this.filterColumns();
+    }
+  }
+
+  buildColumnGroups(): void {
+    const groupMap = new Map<string, ColumnInfo[]>();
+    const ungrouped: ColumnInfo[] = [];
+
+    this.columnDefs.forEach(colDef => {
+      if (colDef.field === 'actions') return; // Skip actions column
+
+      const columnInfo: ColumnInfo = {
+        field: colDef.field || '',
+        headerName: colDef.headerName || colDef.field || '',
+        visible: !colDef.hide,
+        colDef: colDef
+      };
+
+      const groupName = (colDef as any).columnGroup;
+      if (groupName) {
+        if (!groupMap.has(groupName)) {
+          groupMap.set(groupName, []);
+        }
+        groupMap.get(groupName)!.push(columnInfo);
+      } else {
+        ungrouped.push(columnInfo);
+      }
+    });
+
+    this.columnGroups = Array.from(groupMap.entries()).map(([name, columns]) => ({
+      name,
+      columns,
+      expanded: true
+    }));
+
+    this.filteredUngroupedColumns = ungrouped;
+  }
+
+  filterColumns(): void {
+    const searchLower = this.columnSearchTerm.toLowerCase();
+    
+    if (!searchLower) {
+      this.filteredColumnGroups = this.columnGroups;
+      return;
+    }
+
+    this.filteredColumnGroups = this.columnGroups
+      .map(group => ({
+        ...group,
+        columns: group.columns.filter(col => 
+          col.headerName.toLowerCase().includes(searchLower) ||
+          col.field.toLowerCase().includes(searchLower)
+        )
+      }))
+      .filter(group => group.columns.length > 0);
+
+    this.filteredUngroupedColumns = this.filteredUngroupedColumns.filter(col =>
+      col.headerName.toLowerCase().includes(searchLower) ||
+      col.field.toLowerCase().includes(searchLower)
+    );
+  }
+
+  toggleColumnVisibility(column: ColumnInfo): void {
+    column.visible = !column.visible;
+    column.colDef.hide = !column.visible;
+    this.gridApi.setGridOption('columnDefs', this.columnDefs);
+  }
+
+  toggleGroup(group: ColumnGroup): void {
+    group.expanded = !group.expanded;
+  }
+
+  toggleGroupVisibility(group: ColumnGroup): void {
+    const allVisible = group.columns.every(col => col.visible);
+    const newVisibility = !allVisible;
+
+    group.columns.forEach(col => {
+      col.visible = newVisibility;
+      col.colDef.hide = !newVisibility;
+    });
+
+    this.gridApi.setGridOption('columnDefs', this.columnDefs);
+  }
+
+  isGroupVisible(group: ColumnGroup): boolean {
+    return group.columns.every(col => col.visible);
+  }
+
+  isGroupIndeterminate(group: ColumnGroup): boolean {
+    const visibleCount = group.columns.filter(col => col.visible).length;
+    return visibleCount > 0 && visibleCount < group.columns.length;
+  }
+
+  showAllColumns(): void {
+    this.columnDefs.forEach(colDef => {
+      if (colDef.field !== 'actions') {
+        colDef.hide = false;
+      }
+    });
+    this.buildColumnGroups();
+    this.gridApi.setGridOption('columnDefs', this.columnDefs);
+  }
+
+  hideAllColumns(): void {
+    this.columnDefs.forEach(colDef => {
+      if (colDef.field !== 'actions') {
+        colDef.hide = true;
+      }
+    });
+    this.buildColumnGroups();
+    this.gridApi.setGridOption('columnDefs', this.columnDefs);
+  }
+}
+
+// Interfaces for column visibility
+interface ColumnInfo {
+  field: string;
+  headerName: string;
+  visible: boolean;
+  colDef: ColDef;
+}
+
+interface ColumnGroup {
+  name: string;
+  columns: ColumnInfo[];
+  expanded: boolean;
 }
