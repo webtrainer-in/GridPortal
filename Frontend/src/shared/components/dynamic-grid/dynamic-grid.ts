@@ -441,7 +441,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
           if (response.success) {
             this.editingRows.delete(rowData.Id);
             delete rowData._originalData;
-            this.gridApi?.refreshCells({ force: true });
+            
+            // Redraw the entire row to update all cells including action buttons
+            this.gridApi?.redrawRows();
+            
             console.log('✅ Row saved successfully');
           } else {
             alert(`❌ Save failed: ${response.message}`);

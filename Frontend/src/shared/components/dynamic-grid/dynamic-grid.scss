@@ -572,3 +572,10 @@
     margin-bottom: 4px;
   }
 }
+
+// Remove padding from cells with editable cell renderer to allow full-width inputs
+::ng-deep .ag-cell {
+  &:has(app-editable-cell-renderer) {
+    padding: 0 !important;
+  }
+}
