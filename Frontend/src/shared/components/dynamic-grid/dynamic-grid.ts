@@ -734,19 +734,60 @@ export class DynamicGrid implements OnInit, OnDestroy {
   async exportToExcel(): Promise<void> {
     this.showExportMenu = false;
     
-    if (this.isServerSidePagination) {
-      // For server-side pagination, fetch all data first
-      await this.exportAllDataToExcel();
-    } else {
-      // For client-side pagination, export directly
-      const params = {
-        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.xlsx`,
-        columnKeys: this.getExportableColumns(),
-        sheetName: this.procedureName || 'Data'
-      };
+    try {
+      let dataToExport: any[];
       
-      this.gridApi.exportDataAsExcel(params);
+      if (this.isServerSidePagination) {
+        // For server-side pagination, fetch all data first
+        dataToExport = await this.fetchAllDataForExport();
+      } else {
+        // For client-side pagination, use current data
+        dataToExport = this.rowData;
+      }
+      
+      // Use xlsx library to create Excel file
+      await this.exportToExcelUsingXLSX(dataToExport);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel. Please try again.');
     }
+  }
+
+  private async exportToExcelUsingXLSX(data: any[]): Promise<void> {
+    // Dynamically import xlsx library
+    const XLSX = await import('xlsx');
+    
+    // Get exportable columns
+    const exportColumns = this.getExportableColumns();
+    
+    // Create worksheet data with headers
+    const worksheetData: any[][] = [];
+    
+    // Add headers
+    const headers = exportColumns.map(field => {
+      const colDef = this.columnDefs.find(col => col.field === field);
+      return colDef?.headerName || field;
+    });
+    worksheetData.push(headers);
+    
+    // Add data rows
+    data.forEach(row => {
+      const rowData = exportColumns.map(field => row[field] ?? '');
+      worksheetData.push(rowData);
+    });
+    
+    // Create worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, this.procedureName || 'Data');
+    
+    // Generate file name
+    const fileName = `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Write file
+    XLSX.writeFile(workbook, fileName);
   }
 
   private async exportAllDataToCSV(): Promise<void> {
@@ -774,36 +815,6 @@ export class DynamicGrid implements OnInit, OnDestroy {
       this.gridApi.setGridOption('rowData', currentRowData);
     } catch (error) {
       console.error('Error exporting to CSV:', error);
-      alert('Failed to export data. Please try again.');
-    }
-  }
-
-  private async exportAllDataToExcel(): Promise<void> {
-    try {
-      // Fetch all data from server
-      const allData = await this.fetchAllDataForExport();
-      
-      // Temporarily store current row data
-      const currentRowData = this.rowData;
-      
-      // Set all data to grid
-      this.rowData = allData;
-      this.gridApi.setGridOption('rowData', allData);
-      
-      // Export
-      const params = {
-        fileName: `${this.procedureName || 'grid-data'}_${new Date().toISOString().split('T')[0]}.xlsx`,
-        columnKeys: this.getExportableColumns(),
-        sheetName: this.procedureName || 'Data'
-      };
-      
-      this.gridApi.exportDataAsExcel(params);
-      
-      // Restore original data
-      this.rowData = currentRowData;
-      this.gridApi.setGridOption('rowData', currentRowData);
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
       alert('Failed to export data. Please try again.');
     }
   }

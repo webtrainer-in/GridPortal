@@ -37,7 +37,8 @@ BEGIN
     END IF;
     
     -- Validate inputs
-    IF v_FetchSize > 1000 THEN v_FetchSize := 1000; END IF;
+    -- Removed the 1000 record limit to allow full data export
+    -- IF v_FetchSize > 1000 THEN v_FetchSize := 1000; END IF;
     IF v_FetchSize < 1 THEN v_FetchSize := 100; END IF;
     IF p_SortDirection NOT IN ('ASC', 'DESC') THEN p_SortDirection := 'ASC'; END IF;
     
