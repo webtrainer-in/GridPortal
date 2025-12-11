@@ -14,20 +14,20 @@ import { ICellRendererParams } from 'ag-grid-community';
           class="btn-edit" 
           (click)="onEditClick()"
           title="Edit row">
-          ✏️ Edit
+          ✏️
         </button>
         <button 
           class="btn-delete" 
           (click)="onDeleteClick()"
           title="Delete row">
-          🗑️ Delete
+          🗑️
         </button>
       } @else {
         <button 
           class="btn-save" 
           (click)="onSaveClick()"
           title="Save changes">
-          ✅ Save
+          ✅
         </button>
         <button 
           class="btn-cancel" 
@@ -41,20 +41,26 @@ import { ICellRendererParams } from 'ag-grid-community';
   styles: [`
     .action-buttons {
       display: flex;
-      gap: 5px;
+      gap: 4px;
       padding: 5px;
       height: 100%;
       align-items: center;
+      justify-content: center;
     }
     
     button {
-      padding: 4px 8px;
+      padding: 6px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 16px;
       transition: all 0.2s;
       font-weight: 500;
+      min-width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .btn-edit {
@@ -64,6 +70,7 @@ import { ICellRendererParams } from 'ag-grid-community';
     
     .btn-edit:hover {
       background: #0056b3;
+      transform: scale(1.1);
     }
     
     .btn-delete {
@@ -73,6 +80,7 @@ import { ICellRendererParams } from 'ag-grid-community';
     
     .btn-delete:hover {
       background: #c82333;
+      transform: scale(1.1);
     }
     
     .btn-save {
@@ -82,16 +90,17 @@ import { ICellRendererParams } from 'ag-grid-community';
     
     .btn-save:hover {
       background: #218838;
+      transform: scale(1.1);
     }
     
     .btn-cancel {
       background: #6c757d;
       color: white;
-      padding: 4px 6px;
     }
     
     .btn-cancel:hover {
       background: #5a6268;
+      transform: scale(1.1);
     }
   `]
 })
