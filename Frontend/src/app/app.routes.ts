@@ -58,6 +58,10 @@ export const routes: Routes = [
       {
         path: 'operations',
         loadComponent: () => import('../features/dashboard/pages/dashboard/dashboard').then(m => m.DashboardComponent) // Placeholder for Operations parent
+      },
+      {
+        path: 'data-grid',
+        loadComponent: () => import('../features/data-grid/pages/data-grid/data-grid').then(m => m.DataGridComponent)
       }
     ]
   },

@@ -10,7 +10,7 @@
       "isPrimary": true,
       "hasTabs": true,
       "roleAccess": [
-        { "role": "Operator", "accessType": "allow" },
+        { "role": "User", "accessType": "allow" },
         { "role": "Manager", "accessType": "hide" },
         { "role": "Admin", "accessType": "allow" }
 
@@ -83,6 +83,18 @@
               "icon": "pi pi-clock",
               "type": "item",
               "route": "/dashboard"
+            },
+            {
+              "label": "Data Grid",
+              "icon": "pi pi-table",
+              "type": "folder",
+              "children": [
+                {
+                  "label": "Employee Grid",
+                  "icon": "pi pi-users",
+                  "route": "/data-grid"
+                }
+              ]
             }
           ]
         },

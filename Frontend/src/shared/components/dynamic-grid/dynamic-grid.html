@@ -1,0 +1,253 @@
+<div class="dynamic-grid-container">
+  <!-- Loading indicator -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <span>Loading data...</span>
+  </div>
+
+  <!-- Pagination mode indicator -->
+  <div class="pagination-info">
+    <span class="mode-badge" [class.client-side]="!isServerSidePagination" [class.server-side]="isServerSidePagination">
+      {{ isServerSidePagination ? 'Server-Side Pagination' : 'Client-Side Pagination' }}
+    </span>
+    
+    <!-- Toolbar buttons -->
+    <div class="grid-toolbar-top">
+      <!-- Column Visibility Button -->
+      <button class="toolbar-btn" (click)="toggleColumnMenu()" #columnMenuBtn>
+        <span class="icon">☰</span> Columns
+      </button>
+      
+      <!-- Freeze Columns Button -->
+      <button class="toolbar-btn" (click)="toggleFreezeMenu()" #freezeMenuBtn>
+        <span class="icon">📌</span> Freeze
+      </button>
+      
+      <!-- Clear Filters Button -->
+      <button class="toolbar-btn" (click)="clearAllFilters()" title="Clear all column filters">
+        <span class="icon">🔍</span> Clear Filters
+      </button>
+      
+      <!-- Export Button -->
+      <button class="toolbar-btn" (click)="toggleExportMenu()" #exportMenuBtn title="Export data">
+        <span class="icon">📥</span> Export
+      </button>
+      
+      <!-- Global Search Input -->
+      <div class="search-container">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search all columns..." 
+          [(ngModel)]="globalSearchTerm"
+          (input)="onGlobalSearch()"
+          title="Search across all columns"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+      
+      <!-- Export Dropdown Menu -->
+      <div class="export-menu" *ngIf="showExportMenu" [@slideIn]>
+        <div class="export-menu-header">
+          <h4>Export Data</h4>
+          <button class="close-btn" (click)="showExportMenu = false">✕</button>
+        </div>
+        
+        <div class="export-menu-list">
+          <button class="export-option" (click)="exportToCSV()">
+            <span class="export-icon">📄</span>
+            <div class="export-details">
+              <span class="export-title">Export to CSV</span>
+              <span class="export-desc">Comma-separated values file</span>
+            </div>
+          </button>
+          
+          <button class="export-option" (click)="exportToExcel()">
+            <span class="export-icon">📊</span>
+            <div class="export-details">
+              <span class="export-title">Export to Excel</span>
+              <span class="export-desc">Microsoft Excel format (.xlsx)</span>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Column Visibility Dropdown -->
+      <div class="column-menu" *ngIf="showColumnMenu" [@slideIn]>
+        <div class="column-menu-header">
+          <h4>Show/Hide Columns</h4>
+          <button class="close-btn" (click)="showColumnMenu = false">✕</button>
+        </div>
+        
+        <div class="column-menu-search">
+          <input 
+            type="text" 
+            placeholder="Search columns..." 
+            [(ngModel)]="columnSearchTerm"
+            (input)="filterColumns()"
+          />
+        </div>
+        
+        <div class="column-menu-actions">
+          <button (click)="showAllColumns()">Show All</button>
+          <button (click)="hideAllColumns()">Hide All</button>
+        </div>
+        
+        <div class="column-menu-list">
+          <!-- Column Groups -->
+          <div *ngFor="let group of filteredColumnGroups" class="column-group">
+            <div class="group-header" (click)="toggleGroup(group)">
+              <input 
+                type="checkbox" 
+                [checked]="isGroupVisible(group)"
+                [indeterminate]="isGroupIndeterminate(group)"
+                (click)="$event.stopPropagation(); toggleGroupVisibility(group)"
+              />
+              <span class="group-name">{{ group.name }}</span>
+              <span class="expand-icon">{{ group.expanded ? '▼' : '▶' }}</span>
+            </div>
+            
+            <div class="group-columns" *ngIf="group.expanded">
+              <div *ngFor="let col of group.columns" class="column-item">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    [checked]="col.visible"
+                    (change)="toggleColumnVisibility(col)"
+                  />
+                  <span>{{ col.headerName }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Ungrouped Columns -->
+          <div *ngIf="filteredUngroupedColumns.length > 0" class="column-group">
+            <div class="group-header">
+              <span class="group-name">Other Columns</span>
+            </div>
+            <div class="group-columns">
+              <div *ngFor="let col of filteredUngroupedColumns" class="column-item">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    [checked]="col.visible"
+                    (change)="toggleColumnVisibility(col)"
+                  />
+                  <span>{{ col.headerName }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Freeze Columns Dropdown -->
+      <div class="column-menu freeze-menu" *ngIf="showFreezeMenu" [@slideIn]>
+        <div class="column-menu-header">
+          <h4>Freeze Columns</h4>
+          <button class="close-btn" (click)="showFreezeMenu = false">✕</button>
+        </div>
+        
+        <div class="column-menu-actions">
+          <button (click)="unfreezeAllColumns()">Unfreeze All</button>
+        </div>
+        
+        <div class="column-menu-list">
+          <div class="freeze-info">
+            Click a column to pin it to the left side of the grid
+          </div>
+          
+          <!-- Freezable Columns -->
+          <div class="column-group">
+            <div *ngFor="let col of freezableColumns" class="column-item freeze-item">
+              <label (click)="toggleColumnFreeze(col)">
+                <span class="freeze-icon">{{ col.pinned ? '📌' : '○' }}</span>
+                <span>{{ col.headerName }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AG Grid -->
+  <ag-grid-angular
+    class="ag-theme-quartz grid-container"
+    [columnDefs]="columnDefs"
+    [rowData]="rowData"
+    [getRowStyle]="getRowStyle"
+    [animateRows]="true"
+    [pagination]="!isServerSidePagination"
+    [paginationPageSize]="pageSize"
+    [paginationPageSizeSelector]="[15, 25, 50, 100]"
+    (gridReady)="onGridReady($event)"
+    (sortChanged)="onSortChanged()"
+    (filterChanged)="onFilterChanged()"
+  ></ag-grid-angular>
+
+  <!-- Custom pagination controls (shown only for server-side pagination) -->
+  <div *ngIf="isServerSidePagination" class="custom-pagination">
+    <!-- Page Size Selector -->
+    <div class="page-size-selector">
+      <label for="page-size">Page Size:</label>
+      <select 
+        id="page-size" 
+        [(ngModel)]="pageSize" 
+        (change)="onPageSizeChange()"
+        [disabled]="isLoading">
+        <option [value]="15">15</option>
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+      </select>
+    </div>
+    
+    <!-- Record Range Info -->
+    <div class="pagination-info-text">
+      <span>{{ getStartRecord() }} to {{ getEndRecord() }} of {{ totalCount }}</span>
+    </div>
+    
+    <!-- First Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="currentPage === 1 || isLoading"
+      (click)="goToPage(1)"
+      title="First Page">
+      ⏮
+    </button>
+    
+    <!-- Previous Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="!canGoPrevious || isLoading" 
+      (click)="previousPage()"
+      title="Previous Page">
+      ◀
+    </button>
+    
+    <!-- Page Info -->
+    <div class="pagination-info-text">
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    </div>
+    
+    <!-- Next Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="!canGoNext || isLoading" 
+      (click)="nextPage()"
+      title="Next Page">
+      ▶
+    </button>
+    
+    <!-- Last Page Button -->
+    <button 
+      class="pagination-btn icon-btn" 
+      [disabled]="currentPage === totalPages || isLoading"
+      (click)="goToPage(totalPages)"
+      title="Last Page">
+      ⏭
+    </button>
+  </div>
+</div>
