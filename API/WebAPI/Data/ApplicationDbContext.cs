@@ -21,6 +21,9 @@ public class ApplicationDbContext : DbContext
     // Example Data
     public DbSet<Department> Departments { get; set; }
     public DbSet<Employee> Employees { get; set; }
+    
+    // Bus Data
+    public DbSet<Bus> Buses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,6 +119,19 @@ public class ApplicationDbContext : DbContext
                 .WithMany(d => d.Employees)
                 .HasForeignKey(e => e.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Bus configuration
+        modelBuilder.Entity<Bus>(entity =>
+        {
+            entity.HasKey(e => new { e.Ibus, e.CaseNumber });
+            entity.ToTable("Bus");
+            
+            entity.Property(e => e.Ibus).IsRequired();
+            entity.Property(e => e.CaseNumber).IsRequired();
+            entity.Property(e => e.AreaCaseNumber).IsRequired();
+            entity.Property(e => e.OwnerCaseNumber).IsRequired();
+            entity.Property(e => e.ZoneCaseNumber).IsRequired();
         });
 
         // Seed default roles
