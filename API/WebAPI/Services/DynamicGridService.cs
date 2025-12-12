@@ -382,6 +382,12 @@ public class DynamicGridService : IDynamicGridService
 
         foreach (var proc in procedures)
         {
+            // Skip CRUD helper procedures (Update, Delete) - only show grid data procedures
+            if (proc.ProcedureName.Contains("_Update_") || proc.ProcedureName.Contains("_Delete_"))
+            {
+                continue;
+            }
+            
             // Parse allowed roles from JSON
             var allowedRoles = JsonSerializer.Deserialize<List<string>>(proc.AllowedRoles) ?? new List<string>();
             
