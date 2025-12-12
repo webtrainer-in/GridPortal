@@ -166,24 +166,73 @@ public class DynamicGridService : IDynamicGridService
             // Convert changes dictionary to JSON
             var changesJson = JsonSerializer.Serialize(request.Changes);
             
-            // Convert RowId to int (it comes as JsonElement from JSON deserialization)
-            int rowId;
+            // Dynamically determine parameter type based on ID format
+            string parameterName;
+            NpgsqlParameter idParameter;
+            string rowIdString;
+            
+            // Convert RowId to string
             if (request.RowId is System.Text.Json.JsonElement jsonElement)
             {
-                rowId = jsonElement.GetInt32();
+                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    rowIdString = jsonElement.GetInt32().ToString();
+                }
+                else
+                {
+                    rowIdString = jsonElement.GetString() ?? "";
+                }
             }
             else
             {
-                rowId = Convert.ToInt32(request.RowId);
+                rowIdString = request.RowId?.ToString() ?? "";
             }
-            _logger.LogInformation("Converted RowId to int: {RowId}", rowId);
+            
+            _logger.LogInformation("RowId as string: {RowId}", rowIdString);
+            
+            // Extract entity name from update procedure for parameter naming
+            var entityName = updateProcedureName.Replace("sp_Grid_Update_", "");
+            
+            if (rowIdString.Contains("_"))
+            {
+                // Composite key format (e.g., "101_1") - use TEXT parameter
+                parameterName = $"p_{entityName}Id";
+                idParameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Text) 
+                { 
+                    Value = rowIdString 
+                };
+                _logger.LogInformation("Using TEXT parameter for composite key: {ParameterName} = {Value}", 
+                    parameterName, rowIdString);
+            }
+            else if (int.TryParse(rowIdString, out int intId))
+            {
+                // Simple integer ID - use INTEGER parameter
+                parameterName = "p_Id";  // Keep standard name for backward compatibility
+                idParameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Integer) 
+                { 
+                    Value = intId 
+                };
+                _logger.LogInformation("Using INTEGER parameter: {ParameterName} = {Value}", 
+                    parameterName, intId);
+            }
+            else
+            {
+                // Fallback to TEXT for any other format
+                parameterName = $"p_{entityName}Id";
+                idParameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Text) 
+                { 
+                    Value = rowIdString 
+                };
+                _logger.LogInformation("Using TEXT parameter (fallback): {ParameterName} = {Value}", 
+                    parameterName, rowIdString);
+            }
             
             // Execute update function
-            var sql = $"SELECT {updateProcedureName}(@p_Id, @p_ChangesJson, @p_UserId)";
+            var sql = $"SELECT {updateProcedureName}(@{parameterName}, @p_ChangesJson, @p_UserId)";
             
             var parameters = new[]
             {
-                new NpgsqlParameter("p_Id", NpgsqlTypes.NpgsqlDbType.Integer) { Value = rowId },
+                idParameter,
                 new NpgsqlParameter("p_ChangesJson", NpgsqlTypes.NpgsqlDbType.Text) { Value = changesJson },
                 new NpgsqlParameter("p_UserId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = userId }
             };
