@@ -140,8 +140,10 @@ public class DynamicGridService : IDynamicGridService
             throw new UnauthorizedAccessException("Access denied to update this data");
         }
 
-        // Determine update procedure name
-        var updateProcedureName = request.ProcedureName.Replace("sp_Grid_", "sp_Grid_Update_");
+        // Determine update procedure name dynamically
+        // e.g., sp_Grid_Example_Employees -> sp_Grid_Update_Employee
+        // e.g., sp_Grid_Buses -> sp_Grid_Update_Bus
+        var updateProcedureName = DeriveUpdateProcedureName(request.ProcedureName);
         _logger.LogInformation("Derived update procedure name: {UpdateProcedureName}", updateProcedureName);
         
         // Validate update procedure exists and user has access
@@ -454,6 +456,7 @@ public class DynamicGridService : IDynamicGridService
     }
 
 
+
     private bool IsValidProcedureName(string procedureName)
     {
         // Only allow alphanumeric characters and underscores
@@ -462,6 +465,40 @@ public class DynamicGridService : IDynamicGridService
             procedureName,
             @"^sp_Grid_[a-zA-Z0-9_]+$"
         );
+    }
+
+    private string DeriveUpdateProcedureName(string gridProcedureName)
+    {
+        // Derive update procedure name from grid procedure name using pattern matching
+        // Pattern: sp_Grid_[Anything] -> sp_Grid_Update_[Entity]
+        // Examples:
+        //   sp_Grid_Example_Employees -> sp_Grid_Update_Employee
+        //   sp_Grid_Buses -> sp_Grid_Update_Bus
+        //   sp_Grid_Products -> sp_Grid_Update_Product
+        
+        // Remove "sp_Grid_" prefix
+        var withoutPrefix = gridProcedureName.Replace("sp_Grid_", "");
+        
+        // Split by underscore to get parts
+        var parts = withoutPrefix.Split('_');
+        
+        // Get the last part (entity name) and singularize if needed
+        var entityName = parts[parts.Length - 1];
+        
+        // Simple singularization: remove trailing 's' if present
+        if (entityName.EndsWith("es"))
+        {
+            // Buses -> Bus
+            entityName = entityName.Substring(0, entityName.Length - 2);
+        }
+        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        {
+            // Employees -> Employee, Products -> Product
+            entityName = entityName.Substring(0, entityName.Length - 1);
+        }
+        
+        // Construct update procedure name
+        return $"sp_Grid_Update_{entityName}";
     }
 
     private string DeriveDeleteProcedureName(string gridProcedureName)
