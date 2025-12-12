@@ -242,15 +242,13 @@ public class DynamicGridService : IDynamicGridService
 
         // Derive delete procedure name from grid procedure name
         // e.g., sp_Grid_Example_Employees -> sp_Grid_Delete_Employee
-        // Pattern: sp_Grid_[Action]_[Entity] -> sp_Grid_Delete_[Entity_Singular]
-        var deleteProcedureName = "sp_Grid_Delete_Employee"; // Hardcoded for now, can be made dynamic later
+        // e.g., sp_Grid_Buses -> sp_Grid_Delete_Bus
+        var deleteProcedureName = DeriveDeleteProcedureName(request.ProcedureName);
         
         _logger.LogInformation("Delete procedure name: {DeleteProcedureName}", deleteProcedureName);
         
         // Check if delete procedure exists and user has access
-        var hasDeleteAccess = await ValidateProcedureAccessAsync(deleteProcedureName, userRoles);
-        
-        if (!hasDeleteAccess)
+        if (!await ValidateProcedureAccessAsync(deleteProcedureName, userRoles))
         {
             _logger.LogWarning("Delete procedure not found or access denied: {DeleteProcedureName}", deleteProcedureName);
             return new RowDeleteResponse
@@ -263,32 +261,78 @@ public class DynamicGridService : IDynamicGridService
 
         try
         {
-            // Convert RowId to int (it comes as JsonElement from JSON deserialization)
-            int rowId;
+            // Determine parameter type and value based on the row ID
+            string parameterName;
+            NpgsqlParameter parameter;
+            string rowIdString;
+            
+            // Convert RowId to string
             if (request.RowId is System.Text.Json.JsonElement jsonElement)
             {
-                rowId = jsonElement.GetInt32();
+                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    rowIdString = jsonElement.GetInt32().ToString();
+                }
+                else
+                {
+                    rowIdString = jsonElement.GetString() ?? "";
+                }
             }
             else
             {
-                rowId = Convert.ToInt32(request.RowId);
+                rowIdString = request.RowId?.ToString() ?? "";
             }
-            _logger.LogInformation("Converted RowId to int: {RowId}", rowId);
+            
+            _logger.LogInformation("RowId as string: {RowId}", rowIdString);
+            
+            // Extract entity name from delete procedure for parameter naming
+            // sp_Grid_Delete_Employee -> Employee
+            // sp_Grid_Delete_Bus -> Bus
+            var entityName = deleteProcedureName.Replace("sp_Grid_Delete_", "");
+            
+            if (rowIdString.Contains("_"))
+            {
+                // Composite key format (e.g., "101_1") - use TEXT parameter
+                parameterName = $"p_{entityName}Id";
+                parameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Text) 
+                { 
+                    Value = rowIdString 
+                };
+                _logger.LogInformation("Using TEXT parameter for composite key: {ParameterName} = {Value}", 
+                    parameterName, rowIdString);
+            }
+            else if (int.TryParse(rowIdString, out int intId))
+            {
+                // Simple integer ID - use INTEGER parameter
+                parameterName = $"p_{entityName}Id";
+                parameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Integer) 
+                { 
+                    Value = intId 
+                };
+                _logger.LogInformation("Using INTEGER parameter: {ParameterName} = {Value}", 
+                    parameterName, intId);
+            }
+            else
+            {
+                // Fallback to TEXT for any other format
+                parameterName = $"p_{entityName}Id";
+                parameter = new NpgsqlParameter(parameterName, NpgsqlTypes.NpgsqlDbType.Text) 
+                { 
+                    Value = rowIdString 
+                };
+                _logger.LogInformation("Using TEXT parameter (fallback): {ParameterName} = {Value}", 
+                    parameterName, rowIdString);
+            }
             
             // Execute delete function
-            var sql = $"SELECT {deleteProcedureName}(@p_EmployeeId)";
+            var sql = $"SELECT {deleteProcedureName}(@{parameterName})";
             
-            var parameters = new[]
-            {
-                new NpgsqlParameter("p_EmployeeId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = rowId }
-            };
-
             var connection = _context.Database.GetDbConnection();
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
             command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            command.Parameters.Add(parameter);
 
             var jsonResult = await command.ExecuteScalarAsync();
             
@@ -409,6 +453,7 @@ public class DynamicGridService : IDynamicGridService
         await _context.SaveChangesAsync();
     }
 
+
     private bool IsValidProcedureName(string procedureName)
     {
         // Only allow alphanumeric characters and underscores
@@ -417,5 +462,41 @@ public class DynamicGridService : IDynamicGridService
             procedureName,
             @"^sp_Grid_[a-zA-Z0-9_]+$"
         );
+    }
+
+    private string DeriveDeleteProcedureName(string gridProcedureName)
+    {
+        // Derive delete procedure name from grid procedure name using pattern matching
+        // Pattern: sp_Grid_[Anything] -> sp_Grid_Delete_[Entity]
+        // Examples:
+        //   sp_Grid_Example_Employees -> sp_Grid_Delete_Employee
+        //   sp_Grid_Buses -> sp_Grid_Delete_Bus
+        //   sp_Grid_Products -> sp_Grid_Delete_Product
+        
+        // Remove "sp_Grid_" prefix
+        var withoutPrefix = gridProcedureName.Replace("sp_Grid_", "");
+        
+        // Split by underscore to get parts
+        var parts = withoutPrefix.Split('_');
+        
+        // Get the last part (entity name) and singularize if needed
+        var entityName = parts[parts.Length - 1];
+        
+        // Simple singularization: remove trailing 's' if present
+        // For more complex cases, this could be enhanced
+        if (entityName.EndsWith("es"))
+        {
+            // Buses -> Bus
+            entityName = entityName.Substring(0, entityName.Length - 2);
+        }
+        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        {
+            // Employees -> Employee, Products -> Product
+            // But not: Address -> Addres
+            entityName = entityName.Substring(0, entityName.Length - 1);
+        }
+        
+        // Construct delete procedure name
+        return $"sp_Grid_Delete_{entityName}";
     }
 }
