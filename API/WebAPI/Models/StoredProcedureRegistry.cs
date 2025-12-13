@@ -37,6 +37,15 @@ public class StoredProcedureRegistry
 
     public int MaxPageSize { get; set; } = 1000;
 
+    /// <summary>
+    /// Database identifier for routing procedure calls.
+    /// Maps to connection string names in appsettings.json.
+    /// If null, uses DefaultConnection.
+    /// Examples: "PowerSystem", "HR", "Finance"
+    /// </summary>
+    [MaxLength(100)]
+    public string? DatabaseName { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }

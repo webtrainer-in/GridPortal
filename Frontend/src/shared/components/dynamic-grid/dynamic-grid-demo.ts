@@ -41,7 +41,7 @@ import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/
             [procedureName]="selectedProcedure"
             [enableRowEditing]="true"
             [pageSize]="15"
-            [paginationThreshold]="5000"
+            [paginationThreshold]="10"
           ></app-dynamic-grid>
         }
       } @else {

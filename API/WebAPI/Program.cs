@@ -16,6 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Register DbContextFactory for multi-database support
+builder.Services.AddScoped<IDbContextFactory, DbContextFactory>();
+
 // CORS Configuration
 builder.Services.AddCors(options =>
 {
