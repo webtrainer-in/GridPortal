@@ -10,16 +10,30 @@ namespace WebAPI.Services;
 public class DynamicGridService : IDynamicGridService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory _dbContextFactory;
     private readonly ILogger<DynamicGridService> _logger;
 
-    public DynamicGridService(ApplicationDbContext context, ILogger<DynamicGridService> logger)
+    public DynamicGridService(
+        ApplicationDbContext context,
+        IDbContextFactory dbContextFactory,
+        ILogger<DynamicGridService> logger)
     {
         _context = context;
+        _dbContextFactory = dbContextFactory;
         _logger = logger;
     }
 
     public async Task<GridDataResponse> ExecuteGridProcedureAsync(GridDataRequest request, string[] userRoles)
     {
+        // Get procedure metadata for database routing
+        var procedure = await _context.StoredProcedureRegistry
+            .FirstOrDefaultAsync(p => p.ProcedureName == request.ProcedureName && p.IsActive);
+
+        if (procedure == null)
+        {
+            throw new Exception($"Procedure not found or inactive: {request.ProcedureName}");
+        }
+
         // Validate procedure access
         if (!await ValidateProcedureAccessAsync(request.ProcedureName, userRoles))
         {
@@ -31,6 +45,14 @@ public class DynamicGridService : IDynamicGridService
         {
             throw new ArgumentException("Invalid procedure name format");
         }
+
+        // Get database name from procedure metadata
+        var databaseName = procedure.DatabaseName;
+
+        _logger.LogInformation(
+            "Executing procedure {ProcedureName} on database {DatabaseName}",
+            request.ProcedureName,
+            databaseName ?? "DefaultConnection");
 
         // Validate page size - REMOVED: Frontend controls this via paginationThreshold
         // var procedure = await _context.StoredProcedureRegistry
@@ -59,14 +81,17 @@ public class DynamicGridService : IDynamicGridService
             // Execute PostgreSQL function and get JSON result
             var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
             
-            var connection = _context.Database.GetDbConnection();
-            await connection.OpenAsync();
+            // Create connection to target database using factory
+            var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
 
             using var command = connection.CreateCommand();
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
 
             var jsonResult = await command.ExecuteScalarAsync();
+            
+            // Close connection
+            await connection.DisposeAsync();
             
             if (jsonResult == null || jsonResult == DBNull.Value)
             {
@@ -146,13 +171,13 @@ public class DynamicGridService : IDynamicGridService
         var updateProcedureName = DeriveUpdateProcedureName(request.ProcedureName);
         _logger.LogInformation("Derived update procedure name: {UpdateProcedureName}", updateProcedureName);
         
-        // Validate update procedure exists and user has access
-        var hasUpdateAccess = await ValidateProcedureAccessAsync(updateProcedureName, userRoles);
-        _logger.LogInformation("Update procedure validation result: {HasAccess}", hasUpdateAccess);
+        // Get update procedure metadata for database routing
+        var updateProcedure = await _context.StoredProcedureRegistry
+            .FirstOrDefaultAsync(p => p.ProcedureName == updateProcedureName && p.IsActive);
         
-        if (!hasUpdateAccess)
+        if (updateProcedure == null)
         {
-            _logger.LogWarning("Update procedure not found or access denied: {UpdateProcedureName}", updateProcedureName);
+            _logger.LogWarning("Update procedure not found or inactive: {UpdateProcedureName}", updateProcedureName);
             return new RowUpdateResponse
             {
                 Success = false,
@@ -160,6 +185,22 @@ public class DynamicGridService : IDynamicGridService
                 ErrorCode = "UPDATE_NOT_SUPPORTED"
             };
         }
+        
+        // Validate user has access to update procedure
+        var hasUpdateAccess = await ValidateProcedureAccessAsync(updateProcedureName, userRoles);
+        if (!hasUpdateAccess)
+        {
+            _logger.LogWarning("Access denied to update procedure: {UpdateProcedureName}", updateProcedureName);
+            return new RowUpdateResponse
+            {
+                Success = false,
+                Message = "Access denied to update this data",
+                ErrorCode = "ACCESS_DENIED"
+            };
+        }
+        
+        var databaseName = updateProcedure.DatabaseName;
+        _logger.LogInformation("Executing update on database: {DatabaseName}", databaseName ?? "DefaultConnection");
 
         try
         {
@@ -237,14 +278,17 @@ public class DynamicGridService : IDynamicGridService
                 new NpgsqlParameter("p_UserId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = userId }
             };
 
-            var connection = _context.Database.GetDbConnection();
-            await connection.OpenAsync();
+            // Create connection to target database using factory
+            var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
 
             using var command = connection.CreateCommand();
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
 
             var jsonResult = await command.ExecuteScalarAsync();
+            
+            // Close connection
+            await connection.DisposeAsync();
             
             if (jsonResult == null || jsonResult == DBNull.Value)
             {
@@ -298,10 +342,13 @@ public class DynamicGridService : IDynamicGridService
         
         _logger.LogInformation("Delete procedure name: {DeleteProcedureName}", deleteProcedureName);
         
-        // Check if delete procedure exists and user has access
-        if (!await ValidateProcedureAccessAsync(deleteProcedureName, userRoles))
+        // Get delete procedure metadata for database routing
+        var deleteProcedure = await _context.StoredProcedureRegistry
+            .FirstOrDefaultAsync(p => p.ProcedureName == deleteProcedureName && p.IsActive);
+        
+        if (deleteProcedure == null)
         {
-            _logger.LogWarning("Delete procedure not found or access denied: {DeleteProcedureName}", deleteProcedureName);
+            _logger.LogWarning("Delete procedure not found or inactive: {DeleteProcedureName}", deleteProcedureName);
             return new RowDeleteResponse
             {
                 Success = false,
@@ -309,6 +356,21 @@ public class DynamicGridService : IDynamicGridService
                 ErrorCode = "DELETE_NOT_SUPPORTED"
             };
         }
+        
+        // Validate user has access to delete procedure
+        if (!await ValidateProcedureAccessAsync(deleteProcedureName, userRoles))
+        {
+            _logger.LogWarning("Access denied to delete procedure: {DeleteProcedureName}", deleteProcedureName);
+            return new RowDeleteResponse
+            {
+                Success = false,
+                Message = "Access denied to delete this data",
+                ErrorCode = "ACCESS_DENIED"
+            };
+        }
+        
+        var databaseName = deleteProcedure.DatabaseName;
+        _logger.LogInformation("Executing delete on database: {DatabaseName}", databaseName ?? "DefaultConnection");
 
         try
         {
@@ -378,14 +440,17 @@ public class DynamicGridService : IDynamicGridService
             // Execute delete function
             var sql = $"SELECT {deleteProcedureName}(@{parameterName})";
             
-            var connection = _context.Database.GetDbConnection();
-            await connection.OpenAsync();
+            // Create connection to target database using factory
+            var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
 
             using var command = connection.CreateCommand();
             command.CommandText = sql;
             command.Parameters.Add(parameter);
 
             var jsonResult = await command.ExecuteScalarAsync();
+            
+            // Close connection
+            await connection.DisposeAsync();
             
             if (jsonResult == null || jsonResult == DBNull.Value)
             {
