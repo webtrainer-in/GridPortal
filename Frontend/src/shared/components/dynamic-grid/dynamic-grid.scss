@@ -237,6 +237,33 @@
     }
   }
 
+  .save-all-btn {
+    background: #28a745 !important;
+    color: white !important;
+    border-color: #28a745 !important;
+    font-weight: 600;
+    
+    &:hover:not(:disabled) {
+      background: #218838 !important;
+      border-color: #1e7e34 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    &:active:not(:disabled) {
+      background: #1e7e34 !important;
+      transform: translateY(0);
+    }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #6c757d !important;
+      border-color: #6c757d !important;
+      transform: none !important;
+    }
+  }
+
   .column-menu {
     position: absolute;
     top: 100%;

@@ -33,6 +33,17 @@
         <span class="icon">📥</span> Export
       </button>
       
+      <!-- Save All Button (only shown when there are unsaved changes) -->
+      <button 
+        *ngIf="enableRowEditing && hasUnsavedChanges"
+        class="toolbar-btn save-all-btn" 
+        (click)="saveAllChanges()"
+        [disabled]="isSaving"
+        title="Save all edited rows">
+        <span class="icon">💾</span> 
+        {{ isSaving ? 'Saving...' : 'Save All (' + editedRows.size + ')' }}
+      </button>
+      
       <!-- Global Search Input -->
       <div class="search-container">
         <input 
