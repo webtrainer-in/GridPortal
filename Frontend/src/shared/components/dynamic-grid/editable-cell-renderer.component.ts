@@ -14,6 +14,7 @@ import { ICellRendererParams } from 'ag-grid-community';
         class="cell-input"
         [type]="inputType"
         [(ngModel)]="value"
+        (ngModelChange)="onValueChange()"
         (blur)="onValueChange()"
         (keydown.enter)="onValueChange()"
         (keydown.tab)="onValueChange()"
