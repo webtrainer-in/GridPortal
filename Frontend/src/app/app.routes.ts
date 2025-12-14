@@ -62,6 +62,10 @@ export const routes: Routes = [
       {
         path: 'data-grid',
         loadComponent: () => import('../features/data-grid/pages/data-grid/data-grid').then(m => m.DataGridComponent)
+      },
+      {
+        path: 'buses',
+        loadComponent: () => import('./components/bus-management/bus-management').then(m => m.BusManagementComponent)
       }
     ]
   },

@@ -1,0 +1,37 @@
+<div class="bus-management-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>
+        <i class="fas fa-bus"></i>
+        Bus Management
+      </h1>
+      <p class="subtitle">Manage power system buses - View, edit, and delete bus records</p>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refreshGrid()">
+        <i class="fas fa-sync-alt"></i>
+        Refresh
+      </button>
+      <button class="btn btn-secondary" (click)="exportData()">
+        <i class="fas fa-download"></i>
+        Export
+      </button>
+      <button class="btn btn-primary" (click)="addBus()">
+        <i class="fas fa-plus"></i>
+        Add Bus
+      </button>
+    </div>
+  </div>
+
+  <!-- Grid Container -->
+  <div class="grid-wrapper">
+    <app-dynamic-grid
+      [procedureName]="busGridProcedure"
+      [enableRowEditing]="true"
+      [pageSize]="15"
+      [paginationThreshold]="1000">
+    </app-dynamic-grid>
+  </div>
+</div>
