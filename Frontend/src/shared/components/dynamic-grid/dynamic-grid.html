@@ -7,8 +7,12 @@
 
   <!-- Pagination mode indicator -->
   <div class="pagination-info">
-    <span class="mode-badge" [class.client-side]="!isServerSidePagination" [class.server-side]="isServerSidePagination">
-      {{ isServerSidePagination ? 'Server-Side Pagination' : 'Client-Side Pagination' }}
+    <span class="mode-badge" 
+          [class.client-side]="!isServerSidePagination && !isInfiniteScrollMode" 
+          [class.server-side]="isServerSidePagination && !isInfiniteScrollMode"
+          [class.infinite-scroll]="isInfiniteScrollMode"
+          [class.windowed]="windowedScrollActive">
+      {{ getModeDisplayText() }}
     </span>
     
     <!-- Toolbar buttons -->
@@ -31,6 +35,16 @@
       <!-- Export Button -->
       <button class="toolbar-btn" (click)="toggleExportMenu()" #exportMenuBtn title="Export data">
         <span class="icon">📥</span> Export
+      </button>
+      
+      <!-- Pagination Mode Toggle (only shown when toggle is enabled and dataset >= 1000) -->
+      <button 
+        *ngIf="enableInfiniteScrollToggle && totalCount >= 1000"
+        class="toolbar-btn mode-toggle-btn" 
+        (click)="togglePaginationMode()"
+        [title]="paginationMode === 'traditional' ? 'Switch to Infinite Scroll' : 'Switch to Traditional Pagination'">
+        <span class="icon">{{ paginationMode === 'traditional' ? '∞' : '📄' }}</span>
+        {{ paginationMode === 'traditional' ? 'Infinite Scroll' : 'Traditional' }}
       </button>
       
       <!-- Save All Button (only shown when there are unsaved changes) -->
@@ -183,6 +197,24 @@
     </div>
   </div>
 
+  <!-- Large Dataset Warning -->
+  <div *ngIf="totalCount > 50000 && isInfiniteScrollMode" class="large-dataset-warning">
+    <span class="warning-icon">⚠️</span>
+    <span>Large dataset detected ({{ totalCount }} rows). Consider using filters to improve performance.</span>
+  </div>
+
+  <!-- Infinite Scroll Position Indicator -->
+  <div *ngIf="isInfiniteScrollMode" class="infinite-scroll-info">
+    <span class="rows-loaded">
+      {{ windowedScrollActive ? 
+         'Showing ' + (virtualRowStart + 1) + ' - ' + virtualRowEnd + ' of ' + totalCount :
+         'Loaded ' + lastLoadedRow + ' of ' + totalCount + ' rows' }}
+    </span>
+    <span *ngIf="windowedScrollActive" class="windowed-mode-badge" title="Memory-managed mode for large datasets">
+      🪟 Windowed
+    </span>
+  </div>
+
   <!-- AG Grid -->
   <ag-grid-angular
     class="ag-theme-quartz grid-container"
@@ -190,16 +222,28 @@
     [rowData]="rowData"
     [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [pagination]="!isServerSidePagination"
+    [pagination]="!isServerSidePagination && !isInfiniteScrollMode"
     [paginationPageSize]="pageSize"
     [paginationPageSizeSelector]="[15, 25, 50, 100]"
     (gridReady)="onGridReady($event)"
     (sortChanged)="onSortChanged()"
     (filterChanged)="onFilterChanged()"
+    (bodyScroll)="onBodyScroll($event)"
   ></ag-grid-angular>
 
-  <!-- Custom pagination controls (shown only for server-side pagination) -->
-  <div *ngIf="isServerSidePagination" class="custom-pagination">
+  <!-- Loading More Indicator (for infinite scroll) -->
+  <div *ngIf="isInfiniteScrollMode && isLoadingMore" class="loading-more-indicator">
+    <div class="spinner-small"></div>
+    <span>Loading more rows...</span>
+  </div>
+
+  <!-- End of Data Indicator -->
+  <div *ngIf="isInfiniteScrollMode && !hasMoreData && rowData.length > 0" class="end-of-data-indicator">
+    <span>✓ All {{ totalCount }} rows loaded</span>
+  </div>
+
+  <!-- Custom pagination controls (shown only for traditional server-side pagination) -->
+  <div *ngIf="isServerSidePagination && !isInfiniteScrollMode" class="custom-pagination">
     <!-- Page Size Selector -->
     <div class="page-size-selector">
       <label for="page-size">Page Size:</label>

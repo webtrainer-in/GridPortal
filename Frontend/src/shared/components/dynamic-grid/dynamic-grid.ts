@@ -37,6 +37,13 @@ export class DynamicGrid implements OnInit, OnDestroy {
   @Input() pageSize: number = 15;
   @Input() paginationThreshold: number = 1000; // Switch to server-side if > 1000 records
   
+  // Infinite scroll configuration
+  @Input() enableInfiniteScrollToggle: boolean = true; // Allow users to toggle modes
+  @Input() defaultPaginationMode: 'traditional' | 'infinite' = 'traditional';
+  @Input() infiniteScrollBatchSize: number = 1000;
+  @Input() infiniteScrollWindowSize: number = 10000 // For windowed mode (>10k rows)
+  @Input() infiniteScrollThreshold: number = 0.8; // Load at 80% scroll
+  
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
   allRowData: any[] = []; // Store all data for client-side pagination
@@ -78,6 +85,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
   // Global search state
   globalSearchTerm: string = '';
   
+  // Pagination mode state
+  paginationMode: 'traditional' | 'infinite' = 'traditional';
+  infiniteScrollStrategy: 'full' | 'windowed' = 'full';
+  
+  // Infinite scroll state
+  isInfiniteScrollMode: boolean = false;
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
+  lastLoadedRow: number = 0;
+  
+  // Windowed scroll state (for >10k rows)
+  windowedScrollActive: boolean = false;
+  virtualRowStart: number = 0;
+  virtualRowEnd: number = 0;
+  currentWindowRows: any[] = [];
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -94,6 +117,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
     if (!this.procedureName) {
       console.error('DynamicGrid: procedureName is required');
     }
+    
+    // Initialize pagination mode from input
+    this.paginationMode = this.defaultPaginationMode;
   }
 
   ngOnDestroy(): void {
@@ -108,10 +134,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   onSortChanged(): void {
-    // Only handle sorting for server-side pagination
-    if (!this.isServerSidePagination || !this.gridApi) {
-      return;
-    }
+    if (!this.gridApi) return;
 
     const columnState = this.gridApi.getColumnState();
     const sortedColumn = columnState.find(col => col.sort != null);
@@ -126,15 +149,20 @@ export class DynamicGrid implements OnInit, OnDestroy {
       console.log('🔽 Sort cleared');
     }
 
-    // Reload current page with new sort
-    this.loadPageData(this.currentPage);
+    if (this.isInfiniteScrollMode) {
+      // Reset infinite scroll and reload from start
+      console.log('🔄 Resetting infinite scroll due to sort change');
+      this.resetInfiniteScroll();
+      this.loadGridData();
+    } else if (this.isServerSidePagination) {
+      // Reload current page with new sort (traditional pagination)
+      this.loadPageData(this.currentPage);
+    }
+    // Client-side pagination: AG-Grid handles sorting automatically
   }
 
   onFilterChanged(): void {
-    // Only handle filtering for server-side pagination
-    if (!this.isServerSidePagination || !this.gridApi) {
-      return;
-    }
+    if (!this.gridApi) return;
 
     const filterModel = this.gridApi.getFilterModel();
     this.currentFilterModel = Object.keys(filterModel).length > 0 ? filterModel : null;
@@ -145,8 +173,16 @@ export class DynamicGrid implements OnInit, OnDestroy {
       console.log('🔍 Filter cleared');
     }
 
-    // Reload from page 1 with new filter
-    this.loadPageData(1);
+    if (this.isInfiniteScrollMode) {
+      // Reset infinite scroll and reload from start with filter (server-side)
+      console.log('🔄 Resetting infinite scroll due to filter change');
+      this.resetInfiniteScroll();
+      this.loadGridData();
+    } else if (this.isServerSidePagination) {
+      // Reload from page 1 with new filter (traditional pagination)
+      this.loadPageData(1);
+    }
+    // Client-side pagination: AG-Grid handles filtering automatically
   }
 
   private setLoading(loading: boolean): void {
@@ -183,8 +219,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
           console.log(`📈 Total records: ${this.totalCount}`);
           console.log(`📊 Rows in response: ${response.rows?.length || 0}`);
           
-          // Determine pagination mode based on threshold
-          if (this.totalCount < this.paginationThreshold) {
+          // Determine pagination/scroll strategy
+          this.determineScrollStrategy();
+          
+          if (this.isInfiniteScrollMode) {
+            // Infinite scroll mode
+            console.log(`✅ Using INFINITE SCROLL mode (${this.infiniteScrollStrategy})`);
+            this.loadInitialBatchForInfiniteScroll(response);
+          } else if (this.totalCount < this.paginationThreshold) {
             console.log('✅ Using CLIENT-SIDE pagination (dataset < threshold)');
             this.isServerSidePagination = false;
             
@@ -723,6 +765,180 @@ export class DynamicGrid implements OnInit, OnDestroy {
   getEndRecord(): number {
     return Math.min(this.currentPage * this.pageSize, this.totalCount);
   }
+
+  // Infinite Scroll Methods
+  private determineScrollStrategy(): void {
+    if (this.paginationMode === 'traditional') {
+      this.isInfiniteScrollMode = false;
+      return;
+    }
+
+    // Infinite scroll mode selected
+    this.isInfiniteScrollMode = true;
+
+    if (this.totalCount < 1000) {
+      // Small dataset: use existing client-side pagination
+      this.isServerSidePagination = false;
+      this.infiniteScrollStrategy = 'full';
+      this.windowedScrollActive = false;
+    } else if (this.totalCount <= 10000) {
+      // Medium dataset: infinite scroll, keep all in memory
+      this.isServerSidePagination = true;
+      this.infiniteScrollStrategy = 'full';
+      this.windowedScrollActive = false;
+    } else {
+      // Large dataset: windowed scroll with memory management
+      this.isServerSidePagination = true;
+      this.infiniteScrollStrategy = 'windowed';
+      this.windowedScrollActive = true;
+    }
+  }
+
+  private loadInitialBatchForInfiniteScroll(response: any): void {
+    if (this.columnDefs.length === 0 && response.columns) {
+      this.updateColumnDefinitions(response.columns);
+    }
+
+    this.rowData = response.rows || [];
+    this.lastLoadedRow = this.rowData.length;
+    this.hasMoreData = this.lastLoadedRow < this.totalCount;
+
+    if (this.windowedScrollActive) {
+      this.currentWindowRows = this.rowData;
+      this.virtualRowStart = 0;
+      this.virtualRowEnd = this.rowData.length;
+    }
+
+    this.setLoading(false);
+
+    if (this.gridApi) {
+      this.gridApi.setGridOption('rowData', this.rowData);
+    }
+
+    console.log(`✅ Initial batch loaded: ${this.rowData.length} rows, hasMore: ${this.hasMoreData}`);
+  }
+
+  onBodyScroll(event: any): void {
+    if (!this.isInfiniteScrollMode || this.isLoadingMore || !this.hasMoreData) {
+      return;
+    }
+
+    const api = this.gridApi;
+    if (!api) return;
+
+    // Calculate scroll percentage
+    const lastRow = api.getDisplayedRowCount() - 1;
+    const lastRenderedRow = api.getLastDisplayedRowIndex();
+    
+    if (lastRow <= 0) return;
+    
+    const scrollPercentage = lastRenderedRow / lastRow;
+
+    // Load more when threshold reached
+    if (scrollPercentage >= this.infiniteScrollThreshold) {
+      this.loadNextBatch();
+    }
+  }
+
+  private loadNextBatch(): void {
+    if (this.isLoadingMore || !this.hasMoreData) return;
+
+    this.isLoadingMore = true;
+    const nextPage = Math.floor(this.lastLoadedRow / this.infiniteScrollBatchSize) + 1;
+
+    console.log(`📥 Loading batch ${nextPage}...`);
+
+    const request: GridDataRequest = {
+      procedureName: this.procedureName,
+      pageNumber: nextPage,
+      pageSize: this.infiniteScrollBatchSize,
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection,
+      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      searchTerm: this.globalSearchTerm || undefined
+    };
+
+    this.gridService.executeGridProcedure(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const newRows = response.rows || [];
+          
+          if (this.windowedScrollActive) {
+            // Windowed mode: manage memory
+            this.appendRowsWithWindowManagement(newRows);
+          } else {
+            // Full mode: append all rows
+            this.rowData = [...this.rowData, ...newRows];
+          }
+
+          this.lastLoadedRow += newRows.length;
+          // Cap lastLoadedRow to totalCount to prevent display issues
+          this.lastLoadedRow = Math.min(this.lastLoadedRow, this.totalCount);
+          this.hasMoreData = this.lastLoadedRow < this.totalCount;
+          this.isLoadingMore = false;
+
+          this.gridApi?.setGridOption('rowData', this.rowData);
+          
+          console.log(`✅ Batch loaded: ${newRows.length} rows, total loaded: ${this.lastLoadedRow}/${this.totalCount}`);
+        },
+        error: (error) => {
+          console.error('❌ Error loading next batch:', error);
+          this.isLoadingMore = false;
+        }
+      });
+  }
+
+  private appendRowsWithWindowManagement(newRows: any[]): void {
+    // Add new rows
+    this.currentWindowRows = [...this.currentWindowRows, ...newRows];
+    this.virtualRowEnd += newRows.length;
+
+    // Remove old rows if window size exceeded
+    if (this.currentWindowRows.length > this.infiniteScrollWindowSize) {
+      const rowsToRemove = this.currentWindowRows.length - this.infiniteScrollWindowSize;
+      this.currentWindowRows = this.currentWindowRows.slice(rowsToRemove);
+      this.virtualRowStart += rowsToRemove;
+      
+      console.log(`🪟 Window managed: removed ${rowsToRemove} old rows, showing ${this.virtualRowStart}-${this.virtualRowEnd}`);
+    }
+
+    this.rowData = this.currentWindowRows;
+  }
+
+  togglePaginationMode(): void {
+    this.paginationMode = this.paginationMode === 'traditional' ? 'infinite' : 'traditional';
+    console.log(`🔄 Switched to ${this.paginationMode} mode`);
+    
+    // Reset state and reload data
+    this.resetInfiniteScroll();
+    this.loadGridData();
+  }
+
+  private resetInfiniteScroll(): void {
+    this.rowData = [];
+    this.lastLoadedRow = 0;
+    this.hasMoreData = true;
+    this.isLoadingMore = false;
+    this.virtualRowStart = 0;
+    this.virtualRowEnd = 0;
+    this.currentWindowRows = [];
+    this.currentPage = 1;
+  }
+
+  getModeDisplayText(): string {
+    if (this.isInfiniteScrollMode) {
+      if (this.windowedScrollActive) {
+        return 'Infinite Scroll (Windowed)';
+      }
+      return 'Infinite Scroll';
+    } else if (this.isServerSidePagination) {
+      return 'Server-Side Pagination';
+    } else {
+      return 'Client-Side Pagination';
+    }
+  }
+
 
   // Column visibility methods
   toggleColumnMenu(): void {
