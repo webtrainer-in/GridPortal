@@ -39,6 +39,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   gridApi!: GridApi;
   theme = themeQuartz;
   editingRows: Set<any> = new Set();
+  editedRows: Map<any, any> = new Map(); // Map of rowId -> original data
+  hasUnsavedChanges: boolean = false;
+  isSaving: boolean = false;
   
   // Pagination state
   totalCount: number = 0;
@@ -405,6 +408,12 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   enableRowEdit(rowData: any): void {
+    // Track this row as edited if not already tracked
+    if (!this.editedRows.has(rowData.Id)) {
+      this.editedRows.set(rowData.Id, { ...rowData });
+      this.hasUnsavedChanges = true;
+    }
+    
     rowData._originalData = { ...rowData };
     this.editingRows.add(rowData.Id);
     // Refresh cells to trigger custom cell renderer to show input fields
@@ -440,6 +449,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.editingRows.delete(rowData.Id);
+            this.editedRows.delete(rowData.Id); // Clear from edited rows
+            this.hasUnsavedChanges = this.editedRows.size > 0; // Update flag
             delete rowData._originalData;
             
             // Redraw the entire row to update all cells including action buttons
@@ -465,6 +476,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
       delete rowData._originalData;
     }
     this.editingRows.delete(rowData.Id);
+    this.editedRows.delete(rowData.Id); // Clear from edited rows
+    this.hasUnsavedChanges = this.editedRows.size > 0; // Update flag
     this.gridApi?.refreshCells({ force: true });
   }
   
@@ -506,9 +519,103 @@ export class DynamicGrid implements OnInit, OnDestroy {
       });
   }
 
+  async saveAllChanges(): Promise<void> {
+    if (this.editedRows.size === 0) return;
+    
+    this.isSaving = true;
+    const savePromises: Promise<any>[] = [];
+    const failedRows: Array<{rowId: any, error: any}> = [];
+    const rowsToSave: any[] = [];
+    
+    // Collect all rows that need saving
+    this.editedRows.forEach((originalData, rowId) => {
+      const currentRow = this.isServerSidePagination 
+        ? this.rowData.find(r => r.Id === rowId)
+        : this.allRowData.find(r => r.Id === rowId);
+        
+      if (!currentRow) return;
+      
+      // Calculate changes
+      const changes: Record<string, any> = {};
+      Object.keys(currentRow).forEach(key => {
+        if (key !== '_originalData' && key !== 'Id' && 
+            currentRow[key] !== originalData[key]) {
+          changes[key] = currentRow[key];
+        }
+      });
+      
+      if (Object.keys(changes).length > 0) {
+        rowsToSave.push({ rowId, currentRow, changes });
+      }
+    });
+    
+    console.log(`💾 Saving ${rowsToSave.length} row(s)...`);
+    
+    // Create save promises for all rows
+    rowsToSave.forEach(({ rowId, changes }) => {
+      const promise = this.gridService.updateRow({
+        procedureName: this.procedureName,
+        rowId: rowId,
+        changes: changes
+      }).toPromise()
+        .catch(error => {
+          failedRows.push({ rowId, error });
+          return null;
+        });
+      
+      savePromises.push(promise);
+    });
+    
+    // Wait for all saves to complete
+    await Promise.all(savePromises);
+    
+    // Handle results
+    if (failedRows.length === 0) {
+      // All saves successful
+      console.log('🎯 Before clear - editedRows size:', this.editedRows.size, 'hasUnsavedChanges:', this.hasUnsavedChanges);
+      this.editedRows.clear();
+      this.editingRows.clear();
+      this.hasUnsavedChanges = false;
+      this.isSaving = false;
+      console.log('🎯 After clear - editedRows size:', this.editedRows.size, 'hasUnsavedChanges:', this.hasUnsavedChanges);
+      
+      // Manually trigger change detection to update button visibility
+      this.cdr.detectChanges();
+      
+      this.gridApi?.redrawRows();
+      alert(`✅ Successfully saved ${savePromises.length} row(s)`);
+      console.log(`✅ All ${savePromises.length} row(s) saved successfully`);
+    } else {
+      // Some saves failed
+      const successCount = savePromises.length - failedRows.length;
+      alert(`⚠️ Saved ${successCount} row(s), but ${failedRows.length} failed. Please check and retry.`);
+      console.error('Failed rows:', failedRows);
+      
+      // Remove successful saves from editedRows
+      this.editedRows.forEach((_, rowId) => {
+        if (!failedRows.find(f => f.rowId === rowId)) {
+          this.editedRows.delete(rowId);
+          this.editingRows.delete(rowId);
+        }
+      });
+      
+      this.hasUnsavedChanges = this.editedRows.size > 0;
+      this.isSaving = false;
+      
+      // Manually trigger change detection
+      this.cdr.detectChanges();
+    }
+    
+    console.log('🎯 Final state - editedRows size:', this.editedRows.size, 'hasUnsavedChanges:', this.hasUnsavedChanges);
+    this.gridApi?.refreshCells({ force: true });
+  }
+
   getRowStyle = (params: any) => {
     if (this.editingRows.has(params.data?.Id)) {
-      return { background: '#fff9e6' };
+      return { background: '#fff9e6' }; // Currently editing (light yellow)
+    }
+    if (this.editedRows.has(params.data?.Id)) {
+      return { background: '#ffe6e6' }; // Has unsaved changes (light red)
     }
     return undefined;
   };
