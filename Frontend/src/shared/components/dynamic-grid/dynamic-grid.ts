@@ -8,11 +8,15 @@ import { ActionButtonsRendererComponent } from './action-buttons-renderer.compon
 import { EditableCellRendererComponent } from './editable-cell-renderer.component';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
   selector: 'app-dynamic-grid',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridAngular],
+  imports: [CommonModule, FormsModule, AgGridAngular, ConfirmDialogModule, ToastModule],
+  providers: [ConfirmationService, MessageService],
   templateUrl: './dynamic-grid.html',
   styleUrls: ['./dynamic-grid.scss'],
   animations: [
@@ -81,7 +85,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   constructor(
     private gridService: DynamicGridService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private confirmationService: ConfirmationService,
+    private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
@@ -365,7 +371,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
             onSave: (rowData: any) => this.saveRow(rowData),
             onCancel: (rowData: any) => this.cancelRowEdit(rowData),
             onDelete: (rowData: any) => this.deleteRow(rowData),
-            isEditing: (rowData: any) => this.editingRows.has(rowData.Id)
+            isEditing: (rowData: any) => this.editingRows.has(rowData.Id),
+            confirmationService: this.confirmationService
           },
           editable: false,
           sortable: false,
@@ -458,12 +465,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
             
             console.log('✅ Row saved successfully');
           } else {
-            alert(`❌ Save failed: ${response.message}`);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Save Failed',
+              detail: response.message || 'Failed to save row',
+              life: 3000
+            });
           }
         },
         error: (error) => {
           console.error('Error saving row:', error);
-          alert('❌ Failed to save. Please try again.');
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Save Error',
+            detail: 'Failed to save. Please try again.',
+            life: 3000
+          });
         }
       });
   }
@@ -509,12 +526,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
             }
             console.log('✅ Row deleted successfully');
           } else {
-            alert(`❌ Delete failed: ${response.message}`);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Delete Failed',
+              detail: response.message || 'Failed to delete row',
+              life: 3000
+            });
           }
         },
         error: (error) => {
           console.error('Error deleting row:', error);
-          alert('❌ Failed to delete. Please try again.');
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Delete Error',
+            detail: 'Failed to delete. Please try again.',
+            life: 3000
+          });
         }
       });
   }
@@ -583,12 +610,22 @@ export class DynamicGrid implements OnInit, OnDestroy {
       this.cdr.detectChanges();
       
       this.gridApi?.redrawRows();
-      alert(`✅ Successfully saved ${savePromises.length} row(s)`);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Save Successful',
+        detail: `Successfully saved ${savePromises.length} row(s)`,
+        life: 3000
+      });
       console.log(`✅ All ${savePromises.length} row(s) saved successfully`);
     } else {
       // Some saves failed
       const successCount = savePromises.length - failedRows.length;
-      alert(`⚠️ Saved ${successCount} row(s), but ${failedRows.length} failed. Please check and retry.`);
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Partial Save',
+        detail: `Saved ${successCount} row(s), but ${failedRows.length} failed. Please check and retry.`,
+        life: 5000
+      });
       console.error('Failed rows:', failedRows);
       
       // Remove successful saves from editedRows

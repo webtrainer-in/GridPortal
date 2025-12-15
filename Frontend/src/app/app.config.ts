@@ -4,7 +4,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { providePrimeNG } from 'primeng/config';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
-
+import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 import { authInterceptor } from '../core/interceptors/auth.interceptor';
 
@@ -20,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     providePrimeNG({
       theme: {
-        preset: 'Aura',
+        preset: Aura,
         options: {
           darkModeSelector: '.p-dark'
         }
