@@ -226,4 +226,31 @@ public class DynamicGridController : ControllerBase
             return StatusCode(500, new { error = "An error occurred while saving column state" });
         }
     }
+
+    /// <summary>
+    /// Get dropdown values for cascading dropdowns with row context
+    /// </summary>
+    [HttpPost("dropdown-values")]
+    public async Task<IActionResult> GetDropdownValues([FromBody] DropdownValuesRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("GetDropdownValues called for table: {MasterTable}, Procedure: {ProcedureName}", 
+                request.MasterTable, request.ProcedureName);
+            
+            var options = await _gridService.GetDropdownValuesAsync(request);
+            
+            return Ok(new { options });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid dropdown request: {MasterTable}", request.MasterTable);
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting dropdown values for table: {MasterTable}", request.MasterTable);
+            return StatusCode(500, new { error = "An error occurred while loading dropdown values" });
+        }
+    }
 }

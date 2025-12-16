@@ -575,6 +575,179 @@ public class DynamicGridService : IDynamicGridService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<List<DropdownOption>> GetDropdownValuesAsync(DropdownValuesRequest request)
+    {
+        // Whitelist of allowed master tables (security)
+        var allowedTables = new[] { "Groups", "Departments" };
+        
+        if (!allowedTables.Contains(request.MasterTable))
+        {
+            throw new ArgumentException($"Invalid master table: {request.MasterTable}");
+        }
+
+        // Validate field names (prevent SQL injection)
+        if (!IsValidFieldName(request.ValueField) || !IsValidFieldName(request.LabelField))
+        {
+            throw new ArgumentException("Invalid field names");
+        }
+
+        // Get the database name from the procedure (for per-database master tables)
+        string? databaseName = null;
+        if (!string.IsNullOrEmpty(request.ProcedureName))
+        {
+            var procedure = await _context.StoredProcedureRegistry
+                .FirstOrDefaultAsync(p => p.ProcedureName == request.ProcedureName && p.IsActive);
+            
+            if (procedure != null)
+            {
+                databaseName = procedure.DatabaseName;
+                _logger.LogInformation("Querying master table {Table} from database: {Database}", 
+                    request.MasterTable, databaseName ?? "DefaultConnection");
+            }
+        }
+
+        try
+        {
+            // Build SQL query with parameterized placeholders
+            var sql = BuildDropdownQuery(request, out var parameters);
+            
+            _logger.LogInformation("Executing dropdown query for table: {Table}, SQL: {SQL}", 
+                request.MasterTable, sql);
+
+            // Execute query using grid's database (where master tables live)
+            var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            
+            // Add parameters
+            foreach (var param in parameters)
+            {
+                command.Parameters.Add(param);
+            }
+
+            var options = new List<DropdownOption>();
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                options.Add(new DropdownOption
+                {
+                    Value = reader["value"] != DBNull.Value ? reader["value"] : null,
+                    Label = reader["label"]?.ToString() ?? string.Empty
+                });
+            }
+
+            await connection.DisposeAsync();
+
+            _logger.LogInformation("Loaded {Count} dropdown options from {Table}", 
+                options.Count, request.MasterTable);
+
+            return options;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading dropdown values from table: {Table}", request.MasterTable);
+            throw;
+        }
+    }
+
+    private string BuildDropdownQuery(DropdownValuesRequest request, out List<NpgsqlParameter> parameters)
+    {
+        parameters = new List<NpgsqlParameter>();
+
+        // Sanitize table and field names (already validated)
+        var table = SanitizeIdentifier(request.MasterTable);
+        var valueField = SanitizeIdentifier(request.ValueField);
+        var labelField = SanitizeIdentifier(request.LabelField);
+
+        // Build base query
+        var sql = $@"
+            SELECT DISTINCT 
+                ""{valueField}"" as value,
+                ""{labelField}"" as label
+            FROM ""{table}""";
+
+        // Add WHERE clause if filter condition exists
+        if (!string.IsNullOrEmpty(request.FilterCondition) && request.RowContext != null)
+        {
+            var whereClause = ReplaceFilterPlaceholders(request.FilterCondition, request.RowContext, parameters);
+            sql += $" WHERE {whereClause}";
+        }
+
+        sql += $@" ORDER BY ""{labelField}""";
+
+        return sql;
+    }
+
+    private string ReplaceFilterPlaceholders(
+        string filterCondition, 
+        Dictionary<string, object> rowContext, 
+        List<NpgsqlParameter> parameters)
+    {
+        var result = filterCondition;
+        var paramIndex = 0;
+
+        foreach (var kvp in rowContext)
+        {
+            var placeholder = $"@param_{kvp.Key}";
+            
+            if (result.Contains(placeholder))
+            {
+                // Create parameter with unique name
+                var paramName = $"p{paramIndex}";
+                
+                // Extract actual value from JSON if needed
+                object paramValue = kvp.Value;
+                
+                if (paramValue != null)
+                {
+                    // Handle System.Text.Json.JsonElement
+                    if (paramValue.GetType().Name == "JsonElement")
+                    {
+                        var jsonElement = (System.Text.Json.JsonElement)paramValue;
+                        paramValue = jsonElement.ValueKind switch
+                        {
+                            System.Text.Json.JsonValueKind.Number => jsonElement.GetInt32(),
+                            System.Text.Json.JsonValueKind.String => jsonElement.GetString(),
+                            System.Text.Json.JsonValueKind.True => true,
+                            System.Text.Json.JsonValueKind.False => false,
+                            System.Text.Json.JsonValueKind.Null => DBNull.Value,
+                            _ => jsonElement.ToString()
+                        };
+                    }
+                }
+                
+                parameters.Add(new NpgsqlParameter(paramName, paramValue ?? DBNull.Value));
+                
+                // Replace placeholder with parameter reference
+                result = result.Replace(placeholder, $"@{paramName}");
+                paramIndex++;
+            }
+        }
+
+        return result;
+    }
+
+    private bool IsValidFieldName(string fieldName)
+    {
+        // Only allow alphanumeric characters and underscores
+        return System.Text.RegularExpressions.Regex.IsMatch(fieldName, @"^[a-zA-Z0-9_]+$");
+    }
+
+    private string SanitizeIdentifier(string identifier)
+    {
+        // Remove any quotes and validate
+        identifier = identifier.Replace("\"", "").Replace("'", "");
+        
+        if (!IsValidFieldName(identifier))
+        {
+            throw new ArgumentException($"Invalid identifier: {identifier}");
+        }
+        
+        return identifier;
+    }
+
 
 
     private bool IsValidProcedureName(string procedureName)

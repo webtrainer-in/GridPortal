@@ -38,4 +38,9 @@ public interface IDynamicGridService
     /// Save column state for a user and procedure
     /// </summary>
     Task SaveColumnStateAsync(int userId, string procedureName, string columnState);
+    
+    /// <summary>
+    /// Get dropdown values for cascading dropdowns with row context filtering
+    /// </summary>
+    Task<List<DropdownOption>> GetDropdownValuesAsync(DropdownValuesRequest request);
 }
