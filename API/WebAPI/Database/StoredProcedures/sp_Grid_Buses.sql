@@ -1,7 +1,6 @@
 -- =============================================
--- Updated sp_grid_buses with Dropdown Support
--- This version loads dropdown configuration from ColumnMetadata
--- and merges it with the existing column definitions
+-- Updated sp_grid_buses with Zone Name JOIN
+-- Includes zoneName in results to display labels immediately
 -- =============================================
 
 CREATE OR REPLACE FUNCTION public.sp_grid_buses(
@@ -144,7 +143,7 @@ BEGIN
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
     ) INTO v_TotalCount USING p_SearchTerm;
     
-    -- Get data rows with filters and search
+    -- Get data rows with filters and search (includes zoneName via JOIN)
     EXECUTE format('
         SELECT jsonb_agg(row_to_json(t))
         FROM (
@@ -163,12 +162,13 @@ BEGIN
                 b.iowner,
                 b.va,
                 b.vm,
-                b.zone,
+				z.zoname AS "zone",
                 b."Izone",
                 b."AreaCaseNumber",
                 b."OwnerCaseNumber",
                 b."ZoneCaseNumber"
             FROM "Bus" b
+            LEFT JOIN "Zone" z ON z.izone = b.zone AND z."CaseNumber" = b."CaseNumber"
             WHERE (1=1)
                 AND ($1 IS NULL OR 
                      b.name ILIKE ''%%%%'' || $1 || ''%%%%'' OR
@@ -191,14 +191,14 @@ BEGIN
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
     ) INTO v_Data USING p_SearchTerm, p_SortColumn, p_SortDirection, v_FetchSize, v_Offset;
     
-    -- Define base column metadata
+    -- Define base column metadata (zoneName added as display column)
     v_BaseColumns := '[
         {"field": "actions", "headerName": "Actions", "width": 120, "sortable": false, "filter": false, "pinned": true},
         {"field": "ibus", "headerName": "Bus Number", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": false},
         {"field": "CaseNumber", "headerName": "Case Number", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": false},
         {"field": "name", "headerName": "Name", "type": "text", "width": 200, "sortable": true, "filter": true, "editable": true, "cellEditor": "agTextCellEditor"},
         {"field": "baskv", "headerName": "Base KV", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
-        {"field": "iarea", "headerName": "Area", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "iarea", "headerName": "Area", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "dropdown"},
         {"field": "zone", "headerName": "Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "dropdown"},
         {"field": "iowner", "headerName": "Owner", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
         {"field": "ide", "headerName": "IDE", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},

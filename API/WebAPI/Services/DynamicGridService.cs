@@ -594,8 +594,8 @@ public class DynamicGridService : IDynamicGridService
 
         // Dynamic whitelist: Get allowed tables from ColumnMetadata
         // This automatically whitelists any table configured in ColumnMetadata
-        var whitelistConnection = await _dbContextFactory.CreateConnectionAsync(databaseName);
         var allowedTables = new HashSet<string>();
+        using var whitelistConnection = await _dbContextFactory.CreateConnectionAsync(databaseName);
         
         try
         {
