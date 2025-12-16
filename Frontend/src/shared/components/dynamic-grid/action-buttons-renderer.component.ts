@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
+import { ConfirmationService } from 'primeng/api';
 
 @Component({
   selector: 'app-action-buttons-renderer',
@@ -111,6 +112,7 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
     onCancel: (rowData: any) => void;
     onDelete: (rowData: any) => void;
     isEditing: (rowData: any) => boolean;
+    confirmationService: ConfirmationService;
   };
   
   isEditing: boolean = false;
@@ -139,8 +141,14 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
   }
   
   onDeleteClick(): void {
-    if (confirm('Are you sure you want to delete this row?')) {
-      this.params.onDelete(this.params.data);
-    }
+    this.params.confirmationService.confirm({
+      message: 'Are you sure you want to delete this row?',
+      header: 'Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.params.onDelete(this.params.data);
+      }
+    });
   }
 }

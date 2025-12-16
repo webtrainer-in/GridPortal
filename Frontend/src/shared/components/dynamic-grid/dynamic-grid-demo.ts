@@ -42,6 +42,10 @@ import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/
             [enableRowEditing]="true"
             [pageSize]="15"
             [paginationThreshold]="10"
+            [defaultPaginationMode]="'infinite'"
+            [infiniteScrollBatchSize]="1000"
+            [infiniteScrollWindowSize]="10000"
+            [infiniteScrollThreshold]="0.8"
           ></app-dynamic-grid>
         }
       } @else {
