@@ -577,20 +577,6 @@ public class DynamicGridService : IDynamicGridService
 
     public async Task<List<DropdownOption>> GetDropdownValuesAsync(DropdownValuesRequest request)
     {
-        // Whitelist of allowed master tables (security)
-        var allowedTables = new[] { "Groups", "Departments" };
-        
-        if (!allowedTables.Contains(request.MasterTable))
-        {
-            throw new ArgumentException($"Invalid master table: {request.MasterTable}");
-        }
-
-        // Validate field names (prevent SQL injection)
-        if (!IsValidFieldName(request.ValueField) || !IsValidFieldName(request.LabelField))
-        {
-            throw new ArgumentException("Invalid field names");
-        }
-
         // Get the database name from the procedure (for per-database master tables)
         string? databaseName = null;
         if (!string.IsNullOrEmpty(request.ProcedureName))
@@ -604,6 +590,45 @@ public class DynamicGridService : IDynamicGridService
                 _logger.LogInformation("Querying master table {Table} from database: {Database}", 
                     request.MasterTable, databaseName ?? "DefaultConnection");
             }
+        }
+
+        // Dynamic whitelist: Get allowed tables from ColumnMetadata
+        // This automatically whitelists any table configured in ColumnMetadata
+        var whitelistConnection = await _dbContextFactory.CreateConnectionAsync(databaseName);
+        var allowedTables = new HashSet<string>();
+        
+        try
+        {
+            using var cmd = whitelistConnection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT DISTINCT ""MasterTable"" 
+                FROM ""ColumnMetadata"" 
+                WHERE ""MasterTable"" IS NOT NULL 
+                  AND ""IsActive"" = true 
+                  AND ""CellEditor"" = 'dropdown'";
+            
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var tableName = reader.GetString(0);
+                if (!string.IsNullOrEmpty(tableName))
+                {
+                    allowedTables.Add(tableName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load whitelist from ColumnMetadata, using fallback");
+            // Fallback to basic whitelist if ColumnMetadata doesn't exist
+            allowedTables = new HashSet<string> { "Groups", "Departments", "Zone" };
+        }
+        
+        if (!allowedTables.Contains(request.MasterTable))
+        {
+            _logger.LogWarning("Table {Table} not in whitelist. Allowed: {Allowed}", 
+                request.MasterTable, string.Join(", ", allowedTables));
+            throw new ArgumentException($"Invalid master table: {request.MasterTable}");
         }
 
         try
