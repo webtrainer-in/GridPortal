@@ -6,6 +6,7 @@ import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community'
 import { DynamicGridService, GridDataRequest, ColumnDefinition, DropdownOption, DropdownValuesRequest } from '../../../core/services/dynamic-grid.service';
 import { ActionButtonsRendererComponent } from './action-buttons-renderer.component';
 import { EditableCellRendererComponent } from './editable-cell-renderer.component';
+import { LinkCellRendererComponent } from './link-cell-renderer.component';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -428,6 +429,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
         });
       } else {
         const isEditableColumn = this.enableRowEditing && col.field !== 'Id';
+        const hasLinkConfig = col.linkConfig?.enabled;
         
         const colDef: any = {
           field: col.field,
@@ -439,8 +441,15 @@ export class DynamicGrid implements OnInit, OnDestroy {
           singleClickEdit: false
         };
         
-        // Use custom cell renderer for editable columns
-        if (isEditableColumn) {
+        // Use link cell renderer for clickable columns
+        if (hasLinkConfig) {
+          colDef.cellRenderer = LinkCellRendererComponent;
+          colDef.cellRendererParams = {
+            linkConfig: col.linkConfig
+          };
+        }
+        // Use custom cell renderer for editable columns (if not a link column)
+        else if (isEditableColumn) {
           colDef.cellRenderer = EditableCellRendererComponent;
           colDef.cellRendererParams = {
             isEditing: (rowData: any) => this.editingRows.has(rowData.Id),

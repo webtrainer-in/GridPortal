@@ -42,6 +42,7 @@ export interface ColumnDefinition {
   pinned?: boolean;
   customProperties?: Record<string, any>;
   dropdownConfig?: DropdownConfig; // For cascading dropdowns
+  linkConfig?: LinkConfiguration; // For clickable column links
 }
 
 export interface DropdownConfig {
@@ -57,6 +58,19 @@ export interface DropdownConfig {
 export interface DropdownOption {
   value: any;
   label: string;
+}
+
+export interface LinkConfiguration {
+  enabled: boolean;
+  routePath: string;
+  openInNewTab: boolean;
+  params: LinkParameter[];
+}
+
+export interface LinkParameter {
+  name: string;
+  fields: string[];
+  separator?: string;
 }
 
 export interface DropdownValuesRequest {
