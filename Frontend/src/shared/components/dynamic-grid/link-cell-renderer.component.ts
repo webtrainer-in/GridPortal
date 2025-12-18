@@ -4,16 +4,29 @@ import { RouterModule, Router } from '@angular/router';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
 import { MessageService } from 'primeng/api';
+import { DrillDownService } from '../../../core/services/drill-down.service';
 
 interface LinkConfig {
   enabled: boolean;
-  routePath: string;
+  routePath: string | null;
   openInNewTab: boolean;
   params: Array<{
     name: string;
     fields: string[];
     separator?: string;
   }>;
+  drillDown?: {
+    enabled: boolean;
+    targetProcedure: string;
+    filterParams: Array<{
+      targetColumn: string;
+      sourceFields: string[];
+      separator?: string;
+    }>;
+    breadcrumbLabel: string;
+    allowMultipleLevels: boolean;
+    maxDepth: number;
+  };
 }
 
 @Component({
@@ -69,7 +82,8 @@ export class LinkCellRendererComponent implements ICellRendererAngularComp {
 
   constructor(
     private router: Router,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private drillDownService: DrillDownService
   ) {}
 
   agInit(params: any): void {
@@ -93,11 +107,19 @@ export class LinkCellRendererComponent implements ICellRendererAngularComp {
       return;
     }
 
-    // Build query parameters
+    // Check if drill-down mode (routePath is null)
+    if (!linkConfig.routePath && linkConfig.drillDown?.enabled) {
+      // Drill-down mode - link will be handled in onClick
+      this.isLinkEnabled = true;
+      this.routePath = '#';  // Placeholder for template
+      return;
+    }
+
+    // Navigation mode - build query parameters
     this.queryParams = this.buildQueryParams(linkConfig);
     
     // Set route path and target
-    this.routePath = linkConfig.routePath;
+    this.routePath = linkConfig.routePath || '';
     this.target = linkConfig.openInNewTab ? '_blank' : '_self';
     this.isLinkEnabled = true;
   }
@@ -137,7 +159,16 @@ export class LinkCellRendererComponent implements ICellRendererAngularComp {
 
   onClick(event: MouseEvent): void {
     try {
-      // Support Ctrl/Cmd+Click to open in new tab
+      const linkConfig = this.params.linkConfig;
+      
+      // Check if drill-down mode (routePath is null)
+      if (linkConfig && linkConfig.drillDown?.enabled && !linkConfig.routePath) {
+        event.preventDefault();
+        this.handleDrillDown(linkConfig.drillDown, this.params.data);
+        return;
+      }
+
+      // Support Ctrl/Cmd+Click to open in new tab (navigation mode)
       if (event.ctrlKey || event.metaKey) {
         const url = this.buildFullUrl();
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -157,6 +188,13 @@ export class LinkCellRendererComponent implements ICellRendererAngularComp {
       });
       event.preventDefault();
     }
+  }
+
+  private handleDrillDown(config: any, rowData: any): void {
+    // Get current procedure name from params (passed from grid)
+    const baseProcedure = (this.params as any).baseProcedure || 'sp_Grid_Buses';
+    
+    this.drillDownService.drillDown(config, rowData, baseProcedure);
   }
 
   private buildFullUrl(): string {

@@ -167,7 +167,19 @@ BEGIN
                 b."Izone",
                 b."AreaCaseNumber",
                 b."OwnerCaseNumber",
-                b."ZoneCaseNumber"
+                b."ZoneCaseNumber",
+                (
+                    SELECT COUNT(*)
+                    FROM "Acline" a
+                    WHERE (a.ibus = b.ibus OR a.jbus = b.ibus)
+                      AND a."CaseNumber" = b."CaseNumber"
+                ) AS "aclineCount",
+                (
+                    SELECT COUNT(*)
+                    FROM "Transformer" t
+                    WHERE (t.ibus = b.ibus OR t.jbus = b.ibus OR t.kbus = b.ibus)
+                      AND t."CaseNumber" = b."CaseNumber"
+                ) AS "transformerCount"
             FROM "Bus" b
             LEFT JOIN "Zone" z ON z.izone = b.zone AND z."CaseNumber" = b."CaseNumber"
             WHERE (1=1)
@@ -212,7 +224,9 @@ BEGIN
         {"field": "Izone", "headerName": "I Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
         {"field": "AreaCaseNumber", "headerName": "Area Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
         {"field": "OwnerCaseNumber", "headerName": "Owner Case #", "type": "number", "width": 140, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
-        {"field": "ZoneCaseNumber", "headerName": "Zone Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"}
+        {"field": "ZoneCaseNumber", "headerName": "Zone Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "aclineCount", "headerName": "AClines", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": false},
+        {"field": "transformerCount", "headerName": "Transformers", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": false}
     ]'::JSONB;
     
     -- Get dropdown configurations from ColumnMetadata
