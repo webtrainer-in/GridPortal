@@ -1,25 +1,30 @@
 -- =============================================
--- PostgreSQL Function: sp_Grid_Buses
--- Description: Dynamic grid function for bus data
--- Returns: Single JSONB object with rows, columns, and totalCount
+-- Updated sp_grid_buses with Zone Name JOIN
+-- Includes zoneName in results to display labels immediately
 -- =============================================
 
-CREATE OR REPLACE FUNCTION sp_Grid_Buses(
-    p_PageNumber INT DEFAULT 1,
-    p_PageSize INT DEFAULT 15,
-    p_StartRow INT DEFAULT NULL,
-    p_EndRow INT DEFAULT NULL,
-    p_SortColumn VARCHAR DEFAULT NULL,
-    p_SortDirection VARCHAR DEFAULT 'ASC',
-    p_FilterJson TEXT DEFAULT NULL,
-    p_SearchTerm VARCHAR DEFAULT NULL
-)
-RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION public.sp_grid_buses(
+	p_pagenumber integer DEFAULT 1,
+	p_pagesize integer DEFAULT 15,
+	p_startrow integer DEFAULT NULL::integer,
+	p_endrow integer DEFAULT NULL::integer,
+	p_sortcolumn character varying DEFAULT NULL::character varying,
+	p_sortdirection character varying DEFAULT 'ASC'::character varying,
+	p_filterjson text DEFAULT NULL::text,
+	p_searchterm character varying DEFAULT NULL::character varying)
+    RETURNS jsonb
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
 DECLARE
     v_Offset INT;
     v_FetchSize INT;
     v_Data JSONB;
     v_Columns JSONB;
+    v_BaseColumns JSONB;
+    v_DropdownConfigs JSONB;
+    v_LinkConfigs JSONB;
     v_TotalCount INT;
     v_FilterWhere TEXT := '';
     v_FilterJson JSONB;
@@ -139,7 +144,7 @@ BEGIN
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
     ) INTO v_TotalCount USING p_SearchTerm;
     
-    -- Get data rows with filters and search
+    -- Get data rows with filters and search (includes zoneName via JOIN)
     EXECUTE format('
         SELECT jsonb_agg(row_to_json(t))
         FROM (
@@ -158,12 +163,13 @@ BEGIN
                 b.iowner,
                 b.va,
                 b.vm,
-                b.zone,
+				z.zoname AS "zone",
                 b."Izone",
                 b."AreaCaseNumber",
                 b."OwnerCaseNumber",
                 b."ZoneCaseNumber"
             FROM "Bus" b
+            LEFT JOIN "Zone" z ON z.izone = b.zone AND z."CaseNumber" = b."CaseNumber"
             WHERE (1=1)
                 AND ($1 IS NULL OR 
                      b.name ILIKE ''%%%%'' || $1 || ''%%%%'' OR
@@ -186,40 +192,100 @@ BEGIN
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
     ) INTO v_Data USING p_SearchTerm, p_SortColumn, p_SortDirection, v_FetchSize, v_Offset;
     
-    -- Define column metadata
-    v_Columns := '[
+    -- Define base column metadata (zoneName added as display column)
+    v_BaseColumns := '[
         {"field": "actions", "headerName": "Actions", "width": 120, "sortable": false, "filter": false, "pinned": true},
         {"field": "ibus", "headerName": "Bus Number", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": false},
         {"field": "CaseNumber", "headerName": "Case Number", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": false},
-        {"field": "name", "headerName": "Name", "type": "text", "width": 200, "sortable": true, "filter": true, "editable": true},
-        {"field": "baskv", "headerName": "Base KV", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": true},
-        {"field": "iarea", "headerName": "Area", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "zone", "headerName": "Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "iowner", "headerName": "Owner", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "ide", "headerName": "IDE", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "vm", "headerName": "VM", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "va", "headerName": "VA", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "nvhi", "headerName": "NV High", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true},
-        {"field": "nvlo", "headerName": "NV Low", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true},
-        {"field": "evhi", "headerName": "EV High", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true},
-        {"field": "evlo", "headerName": "EV Low", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true},
-        {"field": "Izone", "headerName": "I Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true},
-        {"field": "AreaCaseNumber", "headerName": "Area Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true},
-        {"field": "OwnerCaseNumber", "headerName": "Owner Case #", "type": "number", "width": 140, "sortable": true, "filter": true, "editable": true},
-        {"field": "ZoneCaseNumber", "headerName": "Zone Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true}
+        {"field": "name", "headerName": "Name", "type": "text", "width": 200, "sortable": true, "filter": true, "editable": true, "cellEditor": "agTextCellEditor"},
+        {"field": "baskv", "headerName": "Base KV", "type": "number", "width": 120, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "iarea", "headerName": "Area", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "dropdown"},
+        {"field": "zone", "headerName": "Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "dropdown"},
+        {"field": "iowner", "headerName": "Owner", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "ide", "headerName": "IDE", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "vm", "headerName": "VM", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "va", "headerName": "VA", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "nvhi", "headerName": "NV High", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "nvlo", "headerName": "NV Low", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "evhi", "headerName": "EV High", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "evlo", "headerName": "EV Low", "type": "number", "width": 110, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "Izone", "headerName": "I Zone", "type": "number", "width": 100, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "AreaCaseNumber", "headerName": "Area Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "OwnerCaseNumber", "headerName": "Owner Case #", "type": "number", "width": 140, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"},
+        {"field": "ZoneCaseNumber", "headerName": "Zone Case #", "type": "number", "width": 130, "sortable": true, "filter": true, "editable": true, "cellEditor": "agNumberCellEditor"}
     ]'::JSONB;
+    
+    -- Get dropdown configurations from ColumnMetadata
+    SELECT jsonb_object_agg(
+        cm."ColumnName",
+        jsonb_build_object(
+            'type', cm."DropdownType",
+            'staticValues', CASE 
+                WHEN cm."StaticValuesJson" IS NOT NULL 
+                THEN cm."StaticValuesJson"::jsonb 
+                ELSE NULL 
+            END,
+            'masterTable', cm."MasterTable",
+            'valueField', cm."ValueField",
+            'labelField', cm."LabelField",
+            'filterCondition', cm."FilterCondition",
+            'dependsOn', CASE 
+                WHEN cm."DependsOnJson" IS NOT NULL 
+                THEN cm."DependsOnJson"::jsonb 
+                ELSE NULL 
+            END
+        )
+    )
+    INTO v_DropdownConfigs
+    FROM "ColumnMetadata" cm
+    WHERE cm."ProcedureName" = 'sp_Grid_Buses'
+      AND cm."IsActive" = true
+      AND cm."CellEditor" = 'dropdown';
+    
+    -- Get link configurations from ColumnMetadata
+    SELECT jsonb_object_agg(
+        cm."ColumnName",
+        cm."LinkConfig"
+    )
+    INTO v_LinkConfigs
+    FROM "ColumnMetadata" cm
+    WHERE cm."ProcedureName" = 'sp_Grid_Buses'
+      AND cm."IsActive" = true
+      AND cm."LinkConfig" IS NOT NULL
+      AND (cm."LinkConfig"->>'enabled')::boolean = true;
+    
+    -- Merge dropdown and link configs into base columns
+    SELECT jsonb_agg(
+        CASE 
+            WHEN v_DropdownConfigs ? (col->>'field') AND v_LinkConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('dropdownConfig', v_DropdownConfigs->(col->>'field'))
+                    || jsonb_build_object('linkConfig', v_LinkConfigs->(col->>'field'))
+            WHEN v_DropdownConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('dropdownConfig', v_DropdownConfigs->(col->>'field'))
+            WHEN v_LinkConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('linkConfig', v_LinkConfigs->(col->>'field'))
+            ELSE
+                col
+        END
+    )
+    INTO v_Columns
+    FROM jsonb_array_elements(v_BaseColumns) AS col;
     
     -- Return combined result
     RETURN jsonb_build_object(
         'rows', COALESCE(v_Data, '[]'::JSONB),
-        'columns', v_Columns,
+        'columns', COALESCE(v_Columns, '[]'::JSONB),
         'totalCount', v_TotalCount,
         'pageNumber', p_PageNumber,
         'pageSize', p_PageSize,
         'totalPages', CEIL(v_TotalCount::NUMERIC / p_PageSize)
     );
 END;
-$$ LANGUAGE plpgsql;
+$BODY$;
 
--- Grant execute permission
-GRANT EXECUTE ON FUNCTION sp_Grid_Buses(INT, INT, INT, INT, VARCHAR, VARCHAR, TEXT, VARCHAR) TO PUBLIC;
+ALTER FUNCTION public.sp_grid_buses(integer, integer, integer, integer, character varying, character varying, text, character varying)
+    OWNER TO postgres;
+
+GRANT EXECUTE ON FUNCTION public.sp_grid_buses(integer, integer, integer, integer, character varying, character varying, text, character varying) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.sp_grid_buses(integer, integer, integer, integer, character varying, character varying, text, character varying) TO postgres;

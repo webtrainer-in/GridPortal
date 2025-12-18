@@ -41,6 +41,45 @@ export interface ColumnDefinition {
   columnGroupShow?: string;
   pinned?: boolean;
   customProperties?: Record<string, any>;
+  dropdownConfig?: DropdownConfig; // For cascading dropdowns
+  linkConfig?: LinkConfiguration; // For clickable column links
+}
+
+export interface DropdownConfig {
+  type: 'static' | 'dynamic';
+  staticValues?: DropdownOption[];
+  masterTable?: string;
+  valueField?: string;
+  labelField?: string;
+  filterCondition?: string;
+  dependsOn?: string[];
+}
+
+export interface DropdownOption {
+  value: any;
+  label: string;
+}
+
+export interface LinkConfiguration {
+  enabled: boolean;
+  routePath: string;
+  openInNewTab: boolean;
+  params: LinkParameter[];
+}
+
+export interface LinkParameter {
+  name: string;
+  fields: string[];
+  separator?: string;
+}
+
+export interface DropdownValuesRequest {
+  procedureName: string;
+  masterTable: string;
+  valueField: string;
+  labelField: string;
+  filterCondition?: string;
+  rowContext?: Record<string, any>;
 }
 
 export interface RowUpdateRequest {
@@ -153,5 +192,25 @@ export class DynamicGridService {
    */
   saveColumnState(request: SaveColumnStateRequest): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(`${this.apiUrl}/column-state`, request);
+  }
+
+  /**
+   * Get dropdown values for cascading dropdowns
+   */
+  getDropdownValues(request: DropdownValuesRequest): Observable<DropdownOption[]> {
+    return new Observable<DropdownOption[]>(observer => {
+      this.http.post<{ options: DropdownOption[] }>(`${this.apiUrl}/dropdown-values`, request)
+        .subscribe({
+          next: (response) => {
+            observer.next(response.options || []);
+            observer.complete();
+          },
+          error: (err) => {
+            console.error('Error fetching dropdown values:', err);
+            observer.next([]); // Return empty array on error
+            observer.complete();
+          }
+        });
+    });
   }
 }

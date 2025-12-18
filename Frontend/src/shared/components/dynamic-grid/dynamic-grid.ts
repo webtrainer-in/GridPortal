@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridApi, GridReadyEvent, themeQuartz } from 'ag-grid-community';
-import { DynamicGridService, GridDataRequest, ColumnDefinition } from '../../../core/services/dynamic-grid.service';
+import { DynamicGridService, GridDataRequest, ColumnDefinition, DropdownOption, DropdownValuesRequest } from '../../../core/services/dynamic-grid.service';
 import { ActionButtonsRendererComponent } from './action-buttons-renderer.component';
 import { EditableCellRendererComponent } from './editable-cell-renderer.component';
+import { LinkCellRendererComponent } from './link-cell-renderer.component';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -53,6 +54,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   editedRows: Map<any, any> = new Map(); // Map of rowId -> original data
   hasUnsavedChanges: boolean = false;
   isSaving: boolean = false;
+  
+  // Column definitions (for dropdown support)
+  columns: ColumnDefinition[] = [];
   
   // Pagination state
   totalCount: number = 0;
@@ -398,6 +402,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   private updateColumnDefinitions(columns: ColumnDefinition[]): void {
+    // Store columns for dropdown support
+    this.columns = columns;
+    
     const colDefs: ColDef[] = [];
     
     columns.forEach(col => {
@@ -422,6 +429,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
         });
       } else {
         const isEditableColumn = this.enableRowEditing && col.field !== 'Id';
+        const hasLinkConfig = col.linkConfig?.enabled;
         
         const colDef: any = {
           field: col.field,
@@ -429,21 +437,34 @@ export class DynamicGrid implements OnInit, OnDestroy {
           width: col.width,
           sortable: col.sortable,
           filter: col.filter,
-          // ID column should never be editable
-          editable: false, // Disable AG Grid's built-in editing
+          editable: false,
           singleClickEdit: false
         };
         
-        // Use custom cell renderer for editable columns to show input fields
-        if (isEditableColumn) {
+        // Use link cell renderer for clickable columns
+        if (hasLinkConfig) {
+          colDef.cellRenderer = LinkCellRendererComponent;
+          colDef.cellRendererParams = {
+            linkConfig: col.linkConfig
+          };
+        }
+        // Use custom cell renderer for editable columns (if not a link column)
+        else if (isEditableColumn) {
           colDef.cellRenderer = EditableCellRendererComponent;
           colDef.cellRendererParams = {
             isEditing: (rowData: any) => this.editingRows.has(rowData.Id),
-            columnType: col.type // Pass column type for determining input type
+            columnType: col.type,
+            dropdownConfig: col.dropdownConfig, // Pass dropdown configuration
+            loadDropdownValues: col.dropdownConfig ? 
+              (field: string, rowContext: any) => this.loadDropdownValues(field, rowContext) : 
+              undefined,
+            onCascadingChange: col.dropdownConfig?.dependsOn && col.dropdownConfig.dependsOn.length > 0 ?
+              (field: string, value: any, rowData: any) => this.handleCascadingChange(field, value, rowData) :
+              undefined
           };
         }
         
-        // Add column group if provided from database
+        // Add column group if provided
         if (col.columnGroup) {
           colDef.columnGroup = col.columnGroup;
         }
@@ -1273,8 +1294,80 @@ export class DynamicGrid implements OnInit, OnDestroy {
   private getExportableColumns(): string[] {
     // Get all visible columns except the actions column
     return this.columnDefs
-      .filter(col => col.field && col.field !== 'actions')
-      .map(col => col.field!);
+      .filter(col => col.field !== 'actions' && !col.hide)
+      .map(col => col.field as string);
+  }
+
+  // =============================================
+  // Dropdown Support Methods
+  // =============================================
+
+  /**
+   * Load dropdown values for a specific field with row context
+   */
+  private async loadDropdownValues(field: string, rowContext: any): Promise<DropdownOption[]> {
+    const column = this.columns.find((col: ColumnDefinition) => col.field === field);
+    if (!column?.dropdownConfig) {
+      return [];
+    }
+
+    const config = column.dropdownConfig;
+
+    // Handle static dropdowns
+    if (config.type === 'static' && config.staticValues) {
+      return config.staticValues;
+    }
+
+    // Handle dynamic dropdowns
+    if (config.type === 'dynamic' && config.masterTable && config.valueField && config.labelField) {
+      const request: DropdownValuesRequest = {
+        procedureName: this.procedureName,
+        masterTable: config.masterTable,
+        valueField: config.valueField,
+        labelField: config.labelField,
+        filterCondition: config.filterCondition,
+        rowContext: rowContext
+      };
+
+      try {
+        return await this.gridService.getDropdownValues(request).toPromise() || [];
+      } catch (error) {
+        console.error('Error loading dropdown values:', error);
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Handle cascading dropdown changes
+   */
+  private handleCascadingChange(changedField: string, newValue: any, rowData: any): void {
+    // Find all columns that depend on the changed field
+    const dependentColumns = this.columns.filter((col: ColumnDefinition) => 
+      col.dropdownConfig?.dependsOn?.includes(changedField)
+    );
+
+    if (dependentColumns.length === 0) {
+      return;
+    }
+
+    // Clear values of dependent fields
+    dependentColumns.forEach((col: ColumnDefinition) => {
+      rowData[col.field] = null;
+    });
+
+    // Refresh the cells to reload dropdown options
+    const rowNode = this.gridApi.getRowNode(rowData.Id);
+    if (rowNode) {
+      const fieldsToRefresh = dependentColumns.map((col: ColumnDefinition) => col.field);
+      this.gridApi.refreshCells({
+        rowNodes: [rowNode],
+        columns: fieldsToRefresh,
+        force: true
+      });
+    }
   }
 }
 
