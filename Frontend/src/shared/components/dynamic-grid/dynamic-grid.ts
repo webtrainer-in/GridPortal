@@ -664,9 +664,18 @@ export class DynamicGrid implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            // Remove from local data
-            if (this.isServerSidePagination) {
-              // Reload current page for server-side
+            console.log('✅ Row deleted successfully');
+            
+            // Reload data based on current mode
+            if (this.isDrilledDown) {
+              // In drill-down mode, reload the drilled-down data
+              const currentLevel = this.drillDownLevels[this.currentDrillLevel];
+              this.loadDrilledDownData(currentLevel);
+            } else if (this.isServerSidePagination || this.isInfiniteScrollMode) {
+              // Reload current page for server-side or infinite scroll
+              if (this.isInfiniteScrollMode) {
+                this.resetInfiniteScroll();
+              }
               this.loadPageData(this.currentPage);
             } else {
               // Remove from client-side data
@@ -679,7 +688,13 @@ export class DynamicGrid implements OnInit, OnDestroy {
                 this.gridApi?.setGridOption('rowData', this.rowData);
               }
             }
-            console.log('✅ Row deleted successfully');
+            
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Deleted',
+              detail: 'Record deleted successfully',
+              life: 3000
+            });
           } else {
             this.messageService.add({
               severity: 'error',

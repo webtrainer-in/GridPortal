@@ -42,8 +42,8 @@ BEGIN
     SELECT COUNT(*)
     INTO v_TotalCount
     FROM "Acline" a
-    WHERE (a.ibus = v_BusNumber OR a.jbus = v_BusNumber)
-      AND a."CaseNumber" = v_CaseNumber;
+    WHERE (v_BusNumber IS NULL OR (a.ibus = v_BusNumber OR a.jbus = v_BusNumber))
+      AND (v_CaseNumber IS NULL OR a."CaseNumber" = v_CaseNumber);
     
     -- Get data rows
     SELECT jsonb_agg(row_to_json(t))
@@ -73,8 +73,8 @@ BEGIN
         FROM "Acline" a
         LEFT JOIN "Bus" bi ON bi.ibus = a.ibus AND bi."CaseNumber" = a."CaseNumber"
         LEFT JOIN "Bus" bj ON bj.ibus = a.jbus AND bj."CaseNumber" = a."CaseNumber"
-        WHERE (a.ibus = v_BusNumber OR a.jbus = v_BusNumber)
-          AND a."CaseNumber" = v_CaseNumber
+        WHERE (v_BusNumber IS NULL OR (a.ibus = v_BusNumber OR a.jbus = v_BusNumber))
+          AND (v_CaseNumber IS NULL OR a."CaseNumber" = v_CaseNumber)
         ORDER BY a.ckt, a.ibus, a.jbus
         LIMIT v_FetchSize OFFSET v_Offset
     ) t;
