@@ -1,11 +1,11 @@
 -- =============================================
--- Complete Grid Generator (Procedures Only)
+-- Grid Procedure Scaffolder (Procedures Only)
 -- =============================================
 -- Generates all 3 procedures and returns registration SQL
 -- to run in the main database separately
 --
 -- Usage Example:
---   SELECT generate_complete_grid(
+--   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Adjust',
 --       p_entity_name := 'Bus_Adjusts',
 --       p_display_name := 'Bus Adjustments',
@@ -16,7 +16,7 @@
 --   );
 -- =============================================
 
-CREATE OR REPLACE FUNCTION generate_complete_grid(
+CREATE OR REPLACE FUNCTION Scaffold_Grid_Procedures(
     p_table_name TEXT,              -- Database table name
     p_entity_name TEXT,             -- Entity name for procedures (e.g., 'Bus_Adjusts')
     p_display_name TEXT,            -- Display name for UI (e.g., 'Bus Adjustments')
@@ -85,7 +85,7 @@ BEGIN
     -- ========================================
     v_result := v_result || E'\n' || format('
 ╔══════════════════════════════════════════════════════════════╗
-║                    ✅ SUCCESS!                                ║
+║                    ✅ SUCCESS!                               ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Table: %s
 ║  Entity: %s
@@ -197,7 +197,7 @@ $SQL$,
 END;
 $$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION generate_complete_grid TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Scaffold_Grid_Procedures TO PUBLIC;
 GRANT EXECUTE ON FUNCTION generate_registration_sql TO PUBLIC;
 
 -- =============================================
@@ -206,13 +206,13 @@ GRANT EXECUTE ON FUNCTION generate_registration_sql TO PUBLIC;
 DO $$
 BEGIN
     RAISE NOTICE '╔══════════════════════════════════════════════════════════════╗';
-    RAISE NOTICE '║         ✨ Complete Grid Generator Ready! ✨                 ║';
+    RAISE NOTICE '║            Grid Procedure Scaffolder Ready!                  ║';
     RAISE NOTICE '╠══════════════════════════════════════════════════════════════╣';
-    RAISE NOTICE '║  Creates all 3 procedures + returns registration SQL!       ║';
+    RAISE NOTICE '║  Creates all 3 procedures + returns registration SQL!        ║';
     RAISE NOTICE '╚══════════════════════════════════════════════════════════════╝';
     RAISE NOTICE '';
     RAISE NOTICE 'Usage:';
-    RAISE NOTICE '  SELECT generate_complete_grid(';
+    RAISE NOTICE '  SELECT Scaffold_Grid_Procedures(';
     RAISE NOTICE '      p_table_name := ''Adjust'',';
     RAISE NOTICE '      p_entity_name := ''Bus_Adjusts'',';
     RAISE NOTICE '      p_display_name := ''Bus Adjustments'',';
