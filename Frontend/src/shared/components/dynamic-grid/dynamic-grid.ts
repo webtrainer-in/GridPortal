@@ -618,6 +618,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
             // Redraw the entire row to update all cells including action buttons
             this.gridApi?.redrawRows();
             
+            // Show success toast notification
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Saved',
+              detail: 'Record saved successfully',
+              life: 3000
+            });
+            
             console.log('✅ Row saved successfully');
           } else {
             this.messageService.add({
