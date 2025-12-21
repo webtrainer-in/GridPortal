@@ -1,6 +1,6 @@
 -- =============================================
--- Updated sp_grid_buses with Zone Name JOIN
--- Includes zoneName in results to display labels immediately
+-- Update sp_Grid_Buses to support simple drill-down filters
+-- Adds support for simple {"ibus": value} format alongside complex filter format
 -- =============================================
 
 CREATE OR REPLACE FUNCTION public.sp_grid_buses(
@@ -35,6 +35,9 @@ DECLARE
     v_FilterText TEXT;
     v_FilterNumber NUMERIC;
     v_Condition TEXT;
+    -- Simple filter variables for drill-down
+    v_SimpleBusNumber INT;
+    v_SimpleCaseNumber INT;
 BEGIN
     -- Determine offset and fetch size
     IF p_StartRow IS NOT NULL AND p_EndRow IS NOT NULL THEN
@@ -48,86 +51,111 @@ BEGIN
     -- Parse filter JSON if provided
     IF p_FilterJson IS NOT NULL AND p_FilterJson != '' THEN
         v_FilterJson := p_FilterJson::JSONB;
-        v_FilterKeys := ARRAY(SELECT jsonb_object_keys(v_FilterJson));
         
-        FOREACH v_FilterKey IN ARRAY v_FilterKeys
-        LOOP
-            v_FilterValue := v_FilterJson->v_FilterKey;
-            
-            IF v_FilterValue ? 'filterType' THEN
-                DECLARE
-                    v_ColumnType TEXT;
-                BEGIN
-                    v_FilterType := v_FilterValue->>'filterType';
-                    
-                    -- Determine column type
-                    v_ColumnType := CASE v_FilterKey
-                        WHEN 'ibus' THEN 'number'
-                        WHEN 'CaseNumber' THEN 'number'
-                        WHEN 'iarea' THEN 'number'
-                        WHEN 'baskv' THEN 'number'
-                        WHEN 'evhi' THEN 'number'
-                        WHEN 'evlo' THEN 'number'
-                        WHEN 'ide' THEN 'number'
-                        WHEN 'nvhi' THEN 'number'
-                        WHEN 'nvlo' THEN 'number'
-                        WHEN 'iowner' THEN 'number'
-                        WHEN 'va' THEN 'number'
-                        WHEN 'vm' THEN 'number'
-                        WHEN 'zone' THEN 'number'
-                        WHEN 'Izone' THEN 'number'
-                        WHEN 'AreaCaseNumber' THEN 'number'
-                        WHEN 'OwnerCaseNumber' THEN 'number'
-                        WHEN 'ZoneCaseNumber' THEN 'number'
-                        ELSE 'text'
-                    END;
-                    
-                    IF v_ColumnType = 'text' THEN
-                        v_FilterText := v_FilterValue->>'filter';
-                        CASE v_FilterType
-                            WHEN 'contains' THEN
-                                v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
-                            WHEN 'notContains' THEN
-                                v_Condition := format('b.%I NOT ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
-                            WHEN 'equals' THEN
-                                v_Condition := format('b.%I ILIKE %L', v_FilterKey, v_FilterText);
-                            WHEN 'notEqual' THEN
-                                v_Condition := format('b.%I NOT ILIKE %L', v_FilterKey, v_FilterText);
-                            WHEN 'startsWith' THEN
-                                v_Condition := format('b.%I ILIKE %L', v_FilterKey, v_FilterText || '%');
-                            WHEN 'endsWith' THEN
-                                v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText);
-                            ELSE
-                                v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
-                        END CASE;
-                    ELSIF v_ColumnType = 'number' THEN
-                        v_FilterNumber := (v_FilterValue->>'filter')::NUMERIC;
-                        CASE v_FilterType
-                            WHEN 'equals' THEN
-                                v_Condition := format('b.%I = %s', v_FilterKey, v_FilterNumber);
-                            WHEN 'notEqual' THEN
-                                v_Condition := format('b.%I != %s', v_FilterKey, v_FilterNumber);
-                            WHEN 'lessThan' THEN
-                                v_Condition := format('b.%I < %s', v_FilterKey, v_FilterNumber);
-                            WHEN 'lessThanOrEqual' THEN
-                                v_Condition := format('b.%I <= %s', v_FilterKey, v_FilterNumber);
-                            WHEN 'greaterThan' THEN
-                                v_Condition := format('b.%I > %s', v_FilterKey, v_FilterNumber);
-                            WHEN 'greaterThanOrEqual' THEN
-                                v_Condition := format('b.%I >= %s', v_FilterKey, v_FilterNumber);
-                            ELSE
-                                v_Condition := format('b.%I = %s', v_FilterKey, v_FilterNumber);
-                        END CASE;
-                    END IF;
-                    
-                    IF v_FilterWhere != '' THEN
-                        v_FilterWhere := v_FilterWhere || ' AND ';
-                    END IF;
-                    
-                    v_FilterWhere := v_FilterWhere || v_Condition;
-                END;
+        -- Check for simple drill-down filters first (for drill-down compatibility)
+        IF v_FilterJson ? 'ibus' AND jsonb_typeof(v_FilterJson->'ibus') = 'number' THEN
+            v_SimpleBusNumber := (v_FilterJson->>'ibus')::INT;
+        END IF;
+        
+        IF v_FilterJson ? 'CaseNumber' AND jsonb_typeof(v_FilterJson->'CaseNumber') = 'number' THEN
+            v_SimpleCaseNumber := (v_FilterJson->>'CaseNumber')::INT;
+        END IF;
+        
+        -- If simple filters were found, use them
+        IF v_SimpleBusNumber IS NOT NULL THEN
+            v_FilterWhere := format('b.ibus = %s', v_SimpleBusNumber);
+        END IF;
+        
+        IF v_SimpleCaseNumber IS NOT NULL THEN
+            IF v_FilterWhere != '' THEN
+                v_FilterWhere := v_FilterWhere || ' AND ';
             END IF;
-        END LOOP;
+            v_FilterWhere := v_FilterWhere || format('b."CaseNumber" = %s', v_SimpleCaseNumber);
+        END IF;
+        
+        -- If no simple filters, process complex AG Grid filters
+        IF v_SimpleBusNumber IS NULL AND v_SimpleCaseNumber IS NULL THEN
+            v_FilterKeys := ARRAY(SELECT jsonb_object_keys(v_FilterJson));
+            
+            FOREACH v_FilterKey IN ARRAY v_FilterKeys
+            LOOP
+                v_FilterValue := v_FilterJson->v_FilterKey;
+                
+                IF v_FilterValue ? 'filterType' THEN
+                    DECLARE
+                        v_ColumnType TEXT;
+                    BEGIN
+                        v_FilterType := v_FilterValue->>'filterType';
+                        
+                        -- Determine column type
+                        v_ColumnType := CASE v_FilterKey
+                            WHEN 'ibus' THEN 'number'
+                            WHEN 'CaseNumber' THEN 'number'
+                            WHEN 'iarea' THEN 'number'
+                            WHEN 'baskv' THEN 'number'
+                            WHEN 'evhi' THEN 'number'
+                            WHEN 'evlo' THEN 'number'
+                            WHEN 'ide' THEN 'number'
+                            WHEN 'nvhi' THEN 'number'
+                            WHEN 'nvlo' THEN 'number'
+                            WHEN 'iowner' THEN 'number'
+                            WHEN 'va' THEN 'number'
+                            WHEN 'vm' THEN 'number'
+                            WHEN 'zone' THEN 'number'
+                            WHEN 'Izone' THEN 'number'
+                            WHEN 'AreaCaseNumber' THEN 'number'
+                            WHEN 'OwnerCaseNumber' THEN 'number'
+                            WHEN 'ZoneCaseNumber' THEN 'number'
+                            ELSE 'text'
+                        END;
+                        
+                        IF v_ColumnType = 'text' THEN
+                            v_FilterText := v_FilterValue->>'filter';
+                            CASE v_FilterType
+                                WHEN 'contains' THEN
+                                    v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
+                                WHEN 'notContains' THEN
+                                    v_Condition := format('b.%I NOT ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
+                                WHEN 'equals' THEN
+                                    v_Condition := format('b.%I ILIKE %L', v_FilterKey, v_FilterText);
+                                WHEN 'notEqual' THEN
+                                    v_Condition := format('b.%I NOT ILIKE %L', v_FilterKey, v_FilterText);
+                                WHEN 'startsWith' THEN
+                                    v_Condition := format('b.%I ILIKE %L', v_FilterKey, v_FilterText || '%');
+                                WHEN 'endsWith' THEN
+                                    v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText);
+                                ELSE
+                                    v_Condition := format('b.%I ILIKE %L', v_FilterKey, '%' || v_FilterText || '%');
+                            END CASE;
+                        ELSIF v_ColumnType = 'number' THEN
+                            v_FilterNumber := (v_FilterValue->>'filter')::NUMERIC;
+                            CASE v_FilterType
+                                WHEN 'equals' THEN
+                                    v_Condition := format('b.%I = %s', v_FilterKey, v_FilterNumber);
+                                WHEN 'notEqual' THEN
+                                    v_Condition := format('b.%I != %s', v_FilterKey, v_FilterNumber);
+                                WHEN 'lessThan' THEN
+                                    v_Condition := format('b.%I < %s', v_FilterKey, v_FilterNumber);
+                                WHEN 'lessThanOrEqual' THEN
+                                    v_Condition := format('b.%I <= %s', v_FilterKey, v_FilterNumber);
+                                WHEN 'greaterThan' THEN
+                                    v_Condition := format('b.%I > %s', v_FilterKey, v_FilterNumber);
+                                WHEN 'greaterThanOrEqual' THEN
+                                    v_Condition := format('b.%I >= %s', v_FilterKey, v_FilterNumber);
+                                ELSE
+                                    v_Condition := format('b.%I = %s', v_FilterKey, v_FilterNumber);
+                            END CASE;
+                        END IF;
+                        
+                        IF v_FilterWhere != '' THEN
+                            v_FilterWhere := v_FilterWhere || ' AND ';
+                        END IF;
+                        
+                        v_FilterWhere := v_FilterWhere || v_Condition;
+                    END;
+                END IF;
+            END LOOP;
+        END IF;
     END IF;
     
     -- Get total count with filters and search
@@ -184,10 +212,10 @@ BEGIN
             LEFT JOIN "Zone" z ON z.izone = b.zone AND z."CaseNumber" = b."CaseNumber"
             WHERE (1=1)
                 AND ($1 IS NULL OR 
-                     b.name ILIKE ''%%%%'' || $1 || ''%%%%'' OR
-                     CAST(b.ibus AS TEXT) ILIKE ''%%%%'' || $1 || ''%%%%'' OR
-                     CAST(b."CaseNumber" AS TEXT) ILIKE ''%%%%'' || $1 || ''%%%%'' OR
-                     CAST(b.baskv AS TEXT) ILIKE ''%%%%'' || $1 || ''%%%%'')
+                     b.name ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(b.ibus AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(b."CaseNumber" AS TEXT) ILIKE ''%%'' || $1 || ''%%'' OR
+                     CAST(b.baskv AS TEXT) ILIKE ''%%'' || $1 || ''%%'')
                 %s
             ORDER BY 
                 CASE WHEN $2 = ''ibus'' AND $3 = ''ASC'' THEN b.ibus END ASC,
