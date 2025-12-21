@@ -13,7 +13,7 @@
 --   );
 -- =============================================
 
-CREATE OR REPLACE FUNCTION generate_grid_fetch_procedure(
+CREATE OR REPLACE FUNCTION Generate_Grid_Fetch(
     p_table_name TEXT,           -- Actual table name (e.g., 'Acline')
     p_entity_name TEXT,          -- Entity name for procedure (e.g., 'Bus_Aclines')
     p_primary_key_cols TEXT[],   -- Array of primary key column names (case-insensitive)
@@ -238,7 +238,7 @@ $PROC$,
 END;
 $$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION generate_grid_fetch_procedure TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Generate_Grid_Fetch TO PUBLIC;
 
 -- =============================================
 -- Success Message
@@ -250,7 +250,7 @@ BEGIN
     RAISE NOTICE '✨ NEW: Automatically detects correct column name casing!';
     RAISE NOTICE '';
     RAISE NOTICE 'Usage Example:';
-    RAISE NOTICE '  SELECT generate_grid_fetch_procedure(';
+    RAISE NOTICE '  SELECT Generate_Grid_Fetch(';
     RAISE NOTICE '      ''Adjust'',';
     RAISE NOTICE '      ''Bus_Adjusts'',';
     RAISE NOTICE '      ARRAY[''acctap'', ''casenumber''],  -- Case-insensitive!';

@@ -44,7 +44,7 @@ BEGIN
     -- 1. Generate FETCH procedure
     -- ========================================
     BEGIN
-        v_fetch_sql := generate_grid_fetch_procedure(
+        v_fetch_sql := Generate_Grid_Fetch(
             p_table_name,
             p_entity_name,
             p_primary_keys,
@@ -65,7 +65,7 @@ BEGIN
     -- 2. Generate UPDATE & DELETE procedures
     -- ========================================
     BEGIN
-        PERFORM generate_grid_crud_procedures(
+        PERFORM Generate_CRUD_Procedures(
             p_table_name,
             p_entity_name,
             p_primary_keys,
@@ -115,7 +115,7 @@ BEGIN
         v_update_proc_name,
         v_delete_proc_name,
         v_fetch_proc_name,
-        generate_registration_sql(
+        Generate_Registration_SQL(
             v_fetch_proc_name,
             v_update_proc_name,
             v_delete_proc_name,
@@ -136,7 +136,7 @@ $$ LANGUAGE plpgsql;
 -- =============================================
 -- Generate Registration SQL
 -- =============================================
-CREATE OR REPLACE FUNCTION generate_registration_sql(
+CREATE OR REPLACE FUNCTION Generate_Registration_SQL(
     p_fetch_proc_name TEXT,
     p_update_proc_name TEXT,
     p_delete_proc_name TEXT,
@@ -198,7 +198,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 GRANT EXECUTE ON FUNCTION Scaffold_Grid_Procedures TO PUBLIC;
-GRANT EXECUTE ON FUNCTION generate_registration_sql TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Generate_Registration_SQL TO PUBLIC;
 
 -- =============================================
 -- Success Message

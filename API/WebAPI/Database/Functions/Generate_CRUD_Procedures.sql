@@ -4,7 +4,7 @@
 -- Generates UPDATE and DELETE procedures with proper type handling
 -- =============================================
 
-CREATE OR REPLACE FUNCTION generate_grid_crud_procedures(
+CREATE OR REPLACE FUNCTION Generate_CRUD_Procedures(
     p_table_name TEXT,
     p_entity_name TEXT,
     p_primary_key_cols TEXT[],
@@ -203,7 +203,7 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION generate_grid_crud_procedures TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Generate_CRUD_Procedures TO PUBLIC;
 
 DO $$
 BEGIN
