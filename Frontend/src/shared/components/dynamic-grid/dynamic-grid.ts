@@ -87,6 +87,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   currentDrillLevel: number = 0;
   isDrilledDown: boolean = false;
   originalProcedureName: string = ''; // Store original procedure name for restoration
+  drillDownFilters: any = null; // Store drill-down filters to preserve across search/pagination
   
   // Freeze columns state
   showFreezeMenu: boolean = false;
@@ -160,6 +161,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
             console.log('🔄 Returning from drill-down - restoring original procedure name');
             this.procedureName = this.originalProcedureName;
             console.log(`🔄 Procedure name restored to: ${this.procedureName}`);
+            
+            // Clear drill-down filters
+            this.drillDownFilters = null;
+            console.log('🔄 Drill-down filters cleared');
             
             // Clear columns to force refresh
             this.columnDefs = [];
@@ -428,6 +433,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
     if (this.currentFilterModel) {
       console.log(`🔍 Filtering with:`, this.currentFilterModel);
     }
+    if (this.drillDownFilters) {
+      console.log(`🔍 Drill-down filters:`, this.drillDownFilters);
+    }
     this.isLoading = true;
     
     const request: GridDataRequest = {
@@ -436,7 +444,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageSize: this.pageSize,
       sortColumn: this.currentSortColumn || undefined,
       sortDirection: this.currentSortDirection,
-      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
       searchTerm: this.globalSearchTerm || undefined // Add global search term
     };
 
@@ -479,6 +487,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
     // This ensures search/filter operations use the correct procedure
     this.procedureName = level.procedureName;
     console.log(`🔄 Procedure name updated to: ${this.procedureName}`);
+    
+    // Store drill-down filters to preserve them across search/pagination
+    this.drillDownFilters = level.filters;
+    console.log(`🔄 Drill-down filters stored:`, this.drillDownFilters);
     
     const request: GridDataRequest = {
       procedureName: level.procedureName,
