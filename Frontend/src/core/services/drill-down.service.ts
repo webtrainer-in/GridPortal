@@ -97,6 +97,12 @@ export class DrillDownService {
       return;
     }
 
+    // Special case: going back to root (level 0) means clearing drill-down
+    if (levelIndex === 0) {
+      this.reset();
+      return;
+    }
+
     // Remove all levels after the target level
     const newLevels = currentState.levels.slice(0, levelIndex + 1);
 
@@ -185,12 +191,13 @@ export class DrillDownService {
 
   /**
    * Update URL with drill-down state
+   * FIX: Clear params when at root level to prevent stale data
    */
   private updateUrl(state: DrillDownState): void {
-    const queryParams: any = {};
+    let queryParams: any = {};
 
-    if (state.levels.length > 0) {
-      // Encode drill-down state in URL
+    // Only add drill-down params if we're actually drilled down (not at root)
+    if (state.levels.length > 0 && state.currentLevel > 0) {
       const drillPath = state.levels.map(l => l.procedureName).join('|');
       const filterPath = state.levels.map(l => JSON.stringify(l.filters)).join('|');
       const breadcrumbPath = state.levels.map(l => l.breadcrumbLabel).join('>');
@@ -199,12 +206,19 @@ export class DrillDownService {
       queryParams['filters'] = filterPath;
       queryParams['breadcrumbs'] = breadcrumbPath;
       queryParams['level'] = state.currentLevel;
+    } else {
+      // Clear all drill-down params when at root
+      queryParams = {
+        drill: null,
+        filters: null,
+        breadcrumbs: null,
+        level: null
+      };
     }
 
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: queryParams,
-      queryParamsHandling: 'merge',
       replaceUrl: true
     });
   }

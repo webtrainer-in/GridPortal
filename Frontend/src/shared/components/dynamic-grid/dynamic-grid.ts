@@ -139,15 +139,28 @@ export class DynamicGrid implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(state => {
         console.log('📊 Drill-down state changed:', state);
+        const wasDrilledDown = this.isDrilledDown;
+        
         this.drillDownLevels = state.levels;
         this.currentDrillLevel = state.currentLevel;
         this.isDrilledDown = state.currentLevel > 0;
         
         // Reload grid with drilled-down procedure
-        if (state.levels.length > 0) {
+        if (state.currentLevel > 0 && state.levels.length > 0) {
           const currentLevel = state.levels[state.currentLevel];
           this.loadDrilledDownData(currentLevel);
         } else {
+          // We're at root
+          if (wasDrilledDown) {
+            // Returning from drill-down - clear columns to force refresh
+            console.log('🔄 Returning from drill-down - clearing columns for fresh load');
+            this.columnDefs = [];
+            this.columns = [];
+            if (this.gridApi) {
+              this.gridApi.setGridOption('columnDefs', []);
+            }
+          }
+          // Load root grid data (will fetch fresh columns)
           this.loadGridData();
         }
       });
