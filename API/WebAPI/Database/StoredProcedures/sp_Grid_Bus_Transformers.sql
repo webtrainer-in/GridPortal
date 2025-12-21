@@ -43,7 +43,13 @@ BEGIN
     INTO v_TotalCount
     FROM "Transformer" t
     WHERE (v_BusNumber IS NULL OR (t.ibus = v_BusNumber OR t.jbus = v_BusNumber OR t.kbus = v_BusNumber))
-      AND (v_CaseNumber IS NULL OR t."CaseNumber" = v_CaseNumber);
+      AND (v_CaseNumber IS NULL OR t."CaseNumber" = v_CaseNumber)
+      AND (p_SearchTerm IS NULL OR 
+           t.name ILIKE '%' || p_SearchTerm || '%' OR
+           t.ckt ILIKE '%' || p_SearchTerm || '%' OR
+           CAST(t.ibus AS TEXT) ILIKE '%' || p_SearchTerm || '%' OR
+           CAST(t.jbus AS TEXT) ILIKE '%' || p_SearchTerm || '%' OR
+           CAST(t.kbus AS TEXT) ILIKE '%' || p_SearchTerm || '%');
     
     -- Get data rows
     SELECT jsonb_agg(row_to_json(t))
@@ -81,6 +87,15 @@ BEGIN
         LEFT JOIN "Bus" bk ON bk.ibus = t.kbus AND bk."CaseNumber" = t."CaseNumber"
         WHERE (v_BusNumber IS NULL OR (t.ibus = v_BusNumber OR t.jbus = v_BusNumber OR t.kbus = v_BusNumber))
           AND (v_CaseNumber IS NULL OR t."CaseNumber" = v_CaseNumber)
+          AND (p_SearchTerm IS NULL OR 
+               t.name ILIKE '%' || p_SearchTerm || '%' OR
+               t.ckt ILIKE '%' || p_SearchTerm || '%' OR
+               CAST(t.ibus AS TEXT) ILIKE '%' || p_SearchTerm || '%' OR
+               CAST(t.jbus AS TEXT) ILIKE '%' || p_SearchTerm || '%' OR
+               CAST(t.kbus AS TEXT) ILIKE '%' || p_SearchTerm || '%' OR
+               bi.name ILIKE '%' || p_SearchTerm || '%' OR
+               bj.name ILIKE '%' || p_SearchTerm || '%' OR
+               bk.name ILIKE '%' || p_SearchTerm || '%')
         ORDER BY t.ckt, t.ibus, t.jbus, t.kbus
         LIMIT v_FetchSize OFFSET v_Offset
     ) t;
