@@ -315,6 +315,18 @@ export class DynamicGrid implements OnInit, OnDestroy {
       this.rowData = response.rows || [];
       console.log(`✅ Setting rowData with ${this.rowData.length} rows`);
       
+      // Update total count from response (important for drill-down)
+      if (response.totalCount !== undefined) {
+        this.totalCount = response.totalCount;
+        console.log(`📊 Total count updated to: ${this.totalCount}`);
+        
+        // Also update lastLoadedRow for infinite scroll mode
+        if (this.isInfiniteScrollMode) {
+          this.lastLoadedRow = this.rowData.length;
+          console.log(`📊 Last loaded row updated to: ${this.lastLoadedRow}`);
+        }
+      }
+      
       this.setLoading(false);
       console.log('✅ Loading state cleared');
       
