@@ -320,6 +320,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
         this.totalCount = response.totalCount;
         console.log(`📊 Total count updated to: ${this.totalCount}`);
         
+        // Recalculate total pages based on new total count
+        this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+        console.log(`📄 Total pages recalculated to: ${this.totalPages}`);
+        
         // Also update lastLoadedRow for infinite scroll mode
         if (this.isInfiniteScrollMode) {
           this.lastLoadedRow = this.rowData.length;

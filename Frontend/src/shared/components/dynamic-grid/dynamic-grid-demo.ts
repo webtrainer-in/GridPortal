@@ -43,9 +43,9 @@ import { DrillDownService } from '../../../core/services/drill-down.service';
             [enableRowEditing]="true"
             [pageSize]="15"
             [paginationThreshold]="10"
-            [defaultPaginationMode]="'infinite'"
-            [infiniteScrollBatchSize]="1000"
-            [infiniteScrollWindowSize]="10000"
+            [defaultPaginationMode]="'traditional'"
+            [infiniteScrollBatchSize]="1"
+            [infiniteScrollWindowSize]="10"
             [infiniteScrollThreshold]="0.8"
           ></app-dynamic-grid>
         }
