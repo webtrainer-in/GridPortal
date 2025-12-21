@@ -86,6 +86,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   drillDownLevels: DrillDownLevel[] = [];
   currentDrillLevel: number = 0;
   isDrilledDown: boolean = false;
+  originalProcedureName: string = ''; // Store original procedure name for restoration
   
   // Freeze columns state
   showFreezeMenu: boolean = false;
@@ -131,6 +132,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
       console.error('DynamicGrid: procedureName is required');
     }
     
+    // Store the original procedure name for restoration when returning from drill-down
+    this.originalProcedureName = this.procedureName;
+    
     // Initialize pagination mode from input
     this.paginationMode = this.defaultPaginationMode;
     
@@ -152,8 +156,12 @@ export class DynamicGrid implements OnInit, OnDestroy {
         } else {
           // We're at root
           if (wasDrilledDown) {
-            // Returning from drill-down - clear columns to force refresh
-            console.log('🔄 Returning from drill-down - clearing columns for fresh load');
+            // Returning from drill-down - restore original procedure name
+            console.log('🔄 Returning from drill-down - restoring original procedure name');
+            this.procedureName = this.originalProcedureName;
+            console.log(`🔄 Procedure name restored to: ${this.procedureName}`);
+            
+            // Clear columns to force refresh
             this.columnDefs = [];
             this.columns = [];
             if (this.gridApi) {
@@ -466,6 +474,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
   private loadDrilledDownData(level: DrillDownLevel): void {
     console.log('📊 Loading drilled-down data:', level);
     this.setLoading(true);
+    
+    // Update procedure name to the drilled-down procedure
+    // This ensures search/filter operations use the correct procedure
+    this.procedureName = level.procedureName;
+    console.log(`🔄 Procedure name updated to: ${this.procedureName}`);
     
     const request: GridDataRequest = {
       procedureName: level.procedureName,
