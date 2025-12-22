@@ -9,7 +9,8 @@ import { DrillDownState, DrillDownLevel, DrillDownConfig } from '../models/drill
 export class DrillDownService {
   private drillDownState$ = new BehaviorSubject<DrillDownState>({
     levels: [],
-    currentLevel: 0
+    currentLevel: 0,
+    isStatelessMode: false
   });
 
   constructor(
@@ -28,14 +29,20 @@ export class DrillDownService {
     return this.drillDownState$.value;
   }
 
-  /**
-   * Drill down to a new level
-   */
   drillDown(config: DrillDownConfig, rowData: any, baseProcedure: string): void {
     const currentState = this.getCurrentState();
     
-    // Check max depth
-    if (currentState.currentLevel >= config.maxDepth) {
+    console.log('🔍 DrillDown called with config.maxDepth:', config.maxDepth);
+    console.log('🔍 Target procedure:', config.targetProcedure);
+    console.log('🔍 Base procedure:', baseProcedure);
+    console.log('🔍 Current state:', currentState);
+    
+    // Determine if this is stateless mode (unlimited drill-down)
+    const isStatelessMode = config.maxDepth === -1;
+    console.log('🔍 Is stateless mode?', isStatelessMode);
+    
+    // Check max depth (skip check if maxDepth is -1 = unlimited)
+    if (config.maxDepth !== -1 && currentState.currentLevel >= config.maxDepth) {
       console.warn(`Maximum drill-down depth (${config.maxDepth}) reached`);
       return;
     }
@@ -54,23 +61,68 @@ export class DrillDownService {
       breadcrumbLabel: breadcrumbLabel
     };
 
-    // If this is the first drill-down, add the base level
-    let levels = [...currentState.levels];
-    if (levels.length === 0) {
-      levels.push({
-        procedureName: baseProcedure,
-        displayName: baseProcedure,
-        filters: {},
-        breadcrumbLabel: this.getProcedureDisplayName(baseProcedure)
-      });
-    }
+    let levels: DrillDownLevel[];
+    let currentLevel: number;
 
-    // Add new level
-    levels.push(newLevel);
+    if (isStatelessMode) {
+      // STATELESS MODE: Use sliding window (only keep current + previous level)
+      // This prevents memory growth in unlimited drill-down scenarios
+      
+      if (currentState.levels.length === 0 || !currentState.isStatelessMode) {
+        // First drill-down OR switching from stateful to stateless: add base level + new level
+        levels = [
+          {
+            procedureName: baseProcedure,
+            displayName: baseProcedure,
+            filters: {},
+            breadcrumbLabel: this.getProcedureDisplayName(baseProcedure)
+          },
+          newLevel
+        ];
+        currentLevel = 1;
+        console.log('🔍 First stateless drill-down - created base + new level');
+      } else {
+        // Subsequent drill-downs: use current level as previous
+        // IMPORTANT: Only if we're drilling to a DIFFERENT procedure
+        const currentLevelData = currentState.levels[currentState.currentLevel];
+        
+        // Check if we're drilling to the same procedure (shouldn't happen, but handle it)
+        if (currentLevelData.procedureName === newLevel.procedureName) {
+          console.warn('⚠️ Drilling to same procedure - this might be a race condition');
+          // Just update the filters for the current level
+          levels = [currentState.levels[0], newLevel];
+        } else {
+          levels = [currentLevelData, newLevel];
+        }
+        
+        currentLevel = 1; // Always at index 1 in sliding window
+        console.log('🔍 Current level data:', currentLevelData);
+        console.log('🔍 New level data:', newLevel);
+        console.log('🔍 Sliding window levels:', levels);
+      }
+      
+      console.log('🔄 Stateless drill-down: Using sliding window (2 levels max)');
+    } else {
+      // STATEFUL MODE: Keep full history for breadcrumb navigation
+      levels = [...currentState.levels];
+      
+      if (levels.length === 0) {
+        levels.push({
+          procedureName: baseProcedure,
+          displayName: baseProcedure,
+          filters: {},
+          breadcrumbLabel: this.getProcedureDisplayName(baseProcedure)
+        });
+      }
+
+      levels.push(newLevel);
+      currentLevel = levels.length - 1;
+    }
 
     const newState: DrillDownState = {
       levels: levels,
-      currentLevel: levels.length - 1
+      currentLevel: currentLevel,
+      isStatelessMode: isStatelessMode
     };
 
     this.drillDownState$.next(newState);
@@ -108,7 +160,8 @@ export class DrillDownService {
 
     const newState: DrillDownState = {
       levels: newLevels,
-      currentLevel: levelIndex
+      currentLevel: levelIndex,
+      isStatelessMode: currentState.isStatelessMode
     };
 
     this.drillDownState$.next(newState);
@@ -121,7 +174,8 @@ export class DrillDownService {
   reset(): void {
     const newState: DrillDownState = {
       levels: [],
-      currentLevel: 0
+      currentLevel: 0,
+      isStatelessMode: false
     };
     
     this.drillDownState$.next(newState);
@@ -192,27 +246,41 @@ export class DrillDownService {
   /**
    * Update URL with drill-down state
    * FIX: Clear params when at root level to prevent stale data
+   * STATELESS MODE: Store only current level to prevent URL bloat
    */
   private updateUrl(state: DrillDownState): void {
     let queryParams: any = {};
 
     // Only add drill-down params if we're actually drilled down (not at root)
     if (state.levels.length > 0 && state.currentLevel > 0) {
-      const drillPath = state.levels.map(l => l.procedureName).join('|');
-      const filterPath = state.levels.map(l => JSON.stringify(l.filters)).join('|');
-      const breadcrumbPath = state.levels.map(l => l.breadcrumbLabel).join('>');
+      
+      if (state.isStatelessMode) {
+        // STATELESS MODE: Store only current level (minimal URL state)
+        const currentLevel = state.levels[state.currentLevel];
+        queryParams['drill'] = currentLevel.procedureName;
+        queryParams['filters'] = JSON.stringify(currentLevel.filters);
+        queryParams['stateless'] = 'true'; // Flag to indicate stateless mode
+        
+        console.log('🔗 Stateless URL: Only current level stored');
+      } else {
+        // STATEFUL MODE: Store full drill-down path for breadcrumb navigation
+        const drillPath = state.levels.map(l => l.procedureName).join('|');
+        const filterPath = state.levels.map(l => JSON.stringify(l.filters)).join('|');
+        const breadcrumbPath = state.levels.map(l => l.breadcrumbLabel).join('>');
 
-      queryParams['drill'] = drillPath;
-      queryParams['filters'] = filterPath;
-      queryParams['breadcrumbs'] = breadcrumbPath;
-      queryParams['level'] = state.currentLevel;
+        queryParams['drill'] = drillPath;
+        queryParams['filters'] = filterPath;
+        queryParams['breadcrumbs'] = breadcrumbPath;
+        queryParams['level'] = state.currentLevel;
+      }
     } else {
       // Clear all drill-down params when at root
       queryParams = {
         drill: null,
         filters: null,
         breadcrumbs: null,
-        level: null
+        level: null,
+        stateless: null
       };
     }
 
@@ -225,27 +293,53 @@ export class DrillDownService {
 
   /**
    * Initialize state from URL query params
+   * Handles both stateless and stateful modes
    */
   private initializeFromUrl(): void {
     this.route.queryParams.subscribe(params => {
       if (params['drill']) {
         try {
-          const procedures = params['drill'].split('|');
-          const filters = params['filters'].split('|').map((f: string) => JSON.parse(f));
-          const breadcrumbs = params['breadcrumbs'].split('>');
-          const currentLevel = parseInt(params['level'] || '0');
+          const isStateless = params['stateless'] === 'true';
+          
+          if (isStateless) {
+            // STATELESS MODE: Only current level in URL
+            // Note: On page refresh, we lose drill-down history by design
+            const currentLevel: DrillDownLevel = {
+              procedureName: params['drill'],
+              displayName: params['drill'],
+              filters: JSON.parse(params['filters'] || '{}'),
+              breadcrumbLabel: this.getProcedureDisplayName(params['drill'])
+            };
 
-          const levels: DrillDownLevel[] = procedures.map((proc: string, index: number) => ({
-            procedureName: proc,
-            displayName: proc,
-            filters: filters[index] || {},
-            breadcrumbLabel: breadcrumbs[index] || proc
-          }));
+            this.drillDownState$.next({
+              levels: [currentLevel],
+              currentLevel: 0,
+              isStatelessMode: true
+            });
+            
+            console.log('🔄 Restored stateless drill-down from URL (history lost on refresh)');
+          } else {
+            // STATEFUL MODE: Full drill-down path in URL
+            const procedures = params['drill'].split('|');
+            const filters = params['filters'].split('|').map((f: string) => JSON.parse(f));
+            const breadcrumbs = params['breadcrumbs'].split('>');
+            const currentLevel = parseInt(params['level'] || '0');
 
-          this.drillDownState$.next({
-            levels: levels,
-            currentLevel: currentLevel
-          });
+            const levels: DrillDownLevel[] = procedures.map((proc: string, index: number) => ({
+              procedureName: proc,
+              displayName: proc,
+              filters: filters[index] || {},
+              breadcrumbLabel: breadcrumbs[index] || proc
+            }));
+
+            this.drillDownState$.next({
+              levels: levels,
+              currentLevel: currentLevel,
+              isStatelessMode: false
+            });
+            
+            console.log('🔄 Restored stateful drill-down from URL');
+          }
         } catch (error) {
           console.error('Error parsing drill-down state from URL:', error);
           this.reset();

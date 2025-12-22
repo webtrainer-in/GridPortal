@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Text.Json;
+using WebAPI.Configuration;
 using WebAPI.Data;
 using WebAPI.DTOs;
 using WebAPI.Models;
@@ -12,15 +14,18 @@ public class DynamicGridService : IDynamicGridService
     private readonly ApplicationDbContext _context;
     private readonly IDbContextFactory _dbContextFactory;
     private readonly ILogger<DynamicGridService> _logger;
+    private readonly DrillDownSettings _drillDownSettings;
 
     public DynamicGridService(
         ApplicationDbContext context,
         IDbContextFactory dbContextFactory,
-        ILogger<DynamicGridService> logger)
+        ILogger<DynamicGridService> logger,
+        IOptions<DrillDownSettings> drillDownSettings)
     {
         _context = context;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
+        _drillDownSettings = drillDownSettings.Value;
     }
 
     public async Task<GridDataResponse> ExecuteGridProcedureAsync(GridDataRequest request, string[] userRoles)
@@ -141,6 +146,12 @@ public class DynamicGridService : IDynamicGridService
             if (request.PageSize > 0)
             {
                 response.TotalPages = (int)Math.Ceiling(response.TotalCount / (double)request.PageSize);
+            }
+
+            // Apply global drill-down settings to column definitions
+            if (response.Columns != null && response.Columns.Count > 0)
+            {
+                ApplyGlobalDrillDownSettings(response.Columns);
             }
 
             return response;
@@ -853,5 +864,40 @@ public class DynamicGridService : IDynamicGridService
         
         // Construct delete procedure name
         return $"sp_Grid_Delete_{entityName}";
+    }
+
+    /// <summary>
+    /// Apply global drill-down settings to column definitions
+    /// </summary>
+    private void ApplyGlobalDrillDownSettings(List<ColumnDefinition> columns)
+    {
+        foreach (var column in columns)
+        {
+            // Only process columns that have drill-down configuration
+            if (column.LinkConfig?.DrillDown != null)
+            {
+                if (_drillDownSettings.EnableUnlimitedDrillDown)
+                {
+                    // Override maxDepth to -1 for unlimited drill-down
+                    column.LinkConfig.DrillDown.MaxDepth = -1;
+                    _logger.LogDebug(
+                        "Applied unlimited drill-down to column {Column} (maxDepth = -1)", 
+                        column.Field);
+                }
+                else
+                {
+                    // Use column's maxDepth if specified, otherwise use default
+                    if (column.LinkConfig.DrillDown.MaxDepth <= 0)
+                    {
+                        column.LinkConfig.DrillDown.MaxDepth = _drillDownSettings.DefaultMaxDepth;
+                        _logger.LogDebug(
+                            "Applied default maxDepth ({MaxDepth}) to column {Column}", 
+                            _drillDownSettings.DefaultMaxDepth,
+                            column.Field);
+                    }
+                    // else: keep the column's configured maxDepth
+                }
+            }
+        }
     }
 }

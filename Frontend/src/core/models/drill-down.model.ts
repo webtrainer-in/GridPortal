@@ -1,6 +1,7 @@
 export interface DrillDownState {
   levels: DrillDownLevel[];
   currentLevel: number;
+  isStatelessMode: boolean; // true when maxDepth = -1 (unlimited)
 }
 
 export interface DrillDownLevel {

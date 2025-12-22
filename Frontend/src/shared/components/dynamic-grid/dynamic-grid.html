@@ -10,6 +10,7 @@
     *ngIf="isDrilledDown"
     [levels]="drillDownLevels"
     [currentLevel]="currentDrillLevel"
+    [isStatelessMode]="isStatelessMode"
     (navigate)="onDrillDownNavigate($event)"
     (back)="onDrillDownBack()">
   </app-drill-down-breadcrumb>
