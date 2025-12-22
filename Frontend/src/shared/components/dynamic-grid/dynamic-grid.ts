@@ -7,6 +7,9 @@ import { DynamicGridService, GridDataRequest, ColumnDefinition, DropdownOption, 
 import { ActionButtonsRendererComponent } from './action-buttons-renderer.component';
 import { EditableCellRendererComponent } from './editable-cell-renderer.component';
 import { LinkCellRendererComponent } from './link-cell-renderer.component';
+import { DrillDownBreadcrumbComponent } from '../drill-down-breadcrumb/drill-down-breadcrumb.component';
+import { DrillDownService } from '../../../core/services/drill-down.service';
+import { DrillDownLevel } from '../../../core/models/drill-down.model';
 import { Subject, takeUntil } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -16,7 +19,7 @@ import { ToastModule } from 'primeng/toast';
 @Component({
   selector: 'app-dynamic-grid',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridAngular, ConfirmDialogModule, ToastModule],
+  imports: [CommonModule, FormsModule, AgGridAngular, ConfirmDialogModule, ToastModule, DrillDownBreadcrumbComponent],
   providers: [ConfirmationService, MessageService],
   templateUrl: './dynamic-grid.html',
   styleUrls: ['./dynamic-grid.scss'],
@@ -79,6 +82,13 @@ export class DynamicGrid implements OnInit, OnDestroy {
   filteredColumnGroups: ColumnGroup[] = [];
   filteredUngroupedColumns: ColumnInfo[] = [];
   
+  // Drill-down state
+  drillDownLevels: DrillDownLevel[] = [];
+  currentDrillLevel: number = 0;
+  isDrilledDown: boolean = false;
+  originalProcedureName: string = ''; // Store original procedure name for restoration
+  drillDownFilters: any = null; // Store drill-down filters to preserve across search/pagination
+  
   // Freeze columns state
   showFreezeMenu: boolean = false;
   freezableColumns: FreezeColumnInfo[] = [];
@@ -114,7 +124,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
     private gridService: DynamicGridService,
     private cdr: ChangeDetectorRef,
     private confirmationService: ConfirmationService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private drillDownService: DrillDownService
   ) {}
 
   ngOnInit(): void {
@@ -122,8 +133,53 @@ export class DynamicGrid implements OnInit, OnDestroy {
       console.error('DynamicGrid: procedureName is required');
     }
     
+    // Store the original procedure name for restoration when returning from drill-down
+    this.originalProcedureName = this.procedureName;
+    
     // Initialize pagination mode from input
     this.paginationMode = this.defaultPaginationMode;
+    
+    // Subscribe to drill-down state
+    this.drillDownService.getDrillDownState()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(state => {
+        console.log('📊 Drill-down state changed:', state);
+        const wasDrilledDown = this.isDrilledDown;
+        
+        this.drillDownLevels = state.levels;
+        this.currentDrillLevel = state.currentLevel;
+        this.isDrilledDown = state.currentLevel > 0;
+        
+        // Reload grid with drilled-down procedure
+        if (state.currentLevel > 0 && state.levels.length > 0) {
+          const currentLevel = state.levels[state.currentLevel];
+          this.loadDrilledDownData(currentLevel);
+        } else {
+          // We're at root
+          if (wasDrilledDown) {
+            // Returning from drill-down - restore original procedure name
+            console.log('🔄 Returning from drill-down - restoring original procedure name');
+            this.procedureName = this.originalProcedureName;
+            console.log(`🔄 Procedure name restored to: ${this.procedureName}`);
+            
+            // Clear drill-down filters
+            this.drillDownFilters = null;
+            console.log('🔄 Drill-down filters cleared');
+            
+            // Clear columns to force refresh
+            this.columnDefs = [];
+            this.columns = [];
+            if (this.gridApi) {
+              this.gridApi.setGridOption('columnDefs', []);
+            }
+          }
+          // Load root grid data (will fetch fresh columns)
+          this.loadGridData();
+        }
+      });
+    
+    // Add keyboard listener for Backspace
+    this.setupKeyboardNavigation();
   }
 
   ngOnDestroy(): void {
@@ -262,13 +318,31 @@ export class DynamicGrid implements OnInit, OnDestroy {
     console.log('🔧 setupGridWithData called');
     
     try {
-      if (this.columnDefs.length === 0 && response.columns) {
-        console.log('📋 Setting up column definitions...');
+      // Always update column definitions if response contains columns
+      // This is important for drill-down scenarios where columns change
+      if (response.columns) {
+        console.log('📋 Updating column definitions...');
         this.updateColumnDefinitions(response.columns);
       }
       
       this.rowData = response.rows || [];
       console.log(`✅ Setting rowData with ${this.rowData.length} rows`);
+      
+      // Update total count from response (important for drill-down)
+      if (response.totalCount !== undefined) {
+        this.totalCount = response.totalCount;
+        console.log(`📊 Total count updated to: ${this.totalCount}`);
+        
+        // Recalculate total pages based on new total count
+        this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+        console.log(`📄 Total pages recalculated to: ${this.totalPages}`);
+        
+        // Also update lastLoadedRow for infinite scroll mode
+        if (this.isInfiniteScrollMode) {
+          this.lastLoadedRow = this.rowData.length;
+          console.log(`📊 Last loaded row updated to: ${this.lastLoadedRow}`);
+        }
+      }
       
       this.setLoading(false);
       console.log('✅ Loading state cleared');
@@ -359,6 +433,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
     if (this.currentFilterModel) {
       console.log(`🔍 Filtering with:`, this.currentFilterModel);
     }
+    if (this.drillDownFilters) {
+      console.log(`🔍 Drill-down filters:`, this.drillDownFilters);
+    }
     this.isLoading = true;
     
     const request: GridDataRequest = {
@@ -367,7 +444,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageSize: this.pageSize,
       sortColumn: this.currentSortColumn || undefined,
       sortDirection: this.currentSortDirection,
-      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
       searchTerm: this.globalSearchTerm || undefined // Add global search term
     };
 
@@ -399,6 +476,74 @@ export class DynamicGrid implements OnInit, OnDestroy {
           this.setLoading(false);
         }
       });
+  }
+
+  // Drill-down methods
+  private loadDrilledDownData(level: DrillDownLevel): void {
+    console.log('📊 Loading drilled-down data:', level);
+    this.setLoading(true);
+    
+    // Update procedure name to the drilled-down procedure
+    // This ensures search/filter operations use the correct procedure
+    this.procedureName = level.procedureName;
+    console.log(`🔄 Procedure name updated to: ${this.procedureName}`);
+    
+    // Store drill-down filters to preserve them across search/pagination
+    this.drillDownFilters = level.filters;
+    console.log(`🔄 Drill-down filters stored:`, this.drillDownFilters);
+    
+    const request: GridDataRequest = {
+      procedureName: level.procedureName,
+      pageNumber: 1,
+      pageSize: this.pageSize,
+      filterJson: JSON.stringify(level.filters)
+    };
+
+    this.gridService.executeGridProcedure(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('✅ Drilled-down data loaded:', response);
+          this.setupGridWithData(response);
+        },
+        error: (error) => {
+          console.error('❌ Error loading drilled-down data:', error);
+          this.setLoading(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Load Error',
+            detail: 'Failed to load drilled-down data.',
+            life: 3000
+          });
+        }
+      });
+  }
+
+  private setupKeyboardNavigation(): void {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Backspace to go back (only if not in input/textarea)
+      if (event.key === 'Backspace' && 
+          this.isDrilledDown &&
+          !['INPUT', 'TEXTAREA'].includes((event.target as HTMLElement).tagName)) {
+        event.preventDefault();
+        this.onDrillDownBack();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    
+    // Cleanup on destroy
+    this.destroy$.subscribe(() => {
+      document.removeEventListener('keydown', handleKeyPress);
+    });
+  }
+
+  onDrillDownNavigate(levelIndex: number): void {
+    this.drillDownService.goToLevel(levelIndex);
+  }
+
+  onDrillDownBack(): void {
+    this.drillDownService.goBack();
   }
 
   private updateColumnDefinitions(columns: ColumnDefinition[]): void {
@@ -445,7 +590,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
         if (hasLinkConfig) {
           colDef.cellRenderer = LinkCellRendererComponent;
           colDef.cellRendererParams = {
-            linkConfig: col.linkConfig
+            linkConfig: col.linkConfig,
+            baseProcedure: this.procedureName  // Pass base procedure for drill-down
           };
         }
         // Use custom cell renderer for editable columns (if not a link column)
@@ -526,6 +672,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
             // Redraw the entire row to update all cells including action buttons
             this.gridApi?.redrawRows();
             
+            // Show success toast notification
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Saved',
+              detail: 'Record saved successfully',
+              life: 3000
+            });
+            
             console.log('✅ Row saved successfully');
           } else {
             this.messageService.add({
@@ -572,9 +726,18 @@ export class DynamicGrid implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            // Remove from local data
-            if (this.isServerSidePagination) {
-              // Reload current page for server-side
+            console.log('✅ Row deleted successfully');
+            
+            // Reload data based on current mode
+            if (this.isDrilledDown) {
+              // In drill-down mode, reload the drilled-down data
+              const currentLevel = this.drillDownLevels[this.currentDrillLevel];
+              this.loadDrilledDownData(currentLevel);
+            } else if (this.isServerSidePagination || this.isInfiniteScrollMode) {
+              // Reload current page for server-side or infinite scroll
+              if (this.isInfiniteScrollMode) {
+                this.resetInfiniteScroll();
+              }
               this.loadPageData(this.currentPage);
             } else {
               // Remove from client-side data
@@ -587,7 +750,13 @@ export class DynamicGrid implements OnInit, OnDestroy {
                 this.gridApi?.setGridOption('rowData', this.rowData);
               }
             }
-            console.log('✅ Row deleted successfully');
+            
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Deleted',
+              detail: 'Record deleted successfully',
+              life: 3000
+            });
           } else {
             this.messageService.add({
               severity: 'error',

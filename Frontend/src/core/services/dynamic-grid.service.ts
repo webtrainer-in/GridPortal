@@ -62,14 +62,30 @@ export interface DropdownOption {
 
 export interface LinkConfiguration {
   enabled: boolean;
-  routePath: string;
+  routePath: string | null;  // null = drill-down mode
   openInNewTab: boolean;
   params: LinkParameter[];
+  drillDown?: DrillDownConfig;  // NEW
 }
 
 export interface LinkParameter {
   name: string;
   fields: string[];
+  separator?: string;
+}
+
+export interface DrillDownConfig {
+  enabled: boolean;
+  targetProcedure: string;
+  filterParams: FilterParameter[];
+  breadcrumbLabel: string;
+  allowMultipleLevels: boolean;
+  maxDepth: number;
+}
+
+export interface FilterParameter {
+  targetColumn: string;
+  sourceFields: string[];
   separator?: string;
 }
 

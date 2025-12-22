@@ -49,14 +49,32 @@ public class DropdownOption
 public class LinkConfiguration
 {
     public bool Enabled { get; set; }
-    public string RoutePath { get; set; } = string.Empty;
+    public string? RoutePath { get; set; }  // null = drill-down mode
     public bool OpenInNewTab { get; set; } = false;
     public List<LinkParameter> Params { get; set; } = new();
+    public DrillDownConfiguration? DrillDown { get; set; }  // NEW
 }
 
 public class LinkParameter
 {
     public string Name { get; set; } = string.Empty;
     public List<string> Fields { get; set; } = new();
+    public string? Separator { get; set; }
+}
+
+public class DrillDownConfiguration
+{
+    public bool Enabled { get; set; }
+    public string TargetProcedure { get; set; } = string.Empty;
+    public List<FilterParameter> FilterParams { get; set; } = new();
+    public string BreadcrumbLabel { get; set; } = string.Empty;
+    public bool AllowMultipleLevels { get; set; } = true;
+    public int MaxDepth { get; set; } = 3;
+}
+
+public class FilterParameter
+{
+    public string TargetColumn { get; set; } = string.Empty;
+    public List<string> SourceFields { get; set; } = new();
     public string? Separator { get; set; }
 }

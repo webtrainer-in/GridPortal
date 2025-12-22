@@ -5,6 +5,15 @@
     <span>Loading data...</span>
   </div>
 
+  <!-- Drill-Down Breadcrumb -->
+  <app-drill-down-breadcrumb
+    *ngIf="isDrilledDown"
+    [levels]="drillDownLevels"
+    [currentLevel]="currentDrillLevel"
+    (navigate)="onDrillDownNavigate($event)"
+    (back)="onDrillDownBack()">
+  </app-drill-down-breadcrumb>
+
   <!-- Pagination mode indicator -->
   <div class="pagination-info">
     <span class="mode-badge" 

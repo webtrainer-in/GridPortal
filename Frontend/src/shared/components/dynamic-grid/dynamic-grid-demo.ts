@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DynamicGrid } from './dynamic-grid';
 import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/dynamic-grid.service';
+import { DrillDownService } from '../../../core/services/drill-down.service';
 
 @Component({
   selector: 'app-dynamic-grid-demo',
@@ -42,9 +43,9 @@ import { DynamicGridService, StoredProcedureInfo } from '../../../core/services/
             [enableRowEditing]="true"
             [pageSize]="15"
             [paginationThreshold]="10"
-            [defaultPaginationMode]="'infinite'"
-            [infiniteScrollBatchSize]="1000"
-            [infiniteScrollWindowSize]="10000"
+            [defaultPaginationMode]="'traditional'"
+            [infiniteScrollBatchSize]="1"
+            [infiniteScrollWindowSize]="10"
             [infiniteScrollThreshold]="0.8"
           ></app-dynamic-grid>
         }
@@ -158,6 +159,7 @@ export class DynamicGridDemoComponent implements OnInit {
 
   constructor(
     private gridService: DynamicGridService,
+    private drillDownService: DrillDownService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -185,6 +187,11 @@ export class DynamicGridDemoComponent implements OnInit {
 
   onProcedureChange(): void {
     console.log('📝 Procedure changed to:', this.selectedProcedure);
+    
+    // Reset drill-down state to clear any filters from previous grid
+    this.drillDownService.reset();
+    console.log('🔄 Drill-down state reset');
+    
     // Force grid refresh by toggling gridKey
     this.gridKey = 0;
     this.cdr.detectChanges();
