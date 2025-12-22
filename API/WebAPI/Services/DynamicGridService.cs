@@ -886,16 +886,13 @@ public class DynamicGridService : IDynamicGridService
                 }
                 else
                 {
-                    // Use column's maxDepth if specified, otherwise use default
-                    if (column.LinkConfig.DrillDown.MaxDepth <= 0)
-                    {
-                        column.LinkConfig.DrillDown.MaxDepth = _drillDownSettings.DefaultMaxDepth;
-                        _logger.LogDebug(
-                            "Applied default maxDepth ({MaxDepth}) to column {Column}", 
-                            _drillDownSettings.DefaultMaxDepth,
-                            column.Field);
-                    }
-                    // else: keep the column's configured maxDepth
+                    // When unlimited is disabled, always use DefaultMaxDepth
+                    // This overrides any column-level maxDepth configuration
+                    column.LinkConfig.DrillDown.MaxDepth = _drillDownSettings.DefaultMaxDepth;
+                    _logger.LogDebug(
+                        "Applied default maxDepth ({MaxDepth}) to column {Column}", 
+                        _drillDownSettings.DefaultMaxDepth,
+                        column.Field);
                 }
             }
         }
