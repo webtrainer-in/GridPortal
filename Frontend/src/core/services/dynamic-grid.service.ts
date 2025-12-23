@@ -122,6 +122,19 @@ export interface RowDeleteResponse {
   errorCode?: string;
 }
 
+export interface RowCreateRequest {
+  procedureName: string;
+  fieldValues: Record<string, any>;
+}
+
+export interface RowCreateResponse {
+  success: boolean;
+  message?: string;
+  createdRow?: Record<string, any>;
+  errorCode?: string;
+}
+
+
 export interface StoredProcedureInfo {
   id: number;
   procedureName: string;
@@ -188,6 +201,14 @@ export class DynamicGridService {
   deleteRow(request: RowDeleteRequest): Observable<RowDeleteResponse> {
     return this.http.post<RowDeleteResponse>(`${this.apiUrl}/delete-row`, request);
   }
+
+  /**
+   * Create a new row in the grid
+   */
+  createRow(request: RowCreateRequest): Observable<RowCreateResponse> {
+    return this.http.post<RowCreateResponse>(`${this.apiUrl}/create-row`, request);
+  }
+
 
   /**
    * Get list of available stored procedures

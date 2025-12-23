@@ -164,6 +164,62 @@ public class DynamicGridController : ControllerBase
     }
 
     /// <summary>
+    /// Create a new row in the grid
+    /// </summary>
+    [HttpPost("create-row")]
+    public async Task<IActionResult> CreateRow([FromBody] RowCreateRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("CreateRow called with ProcedureName: {ProcedureName}", 
+                request.ProcedureName);
+            _logger.LogInformation("Field values: {FieldValues}", 
+                System.Text.Json.JsonSerializer.Serialize(request.FieldValues));
+            
+            var userRoles = User.Claims
+                .Where(c => c.Type == ClaimTypes.Role)
+                .Select(c => c.Value)
+                .ToArray();
+            
+            _logger.LogInformation("User roles: {Roles}", string.Join(", ", userRoles));
+            
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            _logger.LogInformation("User ID: {UserId}", userId);
+
+            var response = await _gridService.CreateRowAsync(request, userRoles, userId);
+            
+            _logger.LogInformation("Create response - Success: {Success}, Message: {Message}", 
+                response.Success, response.Message);
+            
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            else
+            {
+                _logger.LogWarning("Create failed: {Message}, ErrorCode: {ErrorCode}", 
+                    response.Message, response.ErrorCode);
+                return BadRequest(response);
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized row create attempt");
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating row");
+            return StatusCode(500, new RowCreateResponse 
+            { 
+                Success = false, 
+                Message = "An error occurred while creating the row" 
+            });
+        }
+    }
+
+
+    /// <summary>
     /// Get list of available stored procedures for the current user
     /// </summary>
     [HttpGet("available-procedures")]

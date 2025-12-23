@@ -68,6 +68,15 @@
         {{ isSaving ? 'Saving...' : 'Save All (' + editedRows.size + ')' }}
       </button>
       
+      <!-- Add New Row Button (only shown when not adding a row) -->
+      <button 
+        *ngIf="enableRowEditing && !isAddingNewRow"
+        class="toolbar-btn add-row-btn" 
+        (click)="addNewRow()"
+        title="Add new row">
+        <span class="icon">➕</span> Add Row
+      </button>
+      
       <!-- Global Search Input -->
       <div class="search-container">
         <input 
