@@ -586,7 +586,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
           filter: false
         });
       } else {
-        const isEditableColumn = this.enableRowEditing && col.field !== 'Id';
+        // Check if column is actually editable (from backend config)
+        const isEditableColumn = this.enableRowEditing && col.editable && col.field !== 'Id';
         const hasLinkConfig = col.linkConfig?.enabled;
         
         const colDef: any = {
