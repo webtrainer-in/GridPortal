@@ -156,10 +156,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
         if (state.currentLevel > 0 && state.levels.length > 0) {
           const currentLevel = state.levels[state.currentLevel];
           this.loadDrilledDownData(currentLevel);
-        } else if (state.currentLevel === 0 && state.levels.length > 0 && state.isStatelessMode) {
-          // STATELESS MODE: Don't reload root grid if we have levels
-          // This prevents the double-load bug where we drill down but then immediately reload root
-          console.log('⚠️ Skipping root reload - in stateless mode with levels present');
+        } else if (state.currentLevel === 0 && state.levels.length === 1 && state.isStatelessMode) {
+          // STATELESS MODE with single level: This is a valid drilled-down state
+          // Load the grid for this level (happens when navigating via browser back)
+          const currentLevel = state.levels[0];
+          this.loadDrilledDownData(currentLevel);
         } else {
           // We're at root
           if (wasDrilledDown) {

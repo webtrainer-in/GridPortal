@@ -12,12 +12,14 @@ export class DrillDownService {
     currentLevel: 0,
     isStatelessMode: false
   });
+  
+  private isUpdatingFromUrl = false; // Prevent infinite loop
 
   constructor(
     private router: Router,
     private route: ActivatedRoute
   ) {
-    // Initialize from URL on service creation
+    // Continuously monitor URL changes for browser back/forward support
     this.initializeFromUrl();
   }
 
@@ -249,6 +251,11 @@ export class DrillDownService {
    * STATELESS MODE: Store only current level to prevent URL bloat
    */
   private updateUrl(state: DrillDownState): void {
+    // Don't update URL if we're currently processing a URL change (browser back/forward)
+    if (this.isUpdatingFromUrl) {
+      return;
+    }
+    
     let queryParams: any = {};
 
     // Only add drill-down params if we're actually drilled down (not at root)
@@ -287,18 +294,22 @@ export class DrillDownService {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: queryParams,
-      replaceUrl: true
+      replaceUrl: false  // Create new history entry for browser back button
     });
   }
 
   /**
    * Initialize state from URL query params
    * Handles both stateless and stateful modes
+   * Continuously monitors URL for browser back/forward support
    */
   private initializeFromUrl(): void {
     this.route.queryParams.subscribe(params => {
       if (params['drill']) {
         try {
+          // Set flag to prevent infinite loop
+          this.isUpdatingFromUrl = true;
+          
           const isStateless = params['stateless'] === 'true';
           
           if (isStateless) {
@@ -343,6 +354,17 @@ export class DrillDownService {
         } catch (error) {
           console.error('Error parsing drill-down state from URL:', error);
           this.reset();
+        } finally {
+          // Clear flag after state update
+          this.isUpdatingFromUrl = false;
+        }
+      } else {
+        // No drill params - we're at root
+        // Only reset if we're currently drilled down
+        if (this.drillDownState$.value.currentLevel > 0) {
+          this.isUpdatingFromUrl = true;
+          this.reset();
+          this.isUpdatingFromUrl = false;
         }
       }
     });
