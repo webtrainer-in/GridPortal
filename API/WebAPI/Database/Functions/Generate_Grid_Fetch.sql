@@ -29,6 +29,11 @@ DECLARE
     v_actual_col_name TEXT;
     v_idx INT := 1;
     v_needs_quotes BOOLEAN;
+    -- Search-related variables
+    v_search_conditions TEXT := '';
+    v_search_col_name TEXT;
+    v_search_needs_quotes BOOLEAN;
+    v_search_count INT := 0;
 BEGIN
     v_proc_name := 'sp_Grid_' || p_entity_name;
     
@@ -51,7 +56,7 @@ BEGIN
         END IF;
         
         IF v_idx > 1 THEN
-            v_id_construction := v_id_construction || ' || ''_'' || ';
+            v_id_construction := v_id_construction || ' || ''''_'''' || ';
         END IF;
         
         -- Add quotes if column has mixed case
@@ -130,11 +135,44 @@ BEGIN
       AND lower(column_name) = lower(p_primary_key_cols[1])
     LIMIT 1;
     
+    -- Build search conditions for p_SearchTerm
+    -- Cast all columns to TEXT and use ILIKE (simpler and works for all types)
+    FOR v_search_col_name, v_search_needs_quotes IN
+        SELECT 
+            column_name,
+            column_name != lower(column_name)
+        FROM information_schema.columns
+        WHERE table_name = p_table_name
+          AND table_schema = 'public'
+          AND lower(column_name) = ANY(SELECT lower(unnest(p_display_cols)))
+        ORDER BY ordinal_position
+    LOOP
+        IF v_search_count > 0 THEN
+            v_search_conditions := v_search_conditions || ' OR' || E'\n                 ';
+        END IF;
+        
+        -- Cast to TEXT and use ILIKE (works for all data types)
+        -- Use 4 percent signs to get %% in the final output
+        IF v_search_needs_quotes THEN
+            v_search_conditions := v_search_conditions || format('CAST(a."%s" AS TEXT) ILIKE ''''%%%%'''' || $1 || ''''%%%%''''', v_search_col_name);
+        ELSE
+            v_search_conditions := v_search_conditions || format('CAST(a.%s AS TEXT) ILIKE ''''%%%%'''' || $1 || ''''%%%%''''', v_search_col_name);
+        END IF;
+        
+        v_search_count := v_search_count + 1;
+    END LOOP;
+    
+    -- If no searchable columns found, create a dummy condition
+    IF v_search_count = 0 THEN
+        v_search_conditions := '1=1';
+    END IF;
+    
     -- Generate the procedure SQL
     RETURN format($PROC$
 -- Auto-generated FETCH procedure for %s
 -- CUSTOMIZE: Add JOINs, filters, and adjust column definitions as needed
 -- NOTE: Column names have been auto-detected with correct casing from database schema
+-- ✨ INCLUDES: Generic global search across all text and number columns
 CREATE OR REPLACE FUNCTION public.%s(
     p_PageNumber INTEGER DEFAULT 1,
     p_PageSize INTEGER DEFAULT 15,
@@ -147,7 +185,7 @@ CREATE OR REPLACE FUNCTION public.%s(
 )
 RETURNS JSONB
 LANGUAGE 'plpgsql'
-AS $BODY$
+AS $INNER$
 DECLARE
     v_Offset INT;
     v_FetchSize INT;
@@ -172,27 +210,38 @@ BEGIN
     --     v_BusNumber := ((p_FilterJson::jsonb)->>'BusNumber')::INT;
     -- END IF;
     
-    -- Get total count
-    SELECT COUNT(*)
-    INTO v_TotalCount
-    FROM "%s" a;
-    -- TODO: Add WHERE clause for filters
-    -- WHERE (v_BusNumber IS NULL OR a.ibus = v_BusNumber)
-    
-    -- Get data rows
-    SELECT jsonb_agg(row_to_json(t))
-    INTO v_Data
-    FROM (
-        SELECT 
-            %s,
-%s
+    -- Get total count with search
+    EXECUTE format('
+        SELECT COUNT(*)
         FROM "%s" a
-        -- TODO: Add JOIN clauses here
-        -- LEFT JOIN "OtherTable" ot ON ot.id = a.other_id
-        -- TODO: Add WHERE clause for filters
-        ORDER BY a.%s
-        LIMIT v_FetchSize OFFSET v_Offset
-    ) t;
+        WHERE ($1 IS NULL OR (
+            %s
+        ))')
+    INTO v_TotalCount
+    USING p_SearchTerm;
+    -- TODO: Add additional WHERE conditions for filters
+    -- Add them to the format string above, e.g.:
+    -- WHERE ($1 IS NULL OR (...)) AND (v_BusNumber IS NULL OR a.ibus = v_BusNumber)
+    
+    -- Get data rows with search
+    EXECUTE format('
+        SELECT jsonb_agg(row_to_json(t))
+        FROM (
+            SELECT 
+                %s,
+%s
+            FROM "%s" a
+            -- TODO: Add JOIN clauses here
+            -- LEFT JOIN "OtherTable" ot ON ot.id = a.other_id
+            WHERE ($1 IS NULL OR (
+                %s
+            ))
+            -- TODO: Add additional WHERE conditions for filters
+            ORDER BY a.%s
+            LIMIT $2 OFFSET $3
+        ) t')
+    INTO v_Data
+    USING p_SearchTerm, v_FetchSize, v_Offset;
     
     -- Define base columns
     -- TODO: Customize column types, widths, and editability
@@ -213,7 +262,7 @@ BEGIN
         'totalPages', CEIL(v_TotalCount::NUMERIC / p_PageSize)
     );
 END;
-$BODY$;
+$INNER$;
 
 GRANT EXECUTE ON FUNCTION %s TO PUBLIC;
 
@@ -228,9 +277,11 @@ $PROC$,
         p_table_name,                    -- Comment
         v_proc_name,                     -- Function name
         p_table_name,                    -- Table name for COUNT
+        v_search_conditions,             -- Search conditions for COUNT
         v_id_construction,               -- ID construction
         v_select_fields,                 -- SELECT fields
         p_table_name,                    -- Table name for SELECT
+        v_search_conditions,             -- Search conditions for SELECT
         CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- ORDER BY with quotes if needed
         v_column_defs,                   -- Column definitions
         v_proc_name                      -- GRANT statement
@@ -245,9 +296,13 @@ GRANT EXECUTE ON FUNCTION Generate_Grid_Fetch TO PUBLIC;
 -- =============================================
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Enhanced Grid Fetch Procedure Generator created successfully!';
-    RAISE NOTICE '';
-    RAISE NOTICE '✨ NEW: Automatically detects correct column name casing!';
+    RAISE NOTICE '╔══════════════════════════════════════════════════════════════╗';
+    RAISE NOTICE '║     Enhanced Grid Fetch Procedure Generator Ready!          ║';
+    RAISE NOTICE '╠══════════════════════════════════════════════════════════════╣';
+    RAISE NOTICE '║  ✨ NEW: Generic global search (p_SearchTerm)                ║';
+    RAISE NOTICE '║  ✨ Auto-detects searchable columns (text + numbers)         ║';
+    RAISE NOTICE '║  ✨ Automatically detects correct column casing              ║';
+    RAISE NOTICE '╚══════════════════════════════════════════════════════════════╝';
     RAISE NOTICE '';
     RAISE NOTICE 'Usage Example:';
     RAISE NOTICE '  SELECT Generate_Grid_Fetch(';
@@ -257,5 +312,8 @@ BEGIN
     RAISE NOTICE '      ARRAY[''acctap'', ''casenumber'', ''adjthr'', ''mxswim'']';
     RAISE NOTICE '  );';
     RAISE NOTICE '';
-    RAISE NOTICE 'The generator will automatically use the correct case from your database!';
+    RAISE NOTICE '🔍 Generated procedure includes:';
+    RAISE NOTICE '   - Global search across all text and number columns';
+    RAISE NOTICE '   - Correct column name casing from database schema';
+    RAISE NOTICE '   - Ready-to-customize template with TODO markers';
 END $$;
