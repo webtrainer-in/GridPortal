@@ -44,7 +44,13 @@ import { DropdownOption } from '../../../core/services/dynamic-grid.service';
       }
     } @else {
       <!-- Display Mode -->
-      <span class="cell-value">{{ displayValue }}</span>
+      @if (hasLink) {
+        <!-- Show as clickable link -->
+        <a class="cell-link" [href]="linkUrl" (click)="onLinkClick($event)">{{ displayValue }}</a>
+      } @else {
+        <!-- Show as plain text -->
+        <span class="cell-value">{{ displayValue }}</span>
+      }
     }
   `,
   styles: [`
@@ -86,12 +92,30 @@ import { DropdownOption } from '../../../core/services/dynamic-grid.service';
       height: 100%;
       box-sizing: border-box;
     }
+    
+    .cell-link {
+      display: block;
+      padding: 8px;
+      font-size: 14px;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      color: #2196F3;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    
+    .cell-link:hover {
+      text-decoration: underline;
+      color: #1976D2;
+    }
   `]
 })
 export class EditableCellRendererComponent implements ICellRendererAngularComp {
   private params!: ICellRendererParams & {
     isEditing: (rowData: any) => boolean;
     columnType?: string;
+    linkConfig?: any;
     dropdownConfig?: any;
     loadDropdownValues?: (field: string, rowContext: any) => Promise<DropdownOption[]>;
     onCascadingChange?: (field: string, value: any, rowData: any) => void;
@@ -101,6 +125,10 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
   isEditing: boolean = false;
   inputType: string = 'text';
   displayValue: any;
+  
+  // Link-specific properties
+  hasLink: boolean = false;
+  linkUrl: string = '#';
   
   // Dropdown-specific properties
   isDropdown: boolean = false;
@@ -114,11 +142,16 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
     this.value = params.value;
     this.isEditing = this.params.isEditing(this.params.data);
     this.isDropdown = !!this.params.dropdownConfig;
+    this.hasLink = !this.isEditing && !!this.params.linkConfig;
     
     if (this.isDropdown && this.isEditing) {
       this.loadDropdownOptions();
     } else {
       this.updateInputType();
+    }
+    
+    if (this.hasLink) {
+      this.buildLinkUrl();
     }
     
     this.updateDisplayValue();
@@ -130,12 +163,17 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
     this.value = params.value;
     this.isEditing = this.params.isEditing(this.params.data);
     this.isDropdown = !!this.params.dropdownConfig;
+    this.hasLink = !this.isEditing && !!this.params.linkConfig;
     
     // Reload dropdown options if entering edit mode
     if (this.isDropdown && this.isEditing && !wasEditing) {
       this.loadDropdownOptions();
     } else if (!this.isDropdown) {
       this.updateInputType();
+    }
+    
+    if (this.hasLink) {
+      this.buildLinkUrl();
     }
     
     this.updateDisplayValue();
@@ -229,5 +267,65 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
     }
     
     this.updateDisplayValue();
+  }
+  
+  private buildLinkUrl(): void {
+    if (!this.params.linkConfig) {
+      this.linkUrl = '#';
+      return;
+    }
+    
+    const config = this.params.linkConfig;
+    const rowData = this.params.data;
+    
+    // Build query parameters from config
+    const queryParams: string[] = [];
+    if (config.params && Array.isArray(config.params)) {
+      config.params.forEach((param: any) => {
+        if (param.fields && Array.isArray(param.fields)) {
+          const values = param.fields.map((field: string) => rowData[field] || '');
+          const paramValue = param.separator ? values.join(param.separator) : values[0];
+          queryParams.push(`${param.name}=${encodeURIComponent(paramValue)}`);
+        }
+      });
+    }
+    
+    // Build the URL
+    const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
+    this.linkUrl = `${config.routePath || '#'}${queryString}`;
+  }
+  
+  onLinkClick(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!this.params.linkConfig) return;
+    
+    const config = this.params.linkConfig;
+    
+    // Handle drill-down if configured
+    if (config.drillDown) {
+      // Emit drill-down event through AG Grid API
+      const drillDownEvent: any = {
+        type: 'drillDown',
+        targetProcedure: config.drillDown.targetProcedure,
+        filterParams: {} as Record<string, any>,
+        rowData: this.params.data
+      };
+      
+      // Build filter params from drill-down config
+      if (config.drillDown.filterParams && Array.isArray(config.drillDown.filterParams)) {
+        config.drillDown.filterParams.forEach((param: any) => {
+          drillDownEvent.filterParams[param.targetField] = this.params.data[param.sourceField];
+        });
+      }
+      
+      // Dispatch custom event that the grid component can listen to
+      this.params.api?.dispatchEvent(drillDownEvent);
+    } else if (config.openInNewTab) {
+      window.open(this.linkUrl, '_blank');
+    } else {
+      window.location.href = this.linkUrl;
+    }
   }
 }

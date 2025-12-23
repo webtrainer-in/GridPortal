@@ -40,6 +40,11 @@ public interface IDynamicGridService
     Task SaveColumnStateAsync(int userId, string procedureName, string columnState);
     
     /// <summary>
+    /// Create a new row using the corresponding insert stored procedure
+    /// </summary>
+    Task<RowCreateResponse> CreateRowAsync(RowCreateRequest request, string[] userRoles, int userId);
+    
+    /// <summary>
     /// Get dropdown values for cascading dropdowns with row context filtering
     /// </summary>
     Task<List<DropdownOption>> GetDropdownValuesAsync(DropdownValuesRequest request);
