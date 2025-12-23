@@ -846,7 +846,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
     const fieldValues: Record<string, any> = {};
     Object.keys(rowData).forEach(key => {
       if (key !== 'Id' && key !== '_isNewRow' && key !== '_originalData' && key !== 'actions') {
-        fieldValues[key] = rowData[key];
+        // Convert field name to lowercase to match backend expectations
+        fieldValues[key.toLowerCase()] = rowData[key];
       }
     });
 
