@@ -167,7 +167,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
           this.loadDrilledDownData(currentLevel);
         } else {
           // We're at root
-          if (wasDrilledDown) {
+          const needsReload = wasDrilledDown || this.procedureName !== this.originalProcedureName;
+          
+          if (needsReload) {
             // Returning from drill-down - restore original procedure name
             console.log('🔄 Returning from drill-down - restoring original procedure name');
             this.procedureName = this.originalProcedureName;
@@ -180,12 +182,20 @@ export class DynamicGrid implements OnInit, OnDestroy {
             // Clear columns to force refresh
             this.columnDefs = [];
             this.columns = [];
+            
+            // IMPORTANT: Clear row data to force complete refresh
+            this.rowData = [];
+            this.totalCount = 0;
+            
             if (this.gridApi) {
               this.gridApi.setGridOption('columnDefs', []);
+              this.gridApi.setGridOption('rowData', []);
             }
+            
+            // Load root grid data (will fetch fresh columns and data)
+            console.log(`🔄 Loading root grid data for procedure: ${this.procedureName}`);
+            this.loadGridData();
           }
-          // Load root grid data (will fetch fresh columns)
-          this.loadGridData();
         }
       });
     

@@ -360,8 +360,11 @@ export class DrillDownService {
         }
       } else {
         // No drill params - we're at root
-        // Only reset if we're currently drilled down
-        if (this.drillDownState$.value.currentLevel > 0) {
+        // Check if we're currently drilled down (either by currentLevel or by having levels in stateless mode)
+        const isDrilledDown = this.drillDownState$.value.currentLevel > 0 || this.drillDownState$.value.levels.length > 0;
+        
+        if (isDrilledDown) {
+          console.log('🔄 URL params cleared - resetting to root');
           this.isUpdatingFromUrl = true;
           this.reset();
           this.isUpdatingFromUrl = false;
