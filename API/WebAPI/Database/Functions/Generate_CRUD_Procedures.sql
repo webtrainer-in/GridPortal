@@ -59,6 +59,12 @@ BEGIN
     
     -- Build UPDATE SET clause with type detection
     FOREACH v_col IN ARRAY p_editable_cols LOOP
+        -- Skip if this column is already declared as a primary key variable
+        IF v_col = ANY(p_primary_key_cols) THEN
+            -- Primary key variables are already declared above, skip to avoid duplicate
+            CONTINUE;
+        END IF;
+        
         SELECT data_type INTO v_col_type
         FROM information_schema.columns
         WHERE table_name = p_table_name
@@ -68,7 +74,7 @@ BEGIN
         
         v_declare_vars := v_declare_vars || format('    v_%s TEXT;%s', v_col, E'\n');
         -- FIX: Use ->> instead of -> to extract as TEXT (removes quotes)
-        v_extract_vars := v_extract_vars || format('        v_%s := (p_ChangesJson::jsonb)->>''%s'';%s', v_col, v_col, E'\n');
+        v_extract_vars := v_extract_vars || format('        v_%s := (p_ChangesJson::jsonb)->''%s'';%s', v_col, v_col, E'\n');
         
         IF v_update_sets != '' THEN
             v_update_sets := v_update_sets || ',' || E'\n        ';

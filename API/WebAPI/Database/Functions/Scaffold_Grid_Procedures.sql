@@ -1,32 +1,45 @@
 -- =============================================
 -- Grid Procedure Scaffolder (Procedures Only)
 -- =============================================
--- Generates all 4 procedures and returns registration SQL
+-- Generates selected CRUD procedures and returns registration SQL
 -- to run in the main database separately
 --
 -- 🔍 Auto-detects primary keys, display columns, and editable columns from schema!
 --
--- Minimal Usage (auto-detect everything):
+-- Minimal Usage (auto-detect everything, all operations):
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
 --       p_entity_name := 'Buses',
 --       p_display_name := 'Buses'
 --   );
 --
--- Full Usage (explicit columns):
+-- Generate only specific operations:
+--   SELECT Scaffold_Grid_Procedures(
+--       p_table_name := 'Bus',
+--       p_entity_name := 'Buses',
+--       p_display_name := 'Buses',
+--       p_operations := ARRAY['fetch', 'insert']  -- Only fetch and insert
+--   );
+--
+-- Full Usage (explicit columns and operations):
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Adjust',
 --       p_entity_name := 'Bus_Adjusts',
 --       p_display_name := 'Bus Adjustments',
 --       p_display_columns := ARRAY['acctap', 'casenumber', 'adjthr', 'mxswim'],
 --       p_editable_columns := ARRAY['adjthr', 'mxswim'],
---       p_allowed_roles := ARRAY['Admin', 'Manager', 'User']
+--       p_allowed_roles := ARRAY['Admin', 'Manager', 'User'],
+--       p_operations := ARRAY['fetch', 'insert']  -- Skip update and delete
 --   );
+--
+-- Available operations: 'fetch', 'insert', 'update', 'delete'
+-- Note: 'update' and 'delete' are always created together (cannot generate one without the other)
 -- =============================================
 
 -- Drop old versions to avoid overload conflicts
 DROP FUNCTION IF EXISTS Scaffold_Grid_Procedures(TEXT, TEXT, TEXT, TEXT[], TEXT[], TEXT[], TEXT[]);
 DROP FUNCTION IF EXISTS Scaffold_Grid_Procedures(TEXT, TEXT, TEXT, TEXT[], TEXT[], TEXT[]);
+DROP FUNCTION IF EXISTS Scaffold_Grid_Procedures(TEXT, TEXT, TEXT, TEXT[], TEXT[], TEXT[], TEXT[]);
 
 CREATE OR REPLACE FUNCTION Scaffold_Grid_Procedures(
     p_table_name TEXT,              -- Database table name
@@ -34,7 +47,8 @@ CREATE OR REPLACE FUNCTION Scaffold_Grid_Procedures(
     p_display_name TEXT,            -- Display name for UI (e.g., 'Bus Adjustments')
     p_display_columns TEXT[] DEFAULT NULL,   -- Optional: All columns to display (NULL = all columns)
     p_editable_columns TEXT[] DEFAULT NULL,  -- Optional: Columns that can be edited (NULL = all non-system columns)
-    p_allowed_roles TEXT[] DEFAULT ARRAY['Admin', 'Manager', 'User']  -- Roles with access
+    p_allowed_roles TEXT[] DEFAULT ARRAY['Admin', 'Manager', 'User'],  -- Roles with access
+    p_operations TEXT[] DEFAULT ARRAY['fetch', 'insert', 'update', 'delete']  -- Which operations to generate
 )
 RETURNS TEXT AS $$
 DECLARE
@@ -111,72 +125,98 @@ BEGIN
     v_result := v_result || format('🔍 Auto-detected primary keys: %s%s%s', 
         array_to_string(v_primary_keys, ', '), E'\n', E'\n');
     
+    -- Debug: Show which operations will be generated
+    v_result := v_result || format('📋 Operations to generate: %s%s%s', 
+        array_to_string(p_operations, ', '), E'\n', E'\n');
+    
     -- Build procedure names
     v_fetch_proc_name := 'sp_Grid_' || p_entity_name;
     v_insert_proc_name := 'sp_grid_insert_' || lower(regexp_replace(p_entity_name, 's$', ''));
     v_update_proc_name := 'sp_Grid_Update_' || p_entity_name;
     v_delete_proc_name := 'sp_Grid_Delete_' || p_entity_name;
     
-    v_result := format('🚀 Generating complete grid for %s...%s%s', p_table_name, E'\n', E'\n');
+    v_result := v_result || format('🚀 Generating complete grid for %s...%s%s', p_table_name, E'\n', E'\n');
     
     -- ========================================
-    -- 1. Generate FETCH procedure
+    -- 1. Generate FETCH procedure (if requested)
     -- ========================================
-    BEGIN
-        v_fetch_sql := Generate_Grid_Fetch(
-            p_table_name,
-            p_entity_name,
-            v_primary_keys,  -- Use auto-detected primary keys
-            v_display_columns  -- Use auto-detected or provided display columns
-        );
-        
-        -- Execute to create the procedure
-        EXECUTE v_fetch_sql;
-        
-        v_result := v_result || format('✅ Created: %s%s', v_fetch_proc_name, E'\n');
-    EXCEPTION
-        WHEN OTHERS THEN
-            v_result := v_result || format('❌ Failed to create %s: %s%s', v_fetch_proc_name, SQLERRM, E'\n');
-            RAISE;
-    END;
+    IF 'fetch' = ANY(p_operations) THEN
+        BEGIN
+            v_fetch_sql := Generate_Grid_Fetch(
+                p_table_name,
+                p_entity_name,
+                v_primary_keys,  -- Use auto-detected primary keys
+                v_display_columns  -- Use auto-detected or provided display columns
+            );
+            
+            -- Execute to create the procedure
+            EXECUTE v_fetch_sql;
+            
+            v_result := v_result || format('✅ Created: %s%s', v_fetch_proc_name, E'\n');
+        EXCEPTION
+            WHEN OTHERS THEN
+                v_result := v_result || format('❌ Failed to create %s: %s%s', v_fetch_proc_name, SQLERRM, E'\n');
+                -- Don't RAISE - continue to show other results
+        END;
+    ELSE
+        v_result := v_result || format('⏭️  Skipped: %s%s', v_fetch_proc_name, E'\n');
+    END IF;
     
     -- ========================================
-    -- 2. Generate INSERT procedure
+    -- 2. Generate INSERT procedure (if requested)
     -- ========================================
-    BEGIN
-        PERFORM Generate_Insert_Procedure(
-            p_table_name,
-            p_entity_name,
-            v_primary_keys,  -- Use auto-detected primary keys
-            v_editable_columns  -- Use auto-detected or provided editable columns
-        );
-        
-        v_result := v_result || format('✅ Created: sp_grid_insert_%s%s', 
+    IF 'insert' = ANY(p_operations) THEN
+        BEGIN
+            PERFORM Generate_Insert_Procedure(
+                p_table_name,
+                p_entity_name,
+                v_primary_keys,  -- Use auto-detected primary keys
+                v_editable_columns  -- Use auto-detected or provided editable columns
+            );
+            
+            v_result := v_result || format('✅ Created: sp_grid_insert_%s%s', 
+                lower(regexp_replace(p_entity_name, 's$', '')), E'\n');
+        EXCEPTION
+            WHEN OTHERS THEN
+                v_result := v_result || format('❌ Failed to create INSERT: %s%s', SQLERRM, E'\n');
+                -- Don't RAISE - continue to show other results
+        END;
+    ELSE
+        v_result := v_result || format('⏭️  Skipped: sp_grid_insert_%s%s', 
             lower(regexp_replace(p_entity_name, 's$', '')), E'\n');
-    EXCEPTION
-        WHEN OTHERS THEN
-            v_result := v_result || format('❌ Failed to create INSERT: %s%s', SQLERRM, E'\n');
-            RAISE;
-    END;
+    END IF;
     
     -- ========================================
-    -- 3. Generate UPDATE & DELETE procedures
+    -- 3. Generate UPDATE & DELETE procedures (if requested)
+    -- Note: Generate_CRUD_Procedures creates BOTH procedures together
     -- ========================================
-    BEGIN
-        PERFORM Generate_CRUD_Procedures(
-            p_table_name,
-            p_entity_name,
-            v_primary_keys,  -- Use auto-detected primary keys
-            v_editable_columns  -- Use auto-detected or provided editable columns
-        );
-        
-        v_result := v_result || format('✅ Created: %s%s', v_update_proc_name, E'\n');
-        v_result := v_result || format('✅ Created: %s%s', v_delete_proc_name, E'\n');
-    EXCEPTION
-        WHEN OTHERS THEN
-            v_result := v_result || format('❌ Failed to create UPDATE/DELETE: %s%s', SQLERRM, E'\n');
-            RAISE;
-    END;
+    IF 'update' = ANY(p_operations) OR 'delete' = ANY(p_operations) THEN
+        DECLARE
+            v_crud_result TEXT;
+        BEGIN
+            -- Call Generate_CRUD_Procedures and capture result
+            SELECT Generate_CRUD_Procedures(
+                p_table_name,
+                p_entity_name,
+                v_primary_keys,
+                v_editable_columns
+            ) INTO v_crud_result;
+            
+            -- Show what Generate_CRUD_Procedures returned
+            v_result := v_result || format('🔧 CRUD Generator Result: %s%s', v_crud_result, E'\n');
+            
+            -- Both procedures are always created together
+            v_result := v_result || format('✅ Created: %s%s', v_update_proc_name, E'\n');
+            v_result := v_result || format('✅ Created: %s%s', v_delete_proc_name, E'\n');
+        EXCEPTION
+            WHEN OTHERS THEN
+                v_result := v_result || format('❌ Failed to create UPDATE/DELETE: %s%s', SQLERRM, E'\n');
+                -- Don't RAISE - continue to show other results
+        END;
+    ELSE
+        v_result := v_result || format('⏭️  Skipped: %s%s', v_update_proc_name, E'\n');
+        v_result := v_result || format('⏭️  Skipped: %s%s', v_delete_proc_name, E'\n');
+    END IF;
     
     -- ========================================
     -- 4. Generate registration SQL
