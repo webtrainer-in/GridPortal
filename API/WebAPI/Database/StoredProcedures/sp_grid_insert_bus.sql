@@ -4,13 +4,13 @@
 -- =============================================
 
 CREATE OR REPLACE FUNCTION public.sp_grid_insert_bus(
-    p_fieldvaluesjson text,
+	p_fieldvaluesjson text,
     p_userid integer
 )
-RETURNS jsonb
-LANGUAGE 'plpgsql'
-COST 100
-VOLATILE PARALLEL UNSAFE
+    RETURNS jsonb
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
     v_FieldValues JSONB;
@@ -30,7 +30,7 @@ BEGIN
         );
     END IF;
     
-    IF NOT (v_FieldValues ? 'CaseNumber') THEN
+    IF NOT (v_FieldValues ? 'casenumber') THEN
         RETURN jsonb_build_object(
             'success', false,
             'message', 'Case Number is required',
@@ -62,7 +62,7 @@ BEGIN
         )
         VALUES (
             (v_FieldValues->>'ibus')::INTEGER,
-            (v_FieldValues->>'CaseNumber')::INTEGER,
+            (v_FieldValues->>'casenumber')::INTEGER,
             v_FieldValues->>'name',
             CASE WHEN v_FieldValues ? 'baskv' THEN (v_FieldValues->>'baskv')::NUMERIC ELSE NULL END,
             CASE WHEN v_FieldValues ? 'iarea' THEN (v_FieldValues->>'iarea')::INTEGER ELSE NULL END,
@@ -76,9 +76,9 @@ BEGIN
             CASE WHEN v_FieldValues ? 'evhi' THEN (v_FieldValues->>'evhi')::NUMERIC ELSE NULL END,
             CASE WHEN v_FieldValues ? 'evlo' THEN (v_FieldValues->>'evlo')::NUMERIC ELSE NULL END,
             CASE WHEN v_FieldValues ? 'Izone' THEN (v_FieldValues->>'Izone')::INTEGER ELSE NULL END,
-            CASE WHEN v_FieldValues ? 'AreaCaseNumber' THEN (v_FieldValues->>'AreaCaseNumber')::INTEGER ELSE NULL END,
-            CASE WHEN v_FieldValues ? 'OwnerCaseNumber' THEN (v_FieldValues->>'OwnerCaseNumber')::INTEGER ELSE NULL END,
-            CASE WHEN v_FieldValues ? 'ZoneCaseNumber' THEN (v_FieldValues->>'ZoneCaseNumber')::INTEGER ELSE NULL END
+            CASE WHEN v_FieldValues ? 'areacasenumber' THEN (v_FieldValues->>'areacasenumber')::INTEGER ELSE NULL END,
+            CASE WHEN v_FieldValues ? 'ownercasenumber' THEN (v_FieldValues->>'ownercasenumber')::INTEGER ELSE NULL END,
+            CASE WHEN v_FieldValues ? 'zonecasenumber' THEN (v_FieldValues->>'zonecasenumber')::INTEGER ELSE NULL END
         )
         RETURNING * INTO v_NewBus;
         

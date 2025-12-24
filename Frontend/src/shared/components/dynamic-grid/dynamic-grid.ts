@@ -918,10 +918,19 @@ export class DynamicGrid implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('❌ Error creating row:', error);
+          
+          // Extract error message from API response
+          let errorMessage = 'Failed to create row. Please try again.';
+          if (error?.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error?.message) {
+            errorMessage = error.message;
+          }
+          
           this.messageService.add({
             severity: 'error',
             summary: 'Create Error',
-            detail: 'Failed to create row. Please try again.',
+            detail: errorMessage,
             life: 5000
           });
         }
