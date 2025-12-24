@@ -57,9 +57,9 @@
         {{ paginationMode === 'traditional' ? 'Infinite Scroll' : 'Traditional' }}
       </button>
       
-      <!-- Save All Button (only shown when there are unsaved changes) -->
+      <!-- Save All Button (only shown when there are unsaved changes and not adding a new row) -->
       <button 
-        *ngIf="enableRowEditing && hasUnsavedChanges"
+        *ngIf="enableRowEditing && hasUnsavedChanges && !isAddingNewRow"
         class="toolbar-btn save-all-btn" 
         (click)="saveAllChanges()"
         [disabled]="isSaving"

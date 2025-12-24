@@ -641,7 +641,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   enableRowEdit(rowData: any): void {
     // Track this row as edited if not already tracked
-    if (!this.editedRows.has(rowData.Id)) {
+    // Don't track new rows in editedRows - they use saveNewRow() instead
+    if (!this.editedRows.has(rowData.Id) && !rowData._isNewRow) {
       this.editedRows.set(rowData.Id, { ...rowData });
       this.hasUnsavedChanges = true;
     }
