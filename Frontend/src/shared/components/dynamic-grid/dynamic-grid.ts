@@ -86,6 +86,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
   drillDownLevels: DrillDownLevel[] = [];
   currentDrillLevel: number = 0;
   isDrilledDown: boolean = false;
+  isStatelessMode: boolean = false; // Track unlimited drill-down mode
   originalProcedureName: string = ''; // Store original procedure name for restoration
   drillDownFilters: any = null; // Store drill-down filters to preserve across search/pagination
   
@@ -149,10 +150,16 @@ export class DynamicGrid implements OnInit, OnDestroy {
         this.drillDownLevels = state.levels;
         this.currentDrillLevel = state.currentLevel;
         this.isDrilledDown = state.currentLevel > 0;
+        this.isStatelessMode = state.isStatelessMode;
         
         // Reload grid with drilled-down procedure
         if (state.currentLevel > 0 && state.levels.length > 0) {
           const currentLevel = state.levels[state.currentLevel];
+          this.loadDrilledDownData(currentLevel);
+        } else if (state.currentLevel === 0 && state.levels.length === 1 && state.isStatelessMode) {
+          // STATELESS MODE with single level: This is a valid drilled-down state
+          // Load the grid for this level (happens when navigating via browser back)
+          const currentLevel = state.levels[0];
           this.loadDrilledDownData(currentLevel);
         } else {
           // We're at root

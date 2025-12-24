@@ -7,7 +7,7 @@ import { DrillDownLevel } from '../../../core/models/drill-down.model';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="breadcrumb-container" *ngIf="levels.length > 0">
+    <div class="breadcrumb-container" *ngIf="levels.length > 0 && !isStatelessMode">
       <button 
         *ngIf="currentLevel > 0" 
         class="back-button"
@@ -93,6 +93,7 @@ import { DrillDownLevel } from '../../../core/models/drill-down.model';
 export class DrillDownBreadcrumbComponent {
   @Input() levels: DrillDownLevel[] = [];
   @Input() currentLevel: number = 0;
+  @Input() isStatelessMode: boolean = false; // Hide breadcrumbs in unlimited mode
   @Output() navigate = new EventEmitter<number>();
   @Output() back = new EventEmitter<void>();
 

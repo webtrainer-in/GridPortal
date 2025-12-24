@@ -57,6 +57,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Drill-Down Configuration
+builder.Services.Configure<WebAPI.Configuration.DrillDownSettings>(
+    builder.Configuration.GetSection("DrillDownSettings"));
+
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDynamicGridService, DynamicGridService>();
