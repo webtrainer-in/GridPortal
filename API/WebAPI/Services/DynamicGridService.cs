@@ -866,6 +866,177 @@ public class DynamicGridService : IDynamicGridService
         return $"sp_Grid_Delete_{entityName}";
     }
 
+    public async Task<RowCreateResponse> CreateRowAsync(RowCreateRequest request, string[] userRoles, int userId)
+    {
+        _logger.LogInformation("CreateRowAsync called - ProcedureName: {ProcedureName}, UserId: {UserId}", 
+            request.ProcedureName, userId);
+        _logger.LogInformation("User roles: {Roles}", string.Join(", ", userRoles));
+        
+        // Validate access to the grid procedure
+        if (!await ValidateProcedureAccessAsync(request.ProcedureName, userRoles))
+        {
+            _logger.LogWarning("Access denied to grid procedure: {ProcedureName}", request.ProcedureName);
+            throw new UnauthorizedAccessException("Access denied to create data in this grid");
+        }
+
+        // Derive insert procedure name from grid procedure name
+        // e.g., sp_Grid_Buses -> sp_grid_insert_bus
+        var insertProcedureName = DeriveInsertProcedureName(request.ProcedureName);
+        _logger.LogInformation("Derived insert procedure name: {InsertProcedureName}", insertProcedureName);
+        
+        // Get insert procedure metadata for database routing
+        var insertProcedure = await _context.StoredProcedureRegistry
+            .FirstOrDefaultAsync(p => p.ProcedureName == insertProcedureName && p.IsActive);
+        
+        if (insertProcedure == null)
+        {
+            _logger.LogWarning("Insert procedure not found or inactive: {InsertProcedureName}", insertProcedureName);
+            return new RowCreateResponse
+            {
+                Success = false,
+                Message = "Create not supported for this grid",
+                ErrorCode = "CREATE_NOT_SUPPORTED"
+            };
+        }
+        
+        // Validate user has access to insert procedure
+        var hasInsertAccess = await ValidateProcedureAccessAsync(insertProcedureName, userRoles);
+        if (!hasInsertAccess)
+        {
+            _logger.LogWarning("Access denied to insert procedure: {InsertProcedureName}", insertProcedureName);
+            return new RowCreateResponse
+            {
+                Success = false,
+                Message = "Access denied to create data in this grid",
+                ErrorCode = "ACCESS_DENIED"
+            };
+        }
+        
+        var databaseName = insertProcedure.DatabaseName;
+        _logger.LogInformation("Executing insert on database: {DatabaseName}", databaseName ?? "DefaultConnection");
+
+        try
+        {
+            // Convert field values dictionary to JSON
+            var fieldValuesJson = JsonSerializer.Serialize(request.FieldValues);
+            
+            // Execute insert function
+            var sql = $"SELECT {insertProcedureName}(@p_FieldValuesJson, @p_UserId)";
+            
+            var parameters = new[]
+            {
+                new NpgsqlParameter("p_FieldValuesJson", NpgsqlTypes.NpgsqlDbType.Text) { Value = fieldValuesJson },
+                new NpgsqlParameter("p_UserId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = userId }
+            };
+
+            // Create connection to target database using factory
+            var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+
+            var jsonResult = await command.ExecuteScalarAsync();
+            
+            // Close connection
+            await connection.DisposeAsync();
+            
+            if (jsonResult == null || jsonResult == DBNull.Value)
+            {
+                return new RowCreateResponse
+                {
+                    Success = false,
+                    Message = "No response from insert procedure"
+                };
+            }
+
+            // Parse JSON response
+            var jsonString = jsonResult.ToString()!;
+            var response = JsonSerializer.Deserialize<RowCreateResponse>(
+                jsonString,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            return response ?? new RowCreateResponse
+            {
+                Success = false,
+                Message = "Failed to parse insert response"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing insert procedure: {ProcedureName}", insertProcedureName);
+            
+            // Check for common database constraint violations
+            var errorMessage = "Database error occurred";
+            var errorCode = "DB_ERROR";
+            
+            if (ex.Message.Contains("violates not-null constraint") || 
+                ex.Message.Contains("null value in column"))
+            {
+                // Extract column name from error message if possible
+                errorMessage = "Required field is missing";
+                errorCode = "REQUIRED_FIELD_MISSING";
+            }
+            else if (ex.Message.Contains("duplicate key") || 
+                     ex.Message.Contains("unique constraint"))
+            {
+                errorMessage = "A record with this value already exists";
+                errorCode = "DUPLICATE_VALUE";
+            }
+            else if (ex.Message.Contains("foreign key constraint"))
+            {
+                errorMessage = "Invalid reference to related data";
+                errorCode = "INVALID_REFERENCE";
+            }
+            
+            return new RowCreateResponse
+            {
+                Success = false,
+                Message = errorMessage,
+                ErrorCode = errorCode
+            };
+        }
+    }
+
+    private string DeriveInsertProcedureName(string gridProcedureName)
+    {
+        // Derive insert procedure name from grid procedure name
+        // Pattern: sp_Grid_[Anything] -> sp_grid_insert_[table]
+        // Examples:
+        //   sp_Grid_Buses -> sp_grid_insert_bus
+        //   sp_Grid_Example_Employees -> sp_grid_insert_employee
+        //   sp_Grid_Products -> sp_grid_insert_product
+        
+        // Remove "sp_Grid_" prefix
+        var withoutPrefix = gridProcedureName.Replace("sp_Grid_", "");
+        
+        // Split by underscore to get parts
+        var parts = withoutPrefix.Split('_');
+        
+        // Get the last part (entity name) and singularize if needed
+        var entityName = parts[parts.Length - 1];
+        
+        // Simple singularization: remove trailing 's' if present
+        if (entityName.EndsWith("es"))
+        {
+            // Buses -> bus
+            entityName = entityName.Substring(0, entityName.Length - 2);
+        }
+        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        {
+            // Employees -> employee, Products -> product
+            entityName = entityName.Substring(0, entityName.Length - 1);
+        }
+        
+        // Convert to lowercase for table name convention
+        entityName = entityName.ToLower();
+        
+        // Construct insert procedure name
+        return $"sp_grid_insert_{entityName}";
+    }
+
+
     /// <summary>
     /// Apply global drill-down settings to column definitions
     /// </summary>

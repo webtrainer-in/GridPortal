@@ -111,20 +111,25 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
     onSave: (rowData: any) => void;
     onCancel: (rowData: any) => void;
     onDelete: (rowData: any) => void;
+    onSaveNew?: (rowData: any) => void;
+    onCancelNew?: (rowData: any) => void;
     isEditing: (rowData: any) => boolean;
     confirmationService: ConfirmationService;
   };
   
   isEditing: boolean = false;
+  isNewRow: boolean = false;
 
   agInit(params: any): void {
     this.params = params;
     this.isEditing = this.params.isEditing(this.params.data);
+    this.isNewRow = this.params.data?._isNewRow || false;
   }
 
   refresh(params: any): boolean {
     this.params = params;
     this.isEditing = this.params.isEditing(this.params.data);
+    this.isNewRow = this.params.data?._isNewRow || false;
     return true;
   }
 
@@ -133,11 +138,21 @@ export class ActionButtonsRendererComponent implements ICellRendererAngularComp 
   }
 
   onSaveClick(): void {
-    this.params.onSave(this.params.data);
+    // Use different callback for new rows
+    if (this.isNewRow && this.params.onSaveNew) {
+      this.params.onSaveNew(this.params.data);
+    } else {
+      this.params.onSave(this.params.data);
+    }
   }
 
   onCancelClick(): void {
-    this.params.onCancel(this.params.data);
+    // Use different callback for new rows
+    if (this.isNewRow && this.params.onCancelNew) {
+      this.params.onCancelNew(this.params.data);
+    } else {
+      this.params.onCancel(this.params.data);
+    }
   }
   
   onDeleteClick(): void {

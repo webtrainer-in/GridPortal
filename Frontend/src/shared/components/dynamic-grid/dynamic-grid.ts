@@ -116,6 +116,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
   virtualRowEnd: number = 0;
   currentWindowRows: any[] = [];
   
+  // New row state
+  isAddingNewRow: boolean = false;
+  newRowTempId: string | null = null;
+  
   private destroy$ = new Subject<void>();
 
   // Make Math available in template
@@ -163,7 +167,9 @@ export class DynamicGrid implements OnInit, OnDestroy {
           this.loadDrilledDownData(currentLevel);
         } else {
           // We're at root
-          if (wasDrilledDown) {
+          const needsReload = wasDrilledDown || this.procedureName !== this.originalProcedureName;
+          
+          if (needsReload) {
             // Returning from drill-down - restore original procedure name
             console.log('🔄 Returning from drill-down - restoring original procedure name');
             this.procedureName = this.originalProcedureName;
@@ -176,12 +182,20 @@ export class DynamicGrid implements OnInit, OnDestroy {
             // Clear columns to force refresh
             this.columnDefs = [];
             this.columns = [];
+            
+            // IMPORTANT: Clear row data to force complete refresh
+            this.rowData = [];
+            this.totalCount = 0;
+            
             if (this.gridApi) {
               this.gridApi.setGridOption('columnDefs', []);
+              this.gridApi.setGridOption('rowData', []);
             }
+            
+            // Load root grid data (will fetch fresh columns and data)
+            console.log(`🔄 Loading root grid data for procedure: ${this.procedureName}`);
+            this.loadGridData();
           }
-          // Load root grid data (will fetch fresh columns)
-          this.loadGridData();
         }
       });
     
@@ -572,6 +586,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
             onSave: (rowData: any) => this.saveRow(rowData),
             onCancel: (rowData: any) => this.cancelRowEdit(rowData),
             onDelete: (rowData: any) => this.deleteRow(rowData),
+            onSaveNew: (rowData: any) => this.saveNewRow(rowData),
+            onCancelNew: (rowData: any) => this.cancelNewRow(rowData),
             isEditing: (rowData: any) => this.editingRows.has(rowData.Id),
             confirmationService: this.confirmationService
           },
@@ -580,7 +596,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
           filter: false
         });
       } else {
-        const isEditableColumn = this.enableRowEditing && col.field !== 'Id';
+        // Check if column is actually editable (from backend config)
+        const isEditableColumn = this.enableRowEditing && col.editable && col.field !== 'Id';
         const hasLinkConfig = col.linkConfig?.enabled;
         
         const colDef: any = {
@@ -593,27 +610,29 @@ export class DynamicGrid implements OnInit, OnDestroy {
           singleClickEdit: false
         };
         
-        // Use link cell renderer for clickable columns
-        if (hasLinkConfig) {
-          colDef.cellRenderer = LinkCellRendererComponent;
-          colDef.cellRendererParams = {
-            linkConfig: col.linkConfig,
-            baseProcedure: this.procedureName  // Pass base procedure for drill-down
-          };
-        }
-        // Use custom cell renderer for editable columns (if not a link column)
-        else if (isEditableColumn) {
+        // If column is editable, use EditableCellRenderer (even if it has linkConfig)
+        // The EditableCellRenderer will show text input in edit mode and link in view mode
+        if (isEditableColumn) {
           colDef.cellRenderer = EditableCellRendererComponent;
           colDef.cellRendererParams = {
             isEditing: (rowData: any) => this.editingRows.has(rowData.Id),
             columnType: col.type,
-            dropdownConfig: col.dropdownConfig, // Pass dropdown configuration
+            linkConfig: hasLinkConfig ? col.linkConfig : undefined, // Pass linkConfig for view mode
+            dropdownConfig: col.dropdownConfig,
             loadDropdownValues: col.dropdownConfig ? 
               (field: string, rowContext: any) => this.loadDropdownValues(field, rowContext) : 
               undefined,
             onCascadingChange: col.dropdownConfig?.dependsOn && col.dropdownConfig.dependsOn.length > 0 ?
               (field: string, value: any, rowData: any) => this.handleCascadingChange(field, value, rowData) :
               undefined
+          };
+        }
+        // If column has link but is NOT editable, use LinkCellRenderer
+        else if (hasLinkConfig) {
+          colDef.cellRenderer = LinkCellRendererComponent;
+          colDef.cellRendererParams = {
+            linkConfig: col.linkConfig,
+            baseProcedure: this.procedureName
           };
         }
         
@@ -632,7 +651,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
   enableRowEdit(rowData: any): void {
     // Track this row as edited if not already tracked
-    if (!this.editedRows.has(rowData.Id)) {
+    // Don't track new rows in editedRows - they use saveNewRow() instead
+    if (!this.editedRows.has(rowData.Id) && !rowData._isNewRow) {
       this.editedRows.set(rowData.Id, { ...rowData });
       this.hasUnsavedChanges = true;
     }
@@ -785,6 +805,164 @@ export class DynamicGrid implements OnInit, OnDestroy {
       });
   }
 
+  addNewRow(): void {
+    if (this.isAddingNewRow) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Already Adding',
+        detail: 'Please save or cancel the current new row first',
+        life: 3000
+      });
+      return;
+    }
+
+    // Create temporary ID
+    this.newRowTempId = `new_temp_${Date.now()}`;
+    
+    // Create new row object with empty values
+    const newRow: any = {
+      Id: this.newRowTempId,
+      _isNewRow: true
+    };
+    
+    // Initialize all editable fields as null
+    this.columns.forEach(col => {
+      if (col.field !== 'Id' && col.field !== 'actions') {
+        newRow[col.field] = null;
+      }
+    });
+    
+    // Add to top of grid
+    this.rowData = [newRow, ...this.rowData];
+    this.isAddingNewRow = true;
+    
+    // Refresh grid
+    if (this.gridApi) {
+      this.gridApi.setGridOption('rowData', this.rowData);
+    }
+    
+    // Automatically enter edit mode
+    this.enableRowEdit(newRow);
+    
+    console.log('✅ New row added with temp ID:', this.newRowTempId);
+  }
+
+  saveNewRow(rowData: any): void {
+    if (!rowData._isNewRow) {
+      console.error('❌ Attempted to save non-new row as new');
+      return;
+    }
+
+    // Extract field values (exclude metadata and temp ID)
+    const fieldValues: Record<string, any> = {};
+    Object.keys(rowData).forEach(key => {
+      if (key !== 'Id' && key !== '_isNewRow' && key !== '_originalData' && key !== 'actions') {
+        // Convert field name to lowercase to match backend expectations
+        fieldValues[key.toLowerCase()] = rowData[key];
+      }
+    });
+
+    console.log('💾 Saving new row with values:', fieldValues);
+
+    const createRequest = {
+      procedureName: this.procedureName,
+      fieldValues: fieldValues
+    };
+
+    this.gridService.createRow(createRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.createdRow) {
+            console.log('✅ Row created successfully:', response.createdRow);
+            
+            // Remove temporary row
+            const tempIndex = this.rowData.findIndex(r => r.Id === this.newRowTempId);
+            if (tempIndex > -1) {
+              this.rowData.splice(tempIndex, 1);
+            }
+            
+            // Add the real row with actual ID
+            this.rowData = [response.createdRow, ...this.rowData];
+            
+            // Update total count
+            this.totalCount++;
+            if (!this.isServerSidePagination && !this.isInfiniteScrollMode) {
+              this.allRowData = [response.createdRow, ...this.allRowData];
+            }
+            
+            // Clear new row state
+            this.isAddingNewRow = false;
+            this.newRowTempId = null;
+            this.editingRows.delete(rowData.Id);
+            
+            // Refresh grid
+            if (this.gridApi) {
+              this.gridApi.setGridOption('rowData', this.rowData);
+            }
+            
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Created',
+              detail: 'Record created successfully',
+              life: 3000
+            });
+          } else {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Create Failed',
+              detail: response.message || 'Failed to create row',
+              life: 5000
+            });
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error creating row:', error);
+          
+          // Extract error message from API response
+          let errorMessage = 'Failed to create row. Please try again.';
+          if (error?.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Create Error',
+            detail: errorMessage,
+            life: 5000
+          });
+        }
+      });
+  }
+
+  cancelNewRow(rowData: any): void {
+    if (!rowData._isNewRow) {
+      console.error('❌ Attempted to cancel non-new row');
+      return;
+    }
+
+    // Remove the temporary row from grid
+    const tempIndex = this.rowData.findIndex(r => r.Id === this.newRowTempId);
+    if (tempIndex > -1) {
+      this.rowData.splice(tempIndex, 1);
+    }
+    
+    // Clear new row state
+    this.isAddingNewRow = false;
+    this.newRowTempId = null;
+    this.editingRows.delete(rowData.Id);
+    
+    // Refresh grid
+    if (this.gridApi) {
+      this.gridApi.setGridOption('rowData', this.rowData);
+    }
+    
+    console.log('✅ New row cancelled');
+  }
+
+
   async saveAllChanges(): Promise<void> {
     if (this.editedRows.size === 0) return;
     
@@ -887,11 +1065,17 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   getRowStyle = (params: any) => {
-    if (this.editingRows.has(params.data?.Id)) {
-      return { background: '#fff9e6' }; // Currently editing (light yellow)
+    // New row being added (light green)
+    if (params.data?._isNewRow) {
+      return { background: '#e6ffe6' };
     }
+    // Currently editing (light yellow)
+    if (this.editingRows.has(params.data?.Id)) {
+      return { background: '#fff9e6' };
+    }
+    // Has unsaved changes (light red)
     if (this.editedRows.has(params.data?.Id)) {
-      return { background: '#ffe6e6' }; // Has unsaved changes (light red)
+      return { background: '#ffe6e6' };
     }
     return undefined;
   };
