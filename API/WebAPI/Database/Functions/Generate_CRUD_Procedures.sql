@@ -58,10 +58,41 @@ BEGIN
     END LOOP;
     
     -- Build UPDATE SET clause with type detection
+    -- First, add primary key columns to allow updating them
+    FOREACH v_pk_col IN ARRAY p_primary_key_cols LOOP
+        SELECT data_type INTO v_col_type
+        FROM information_schema.columns
+        WHERE table_name = p_table_name
+          AND table_schema = 'public'
+          AND lower(column_name) = lower(v_pk_col)
+        LIMIT 1;
+        
+        -- Declare new variable for updated primary key value
+        v_declare_vars := v_declare_vars || format('    v_New_%s TEXT;%s', v_pk_col, E'\n');
+        -- Extract new primary key value from changes JSON
+        v_extract_vars := v_extract_vars || format('        v_New_%s := (p_ChangesJson::jsonb)->''%s'';%s', v_pk_col, v_pk_col, E'\n');
+        
+        IF v_update_sets != '' THEN
+            v_update_sets := v_update_sets || ',' || E'\n        ';
+        END IF;
+        
+        -- Add primary key to UPDATE SET clause (use new value if provided, otherwise keep old)
+        IF v_col_type IN ('integer', 'bigint', 'smallint') THEN
+            v_update_sets := v_update_sets || format('"%s" = CASE WHEN v_New_%s IS NULL OR v_New_%s = '''' THEN "%s" ELSE v_New_%s::INTEGER END', 
+                v_pk_col, v_pk_col, v_pk_col, v_pk_col, v_pk_col);
+        ELSIF v_col_type IN ('numeric', 'decimal', 'real', 'double precision') THEN
+            v_update_sets := v_update_sets || format('"%s" = CASE WHEN v_New_%s IS NULL OR v_New_%s = '''' THEN "%s" ELSE v_New_%s::NUMERIC END', 
+                v_pk_col, v_pk_col, v_pk_col, v_pk_col, v_pk_col);
+        ELSE
+            v_update_sets := v_update_sets || format('"%s" = COALESCE(NULLIF(v_New_%s, ''''), "%s")', 
+                v_pk_col, v_pk_col, v_pk_col);
+        END IF;
+    END LOOP;
+    
+    -- Now add other editable columns
     FOREACH v_col IN ARRAY p_editable_cols LOOP
-        -- Skip if this column is already declared as a primary key variable
+        -- Skip if this column is a primary key (already handled above)
         IF v_col = ANY(p_primary_key_cols) THEN
-            -- Primary key variables are already declared above, skip to avoid duplicate
             CONTINUE;
         END IF;
         
