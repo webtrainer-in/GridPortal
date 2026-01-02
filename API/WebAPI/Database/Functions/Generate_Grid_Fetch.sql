@@ -192,6 +192,8 @@ DECLARE
     v_Data JSONB;
     v_Columns JSONB;
     v_BaseColumns JSONB;
+    v_DropdownConfigs JSONB;
+    v_LinkConfigs JSONB;
     v_TotalCount INT;
     -- TODO: Add filter parameter variables here (e.g., v_BusNumber INT;)
 BEGIN
@@ -250,7 +252,62 @@ BEGIN
 %s
     ]'::JSONB;
     
-    v_Columns := v_BaseColumns;
+    
+    -- Get dropdown configurations (if any)
+    SELECT jsonb_object_agg(
+        cm."ColumnName",
+        jsonb_build_object(
+            'type', cm."DropdownType",
+            'staticValues', CASE 
+                WHEN cm."StaticValuesJson" IS NOT NULL 
+                THEN cm."StaticValuesJson"::jsonb 
+                ELSE NULL 
+            END,
+            'masterTable', cm."MasterTable",
+            'valueField', cm."ValueField",
+            'labelField', cm."LabelField",
+            'filterCondition', cm."FilterCondition",
+            'dependsOn', CASE 
+                WHEN cm."DependsOnJson" IS NOT NULL 
+                THEN cm."DependsOnJson"::jsonb 
+                ELSE NULL 
+            END
+        )
+    )
+    INTO v_DropdownConfigs
+    FROM "ColumnMetadata" cm
+    WHERE cm."ProcedureName" = '%s'
+      AND cm."IsActive" = true
+      AND cm."CellEditor" = 'dropdown';
+    
+    -- Get link configurations (if any)
+    SELECT jsonb_object_agg(
+        cm."ColumnName",
+        cm."LinkConfig"
+    )
+    INTO v_LinkConfigs
+    FROM "ColumnMetadata" cm
+    WHERE cm."ProcedureName" = '%s'
+      AND cm."IsActive" = true
+      AND cm."LinkConfig" IS NOT NULL
+      AND (cm."LinkConfig"->'enabled')::boolean = true;
+    
+    -- Merge dropdown and link configs into base columns
+    SELECT jsonb_agg(
+        CASE 
+            WHEN v_DropdownConfigs ? (col->>'field') AND v_LinkConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('dropdownConfig', v_DropdownConfigs->(col->>'field'))
+                    || jsonb_build_object('linkConfig', v_LinkConfigs->(col->>'field'))
+            WHEN v_DropdownConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('dropdownConfig', v_DropdownConfigs->(col->>'field'))
+            WHEN v_LinkConfigs ? (col->>'field') THEN
+                col || jsonb_build_object('linkConfig', v_LinkConfigs->(col->>'field'))
+            ELSE
+                col
+        END
+    )
+    INTO v_Columns
+    FROM jsonb_array_elements(v_BaseColumns) AS col;
     
     -- Return result
     RETURN jsonb_build_object(
@@ -284,6 +341,8 @@ $PROC$,
         v_search_conditions,             -- Search conditions for SELECT
         CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- ORDER BY with quotes if needed
         v_column_defs,                   -- Column definitions
+        v_proc_name,                     -- Dropdown config ProcedureName
+        v_proc_name,                     -- Link config ProcedureName
         v_proc_name                      -- GRANT statement
     );
 END;

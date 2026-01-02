@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
 import { DropdownOption } from '../../../core/services/dynamic-grid.service';
+import { DrillDownService } from '../../../core/services/drill-down.service';
 
 @Component({
   selector: 'app-editable-cell-renderer',
@@ -135,7 +136,10 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
   dropdownOptions: DropdownOption[] = [];
   isLoadingDropdown: boolean = false;
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private drillDownService: DrillDownService
+  ) {}
 
   agInit(params: any): void {
     this.params = params;
@@ -278,6 +282,12 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
     const config = this.params.linkConfig;
     const rowData = this.params.data;
     
+    // For drilldown links (routePath is null and drillDown is enabled), use javascript:void(0)
+    if (!config.routePath && config.drillDown?.enabled) {
+      this.linkUrl = 'javascript:void(0)';
+      return;
+    }
+    
     // Build query parameters from config
     const queryParams: string[] = [];
     if (config.params && Array.isArray(config.params)) {
@@ -304,24 +314,10 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
     const config = this.params.linkConfig;
     
     // Handle drill-down if configured
-    if (config.drillDown) {
-      // Emit drill-down event through AG Grid API
-      const drillDownEvent: any = {
-        type: 'drillDown',
-        targetProcedure: config.drillDown.targetProcedure,
-        filterParams: {} as Record<string, any>,
-        rowData: this.params.data
-      };
-      
-      // Build filter params from drill-down config
-      if (config.drillDown.filterParams && Array.isArray(config.drillDown.filterParams)) {
-        config.drillDown.filterParams.forEach((param: any) => {
-          drillDownEvent.filterParams[param.targetField] = this.params.data[param.sourceField];
-        });
-      }
-      
-      // Dispatch custom event that the grid component can listen to
-      this.params.api?.dispatchEvent(drillDownEvent);
+    if (config.drillDown && config.drillDown.enabled) {
+      // Use DrillDownService to handle drilldown (same as LinkCellRendererComponent)
+      const baseProcedure = (this.params as any).baseProcedure || 'sp_Grid_Buses';
+      this.drillDownService.drillDown(config.drillDown, this.params.data, baseProcedure);
     } else if (config.openInNewTab) {
       window.open(this.linkUrl, '_blank');
     } else {
