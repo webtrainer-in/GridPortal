@@ -254,7 +254,23 @@ export class EditableCellRendererComponent implements ICellRendererAngularComp {
 
   onValueChange(): void {
     if (this.params?.colDef?.field) {
-      this.params.data[this.params.colDef.field] = this.value;
+      // Convert value to appropriate type
+      let convertedValue = this.value;
+      
+      // Always attempt to convert numeric strings to numbers
+      // This prevents values like "123" from being saved as strings with quotes
+      if (typeof this.value === 'string' && this.value.trim() !== '') {
+        const numValue = Number(this.value);
+        // Only convert if it's a valid number and not an empty string
+        if (!isNaN(numValue) && this.value.trim() !== '') {
+          convertedValue = numValue;
+        }
+      } else if (this.inputType === 'date' && this.value) {
+        // Keep date as string in ISO format
+        convertedValue = this.value;
+      }
+      
+      this.params.data[this.params.colDef.field] = convertedValue;
     }
   }
 
