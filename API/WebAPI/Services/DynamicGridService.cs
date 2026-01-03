@@ -832,6 +832,44 @@ public class DynamicGridService : IDynamicGridService
         return $"sp_Grid_Update_{entityName}";
     }
 
+    
+    private string DeriveInsertProcedureName(string gridProcedureName)
+    {
+        // Derive insert procedure name from grid procedure name using pattern matching
+        // Pattern: sp_Grid_[Anything] -> sp_Grid_Insert_[Entity]
+        // Examples:
+        //   sp_Grid_Example_Employees -> sp_Grid_Insert_Employee
+        //   sp_Grid_Buses -> sp_Grid_Insert_Bus
+        //   sp_Grid_T1 -> sp_Grid_Insert_T1
+        //   sp_Grid_Products -> sp_Grid_Insert_Product
+        
+        // Remove "sp_Grid_" prefix
+        var withoutPrefix = gridProcedureName.Replace("sp_Grid_", "");
+        
+        // Split by underscore to get parts
+        var parts = withoutPrefix.Split('_');
+        
+        // Get the last part (entity name) and singularize if needed
+        var entityName = parts[parts.Length - 1];
+        
+        // Simple singularization: remove trailing 's' if present
+        // For more complex cases, this could be enhanced
+        if (entityName.EndsWith("es"))
+        {
+            // Buses -> Bus
+            entityName = entityName.Substring(0, entityName.Length - 2);
+        }
+        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        {
+            // Employees -> Employee, Products -> Product
+            // But not: Address -> Addres
+            entityName = entityName.Substring(0, entityName.Length - 1);
+        }
+        
+        // Construct insert procedure name
+        return $"sp_Grid_Insert_{entityName}";
+    }
+
     private string DeriveDeleteProcedureName(string gridProcedureName)
     {
         // Derive delete procedure name from grid procedure name using pattern matching
@@ -1001,42 +1039,6 @@ public class DynamicGridService : IDynamicGridService
         }
     }
 
-    private string DeriveInsertProcedureName(string gridProcedureName)
-    {
-        // Derive insert procedure name from grid procedure name
-        // Pattern: sp_Grid_[Anything] -> sp_grid_insert_[table]
-        // Examples:
-        //   sp_Grid_Buses -> sp_grid_insert_bus
-        //   sp_Grid_Example_Employees -> sp_grid_insert_employee
-        //   sp_Grid_Products -> sp_grid_insert_product
-        
-        // Remove "sp_Grid_" prefix
-        var withoutPrefix = gridProcedureName.Replace("sp_Grid_", "");
-        
-        // Split by underscore to get parts
-        var parts = withoutPrefix.Split('_');
-        
-        // Get the last part (entity name) and singularize if needed
-        var entityName = parts[parts.Length - 1];
-        
-        // Simple singularization: remove trailing 's' if present
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> employee, Products -> product
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
-        
-        // Convert to lowercase for table name convention
-        entityName = entityName.ToLower();
-        
-        // Construct insert procedure name
-        return $"sp_grid_insert_{entityName}";
-    }
 
 
     /// <summary>
