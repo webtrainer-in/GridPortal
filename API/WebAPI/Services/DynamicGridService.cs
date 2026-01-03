@@ -507,8 +507,10 @@ public class DynamicGridService : IDynamicGridService
 
         foreach (var proc in procedures)
         {
-            // Skip CRUD helper procedures (Update, Delete) - only show grid data procedures
-            if (proc.ProcedureName.Contains("_Update_") || proc.ProcedureName.Contains("_Delete_"))
+            // Skip CRUD helper procedures (Insert, Update, Delete) - only show grid data procedures
+            if (proc.ProcedureName.Contains("_Insert_", StringComparison.OrdinalIgnoreCase) || 
+                proc.ProcedureName.Contains("_Update_", StringComparison.OrdinalIgnoreCase) || 
+                proc.ProcedureName.Contains("_Delete_", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
