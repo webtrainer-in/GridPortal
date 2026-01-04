@@ -41,7 +41,7 @@ import { DrillDownService } from '../../../core/services/drill-down.service';
           <app-dynamic-grid
             [procedureName]="selectedProcedure"
             [enableRowEditing]="true"
-            [pageSize]="15"
+            [pageSize]="10"
             [paginationThreshold]="10"
             [defaultPaginationMode]="'traditional'"
             [infiniteScrollBatchSize]="1"
