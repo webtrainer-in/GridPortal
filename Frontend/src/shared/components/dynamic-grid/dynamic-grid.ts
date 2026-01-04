@@ -600,12 +600,23 @@ export class DynamicGrid implements OnInit, OnDestroy {
         const isEditableColumn = this.enableRowEditing && col.editable && col.field !== 'Id';
         const hasLinkConfig = col.linkConfig?.enabled;
         
+        // Determine AG Grid filter type based on column type
+        let filterType: string | boolean = col.filter;
+        if (col.filter && col.type === 'number') {
+          filterType = 'agNumberColumnFilter';
+        } else if (col.filter && col.type === 'date') {
+          filterType = 'agDateColumnFilter';
+        } else if (col.filter && col.type === 'text') {
+          filterType = 'agTextColumnFilter';
+        }
+        
         const colDef: any = {
           field: col.field,
           headerName: col.headerName,
           width: col.width,
           sortable: col.sortable,
-          filter: col.filter,
+          filter: filterType,  // Use type-specific filter
+          type: col.type,  // Set column type for AG Grid
           editable: false,
           singleClickEdit: false
         };
