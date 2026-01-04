@@ -44,6 +44,7 @@ DECLARE
     v_filter_text TEXT;
     v_filter_number NUMERIC;
     v_col_type TEXT;
+    v_ag_grid_type TEXT;
     -- Template-related variables
     v_filter_parser_template TEXT;
     v_column_type_map TEXT := '';
@@ -112,8 +113,8 @@ BEGIN
     
     -- Build column definitions (basic - user can customize)
     FOREACH v_col IN ARRAY p_display_cols LOOP
-        -- Get actual column name
-        SELECT column_name INTO v_actual_col_name
+        -- Get actual column name and data type
+        SELECT column_name, data_type INTO v_actual_col_name, v_col_type
         FROM information_schema.columns
         WHERE table_name = p_table_name
           AND table_schema = 'public'
@@ -124,9 +125,19 @@ BEGIN
             CONTINUE;
         END IF;
         
-        v_column_defs := v_column_defs || format('        {"field": "%s", "headerName": "%s", "type": "text", "width": 120, "sortable": true, "filter": true, "editable": true, "cellEditor": "agTextCellEditor"},%s',
+        -- Determine AG Grid column type based on database data type
+        IF v_col_type IN ('integer', 'bigint', 'smallint', 'numeric', 'decimal', 'real', 'double precision') THEN
+            v_ag_grid_type := 'number';
+        ELSIF v_col_type IN ('date', 'timestamp without time zone', 'timestamp with time zone') THEN
+            v_ag_grid_type := 'date';
+        ELSE
+            v_ag_grid_type := 'text';
+        END IF;
+        
+        v_column_defs := v_column_defs || format('        {"field": "%s", "headerName": "%s", "type": "%s", "width": 120, "sortable": true, "filter": true, "editable": true, "cellEditor": "agTextCellEditor"},%s',
             v_actual_col_name,
             initcap(replace(v_actual_col_name, '_', ' ')),  -- Convert snake_case to Title Case
+            v_ag_grid_type,
             E'\n'
         );
     END LOOP;
@@ -449,11 +460,8 @@ GRANT EXECUTE ON FUNCTION %s TO PUBLIC;
 
 -- TODO: Customize this procedure by:
 -- 1. Adding JOIN clauses for related tables
--- 2. Adding filter parameter declarations and extraction
--- 3. Adding WHERE clauses for filtering
--- 4. Adjusting column types (number, text, date, etc.)
--- 5. Setting correct widths and editability
--- 6. Adding dropdown configurations if needed
+-- 2. Adding WHERE clauses for filtering
+-- 3. Setting correct widths and editability
 $PROC$,
         p_table_name,                    -- 1. Entity name (comment)
         v_proc_name,                     -- 2. Function name
