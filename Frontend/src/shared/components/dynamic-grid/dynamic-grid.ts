@@ -420,10 +420,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
           // Set grid data
           if (this.gridApi) {
             this.gridApi.setGridOption('rowData', this.rowData);
-            // Enable AG Grid's pagination for client-side mode
-            this.gridApi.setGridOption('pagination', true);
-            this.gridApi.setGridOption('paginationPageSize', this.pageSize);
           }
+          
           
           this.setLoading(false);
         },
@@ -1164,20 +1162,45 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   onPageSizeChange(): void {
-    console.log('📏 Page size changed to:', this.pageSize);
-    // Recalculate total pages
-    this.totalPages = Math.ceil(this.totalCount / this.pageSize);
-    // Reset to first page
+    console.log(`📏 Page size changed to: ${this.pageSize}`);
+    // Reset to page 1 when page size changes
     this.currentPage = 1;
     
     if (this.isServerSidePagination) {
-      // Reload data with new page size
+      // Recalculate total pages
+      this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+      // Load first page with new page size
       this.loadPageData(1);
     } else {
-      // Just update the paged data slice
+      // For client-side pagination, just update the paged data
+      this.totalPages = Math.ceil(this.totalCount / this.pageSize);
       this.updatePagedData();
     }
   }
+
+  onPageJumpEnter(event: any): void {
+    const input = event.target as HTMLInputElement;
+    const pageNumber = parseInt(input.value, 10);
+    
+    // Validate the page number
+    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= this.totalPages) {
+      this.goToPage(pageNumber);
+    } else {
+      // Reset to current page if invalid
+      input.value = this.currentPage.toString();
+      
+      // Show a brief error message
+      if (pageNumber < 1) {
+        console.warn('Page number must be at least 1');
+      } else if (pageNumber > this.totalPages) {
+        console.warn(`Page number cannot exceed ${this.totalPages}`);
+      }
+    }
+    
+    // Blur the input to remove focus
+    input.blur();
+  }
+
 
   getStartRecord(): number {
     if (this.totalCount === 0) return 0;

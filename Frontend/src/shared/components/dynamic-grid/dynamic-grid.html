@@ -241,9 +241,8 @@
     [rowData]="rowData"
     [getRowStyle]="getRowStyle"
     [animateRows]="true"
-    [pagination]="!isServerSidePagination && !isInfiniteScrollMode"
+    [pagination]="false"
     [paginationPageSize]="pageSize"
-    [paginationPageSizeSelector]="[15, 25, 50, 100]"
     (gridReady)="onGridReady($event)"
     (sortChanged)="onSortChanged()"
     (filterChanged)="onFilterChanged()"
@@ -261,8 +260,8 @@
     <span>✓ All {{ totalCount }} rows loaded</span>
   </div>
 
-  <!-- Custom pagination controls (shown only for traditional server-side pagination) -->
-  <div *ngIf="isServerSidePagination && !isInfiniteScrollMode" class="custom-pagination">
+  <!-- Custom pagination controls (shown for all traditional pagination modes) -->
+  <div *ngIf="!isInfiniteScrollMode" class="custom-pagination">
     <!-- Page Size Selector -->
     <div class="page-size-selector">
       <label for="page-size">Page Size:</label>
@@ -301,9 +300,21 @@
       ◀
     </button>
     
-    <!-- Page Info -->
-    <div class="pagination-info-text">
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    
+    <!-- Page Jump Input -->
+    <div class="page-jump-container">
+      <span>Page</span>
+      <input 
+        type="number" 
+        class="page-jump-input"
+        [value]="currentPage"
+        (keydown.enter)="onPageJumpEnter($event)"
+        min="1"
+        [max]="totalPages"
+        [disabled]="isLoading"
+        title="Enter page number and press Enter"
+      />
+      <span>of {{ totalPages }}</span>
     </div>
     
     <!-- Next Page Button -->
