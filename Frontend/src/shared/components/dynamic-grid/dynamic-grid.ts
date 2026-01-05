@@ -1598,11 +1598,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
       let dataToExport: any[];
       
       if (this.isServerSidePagination) {
-        // For server-side pagination, fetch all data first
+        // For server-side pagination, fetch all data first with current filters
         dataToExport = await this.fetchAllDataForExport();
       } else {
-        // For client-side pagination, use current data
-        dataToExport = this.rowData;
+        // For client-side pagination, get filtered rows from AG Grid
+        dataToExport = [];
+        this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+          dataToExport.push(node.data);
+        });
       }
       
       // Use xlsx library to create Excel file
@@ -1680,12 +1683,16 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   private async fetchAllDataForExport(): Promise<any[]> {
-    // Fetch all data without pagination, sorting, or filtering
-    // Use a very large page size to ensure we get ALL records
+    // Fetch all data with current filters, sorting, and search applied
+    // Use a very large page size to ensure we get ALL filtered records
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: 1,
-      pageSize: 999999999 // Very large number to get all records from database
+      pageSize: 999999999, // Very large number to get all records from database
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
+      searchTerm: this.globalSearchTerm || undefined
     };
     
     const response = await this.gridService.executeGridProcedure(request).toPromise();
