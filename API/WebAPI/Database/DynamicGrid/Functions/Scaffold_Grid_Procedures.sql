@@ -131,7 +131,7 @@ BEGIN
     
     -- Build procedure names
     v_fetch_proc_name := 'sp_Grid_' || p_entity_name;
-    v_insert_proc_name := 'sp_grid_insert_' || lower(regexp_replace(p_entity_name, 's$', ''));
+    v_insert_proc_name := 'sp_Grid_Insert_' || p_entity_name;
     v_update_proc_name := 'sp_Grid_Update_' || p_entity_name;
     v_delete_proc_name := 'sp_Grid_Delete_' || p_entity_name;
     
@@ -163,34 +163,10 @@ BEGIN
     END IF;
     
     -- ========================================
-    -- 2. Generate INSERT procedure (if requested)
+    -- 2. Generate INSERT, UPDATE & DELETE procedures (if requested)
+    -- Note: Generate_CRUD_Procedures creates all three procedures together
     -- ========================================
-    IF 'insert' = ANY(p_operations) THEN
-        BEGIN
-            PERFORM Generate_Insert_Procedure(
-                p_table_name,
-                p_entity_name,
-                v_primary_keys,  -- Use auto-detected primary keys
-                v_editable_columns  -- Use auto-detected or provided editable columns
-            );
-            
-            v_result := v_result || format('✅ Created: sp_grid_insert_%s%s', 
-                lower(regexp_replace(p_entity_name, 's$', '')), E'\n');
-        EXCEPTION
-            WHEN OTHERS THEN
-                v_result := v_result || format('❌ Failed to create INSERT: %s%s', SQLERRM, E'\n');
-                -- Don't RAISE - continue to show other results
-        END;
-    ELSE
-        v_result := v_result || format('⏭️  Skipped: sp_grid_insert_%s%s', 
-            lower(regexp_replace(p_entity_name, 's$', '')), E'\n');
-    END IF;
-    
-    -- ========================================
-    -- 3. Generate UPDATE & DELETE procedures (if requested)
-    -- Note: Generate_CRUD_Procedures creates BOTH procedures together
-    -- ========================================
-    IF 'update' = ANY(p_operations) OR 'delete' = ANY(p_operations) THEN
+    IF 'insert' = ANY(p_operations) OR 'update' = ANY(p_operations) OR 'delete' = ANY(p_operations) THEN
         DECLARE
             v_crud_result TEXT;
         BEGIN
@@ -205,15 +181,17 @@ BEGIN
             -- Show what Generate_CRUD_Procedures returned
             v_result := v_result || format('🔧 CRUD Generator Result: %s%s', v_crud_result, E'\n');
             
-            -- Both procedures are always created together
+            -- All three procedures are always created together
+            v_result := v_result || format('✅ Created: %s%s', v_insert_proc_name, E'\n');
             v_result := v_result || format('✅ Created: %s%s', v_update_proc_name, E'\n');
             v_result := v_result || format('✅ Created: %s%s', v_delete_proc_name, E'\n');
         EXCEPTION
             WHEN OTHERS THEN
-                v_result := v_result || format('❌ Failed to create UPDATE/DELETE: %s%s', SQLERRM, E'\n');
+                v_result := v_result || format('❌ Failed to create INSERT/UPDATE/DELETE: %s%s', SQLERRM, E'\n');
                 -- Don't RAISE - continue to show other results
         END;
     ELSE
+        v_result := v_result || format('⏭️  Skipped: %s%s', v_insert_proc_name, E'\n');
         v_result := v_result || format('⏭️  Skipped: %s%s', v_update_proc_name, E'\n');
         v_result := v_result || format('⏭️  Skipped: %s%s', v_delete_proc_name, E'\n');
     END IF;

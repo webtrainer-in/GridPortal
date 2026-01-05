@@ -600,12 +600,23 @@ export class DynamicGrid implements OnInit, OnDestroy {
         const isEditableColumn = this.enableRowEditing && col.editable && col.field !== 'Id';
         const hasLinkConfig = col.linkConfig?.enabled;
         
+        // Determine AG Grid filter type based on column type
+        let filterType: string | boolean = col.filter;
+        if (col.filter && col.type === 'number') {
+          filterType = 'agNumberColumnFilter';
+        } else if (col.filter && col.type === 'date') {
+          filterType = 'agDateColumnFilter';
+        } else if (col.filter && col.type === 'text') {
+          filterType = 'agTextColumnFilter';
+        }
+        
         const colDef: any = {
           field: col.field,
           headerName: col.headerName,
           width: col.width,
           sortable: col.sortable,
-          filter: col.filter,
+          filter: filterType,  // Use type-specific filter
+          type: col.type,  // Set column type for AG Grid
           editable: false,
           singleClickEdit: false
         };
@@ -682,7 +693,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
     
     const updateRequest = {
       procedureName: this.procedureName,
-      rowId: rowData.Id,
+      rowId: originalData.Id,  // Use original Id, not current Id (which may have changed if PK was edited)
       changes: changes
     };
     
@@ -691,13 +702,43 @@ export class DynamicGrid implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.editingRows.delete(rowData.Id);
-            this.editedRows.delete(rowData.Id); // Clear from edited rows
+            // Use original Id to remove from tracking sets (before PK change)
+            const originalId = originalData.Id;
+            this.editingRows.delete(originalId);
+            this.editedRows.delete(originalId); // Clear from edited rows
             this.hasUnsavedChanges = this.editedRows.size > 0; // Update flag
+            
             delete rowData._originalData;
             
-            // Redraw the entire row to update all cells including action buttons
-            this.gridApi?.redrawRows();
+            // Get the row node BEFORE updating the Id (while it's still indexed by the old Id)
+            const rowNode = this.gridApi?.getRowNode(originalId);
+            
+            // Update the Id field if any primary key fields were changed
+            // The Id is a concatenation of primary key values separated by underscores
+            // We need to rebuild it with the new values
+            if (changes && Object.keys(changes).length > 0) {
+              // Split the original Id to get the parts
+              const idParts = originalId.split('_');
+              
+              // For each change, check if it might be a primary key field
+              // by seeing if the old value exists in the Id parts
+              Object.keys(changes).forEach(fieldName => {
+                const oldValue = String(originalData[fieldName]);
+                const newValue = String(rowData[fieldName]);
+                
+                // Find and replace the old value in the Id parts
+                const index = idParts.indexOf(oldValue);
+                if (index !== -1) {
+                  idParts[index] = newValue;
+                }
+              });
+              
+              // Reconstruct the Id
+              rowData.Id = idParts.join('_');
+            }
+            
+            // Force refresh all cells to exit edit mode (same as when entering edit mode)
+            this.gridApi?.refreshCells({ force: true });
             
             // Show success toast notification
             this.messageService.add({
