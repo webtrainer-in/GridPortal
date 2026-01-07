@@ -355,9 +355,9 @@ BEGIN
         WHERE ($1 IS NULL OR (
             %s
         ))
-        ' || (CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END))
-    INTO v_TotalCount
-    USING p_SearchTerm;
+        %%s',
+        CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
+    ) INTO v_TotalCount USING p_SearchTerm;
     
     -- Get data rows with search
     EXECUTE format('
@@ -372,13 +372,13 @@ BEGIN
             WHERE ($1 IS NULL OR (
                 %s
             ))
-            ' || (CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END) || '
+            %%s
             -- TODO: Add JOIN clauses here
             ORDER BY a.%s
             LIMIT $2 OFFSET $3
-        ) t')
-    INTO v_Data
-    USING p_SearchTerm, v_FetchSize, v_Offset;
+        ) t',
+        CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
+    ) INTO v_Data USING p_SearchTerm, v_FetchSize, v_Offset;
     
     -- Define base columns
     -- TODO: Customize column types, widths, and editability

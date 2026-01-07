@@ -116,6 +116,10 @@ export class DynamicGrid implements OnInit, OnDestroy {
   virtualRowEnd: number = 0;
   currentWindowRows: any[] = [];
   
+  // Scroll tracking for bidirectional windowed scroll
+  lastScrollTop: number = 0;
+  isLoadingPrevious: boolean = false;
+  
   // New row state
   isAddingNewRow: boolean = false;
   newRowTempId: string | null = null;
@@ -284,12 +288,19 @@ export class DynamicGrid implements OnInit, OnDestroy {
       }
     }, 10000);
     
+    
     // Load initial page to get total count
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: 1,
-      pageSize: this.pageSize
+      pageSize: this.pageSize,
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : 
+                  (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
+      searchTerm: this.globalSearchTerm || undefined
     };
+
 
     this.gridService.executeGridProcedure(request)
       .pipe(takeUntil(this.destroy$))
@@ -420,10 +431,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
           // Set grid data
           if (this.gridApi) {
             this.gridApi.setGridOption('rowData', this.rowData);
-            // Enable AG Grid's pagination for client-side mode
-            this.gridApi.setGridOption('pagination', true);
-            this.gridApi.setGridOption('paginationPageSize', this.pageSize);
           }
+          
           
           this.setLoading(false);
         },
@@ -797,27 +806,54 @@ export class DynamicGrid implements OnInit, OnDestroy {
             console.log('✅ Row deleted successfully');
             
             // Reload data based on current mode
-            if (this.isDrilledDown) {
-              // In drill-down mode, reload the drilled-down data
-              const currentLevel = this.drillDownLevels[this.currentDrillLevel];
-              this.loadDrilledDownData(currentLevel);
-            } else if (this.isServerSidePagination || this.isInfiniteScrollMode) {
-              // Reload current page for server-side or infinite scroll
-              if (this.isInfiniteScrollMode) {
-                this.resetInfiniteScroll();
-              }
-              this.loadPageData(this.currentPage);
-            } else {
-              // Remove from client-side data
-              const index = this.allRowData.findIndex(row => row.Id === rowData.Id);
+          if (this.isDrilledDown) {
+            // In drill-down mode, reload the drilled-down data
+            const currentLevel = this.drillDownLevels[this.currentDrillLevel];
+            this.loadDrilledDownData(currentLevel);
+          } else if (this.isInfiniteScrollMode) {
+            // Handle infinite scroll mode
+            if (this.windowedScrollActive) {
+              // Windowed mode: update window and total count
+              const index = this.currentWindowRows.findIndex(row => row.Id === rowData.Id);
               if (index > -1) {
-                this.allRowData.splice(index, 1);
-                this.rowData = this.allRowData;
-                this.totalCount = this.allRowData.length;
-                this.totalPages = Math.ceil(this.totalCount / this.pageSize);
-                this.gridApi?.setGridOption('rowData', this.rowData);
+                this.currentWindowRows.splice(index, 1);
+                this.rowData = this.currentWindowRows;
+                this.virtualRowEnd--;
+                this.totalCount--;
+                
+                console.log(`🗑️ Deleted row from window. New window: ${this.virtualRowStart}-${this.virtualRowEnd}, Total: ${this.totalCount}`);
+                
+                if (this.gridApi) {
+                  this.gridApi.setGridOption('rowData', this.rowData);
+                }
+              }
+            } else {
+              // Full infinite scroll mode: remove from rowData and update count
+              const index = this.rowData.findIndex(row => row.Id === rowData.Id);
+              if (index > -1) {
+                this.rowData.splice(index, 1);
+                this.lastLoadedRow--;
+                this.totalCount--;
+                
+                if (this.gridApi) {
+                  this.gridApi.setGridOption('rowData', this.rowData);
+                }
               }
             }
+          } else if (this.isServerSidePagination) {
+            // Reload current page for server-side pagination
+            this.loadPageData(this.currentPage);
+          } else {
+            // Remove from client-side data
+            const index = this.allRowData.findIndex(row => row.Id === rowData.Id);
+            if (index > -1) {
+              this.allRowData.splice(index, 1);
+              this.rowData = this.allRowData;
+              this.totalCount = this.allRowData.length;
+              this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+              this.gridApi?.setGridOption('rowData', this.rowData);
+            }
+          }
             
             this.messageService.add({
               severity: 'success',
@@ -1164,20 +1200,45 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   onPageSizeChange(): void {
-    console.log('📏 Page size changed to:', this.pageSize);
-    // Recalculate total pages
-    this.totalPages = Math.ceil(this.totalCount / this.pageSize);
-    // Reset to first page
+    console.log(`📏 Page size changed to: ${this.pageSize}`);
+    // Reset to page 1 when page size changes
     this.currentPage = 1;
     
     if (this.isServerSidePagination) {
-      // Reload data with new page size
+      // Recalculate total pages
+      this.totalPages = Math.ceil(this.totalCount / this.pageSize);
+      // Load first page with new page size
       this.loadPageData(1);
     } else {
-      // Just update the paged data slice
+      // For client-side pagination, just update the paged data
+      this.totalPages = Math.ceil(this.totalCount / this.pageSize);
       this.updatePagedData();
     }
   }
+
+  onPageJumpEnter(event: any): void {
+    const input = event.target as HTMLInputElement;
+    const pageNumber = parseInt(input.value, 10);
+    
+    // Validate the page number
+    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= this.totalPages) {
+      this.goToPage(pageNumber);
+    } else {
+      // Reset to current page if invalid
+      input.value = this.currentPage.toString();
+      
+      // Show a brief error message
+      if (pageNumber < 1) {
+        console.warn('Page number must be at least 1');
+      } else if (pageNumber > this.totalPages) {
+        console.warn(`Page number cannot exceed ${this.totalPages}`);
+      }
+    }
+    
+    // Blur the input to remove focus
+    input.blur();
+  }
+
 
   getStartRecord(): number {
     if (this.totalCount === 0) return 0;
@@ -1198,12 +1259,12 @@ export class DynamicGrid implements OnInit, OnDestroy {
     // Infinite scroll mode selected
     this.isInfiniteScrollMode = true;
 
-    if (this.totalCount < 1000) {
+    if (this.totalCount < 100) {
       // Small dataset: use existing client-side pagination
       this.isServerSidePagination = false;
       this.infiniteScrollStrategy = 'full';
       this.windowedScrollActive = false;
-    } else if (this.totalCount <= 10000) {
+    } else if (this.totalCount <= 1000) {
       // Medium dataset: infinite scroll, keep all in memory
       this.isServerSidePagination = true;
       this.infiniteScrollStrategy = 'full';
@@ -1241,34 +1302,69 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   onBodyScroll(event: any): void {
-    if (!this.isInfiniteScrollMode || this.isLoadingMore || !this.hasMoreData) {
-      return;
-    }
-
+    if (!this.isInfiniteScrollMode) return;
+    
     const api = this.gridApi;
     if (!api) return;
 
-    // Calculate scroll percentage
     const lastRow = api.getDisplayedRowCount() - 1;
+    const firstRenderedRow = api.getFirstDisplayedRowIndex();
     const lastRenderedRow = api.getLastDisplayedRowIndex();
     
     if (lastRow <= 0) return;
     
-    const scrollPercentage = lastRenderedRow / lastRow;
-
-    // Load more when threshold reached
-    if (scrollPercentage >= this.infiniteScrollThreshold) {
-      this.loadNextBatch();
+    // Detect scroll direction based on rendered rows instead of scroll position
+    // This works better with mouse wheel scrolling
+    const isScrollingDown = lastRenderedRow > this.lastScrollTop;
+    const isScrollingUp = firstRenderedRow < this.lastScrollTop;
+    
+    // Update last position using last rendered row
+    this.lastScrollTop = lastRenderedRow;
+    
+    // Forward scrolling - load next batch
+    if (isScrollingDown && !this.isLoadingMore) {
+      // In windowed mode, check if we can load more based on window position
+      // In full mode, check hasMoreData flag
+      const canLoadMore = this.windowedScrollActive 
+        ? this.virtualRowEnd < this.totalCount 
+        : this.hasMoreData;
+        
+      if (canLoadMore) {
+        const scrollPercentage = lastRenderedRow / lastRow;
+        if (scrollPercentage >= this.infiniteScrollThreshold) {
+          console.log(`📥 Triggering forward load at ${Math.round(scrollPercentage * 100)}%`);
+          this.loadNextBatch();
+        }
+      }
+    }
+    
+    // Backward scrolling - load previous batch (windowed mode only)
+    if (isScrollingUp && this.windowedScrollActive && !this.isLoadingPrevious && this.virtualRowStart > 0) {
+      const scrollPercentage = firstRenderedRow / lastRow;
+      // Load when scrolled to top 25% (inverse of threshold)
+      if (scrollPercentage <= (1 - this.infiniteScrollThreshold)) {
+        console.log(`📤 Triggering backward load at ${Math.round(scrollPercentage * 100)}%`);
+        this.loadPreviousBatch();
+      }
     }
   }
 
+
   private loadNextBatch(): void {
-    if (this.isLoadingMore || !this.hasMoreData) return;
+    // In windowed mode, check if we can load more based on window position
+    // In full mode, check hasMoreData flag
+    if (this.isLoadingMore) return;
+    if (!this.windowedScrollActive && !this.hasMoreData) return;
+    if (this.windowedScrollActive && this.virtualRowEnd >= this.totalCount) return;
 
     this.isLoadingMore = true;
-    const nextPage = Math.floor(this.lastLoadedRow / this.infiniteScrollBatchSize) + 1;
+    
+    // Calculate next page based on window position for windowed mode
+    const nextPage = this.windowedScrollActive 
+      ? Math.floor(this.virtualRowEnd / this.infiniteScrollBatchSize) + 1
+      : Math.floor(this.lastLoadedRow / this.infiniteScrollBatchSize) + 1;
 
-    console.log(`📥 Loading batch ${nextPage}...`);
+    console.log(`📥 Loading batch ${nextPage}... (windowed: ${this.windowedScrollActive})`);
 
     const request: GridDataRequest = {
       procedureName: this.procedureName,
@@ -1276,9 +1372,11 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageSize: this.infiniteScrollBatchSize,
       sortColumn: this.currentSortColumn || undefined,
       sortDirection: this.currentSortDirection,
-      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : 
+                  (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
       searchTerm: this.globalSearchTerm || undefined
     };
+
 
     this.gridService.executeGridProcedure(request)
       .pipe(takeUntil(this.destroy$))
@@ -1292,17 +1390,18 @@ export class DynamicGrid implements OnInit, OnDestroy {
           } else {
             // Full mode: append all rows
             this.rowData = [...this.rowData, ...newRows];
+            this.lastLoadedRow += newRows.length;
+            this.lastLoadedRow = Math.min(this.lastLoadedRow, this.totalCount);
+            this.hasMoreData = this.lastLoadedRow < this.totalCount;
           }
 
-          this.lastLoadedRow += newRows.length;
-          // Cap lastLoadedRow to totalCount to prevent display issues
-          this.lastLoadedRow = Math.min(this.lastLoadedRow, this.totalCount);
-          this.hasMoreData = this.lastLoadedRow < this.totalCount;
           this.isLoadingMore = false;
 
-          this.gridApi?.setGridOption('rowData', this.rowData);
+          if (!this.windowedScrollActive) {
+            this.gridApi?.setGridOption('rowData', this.rowData);
+          }
           
-          console.log(`✅ Batch loaded: ${newRows.length} rows, total loaded: ${this.lastLoadedRow}/${this.totalCount}`);
+          console.log(`✅ Batch loaded: ${newRows.length} rows, window: ${this.virtualRowStart}-${this.virtualRowEnd}`);
         },
         error: (error) => {
           console.error('❌ Error loading next batch:', error);
@@ -1310,6 +1409,52 @@ export class DynamicGrid implements OnInit, OnDestroy {
         }
       });
   }
+
+  private loadPreviousBatch(): void {
+    if (this.isLoadingPrevious || this.virtualRowStart === 0) return;
+    
+    this.isLoadingPrevious = true;
+    console.log('📤 Loading previous batch for windowed scroll...');
+    
+    // Calculate which page to load
+    const rowsToLoad = this.infiniteScrollBatchSize;
+    const startRow = Math.max(0, this.virtualRowStart - rowsToLoad);
+    const actualRowsToLoad = this.virtualRowStart - startRow;
+    const pageNumber = Math.floor(startRow / this.infiniteScrollBatchSize) + 1;
+    
+    console.log(`📤 Loading page ${pageNumber}, rows ${startRow} to ${startRow + actualRowsToLoad - 1}`);
+    
+    const request: GridDataRequest = {
+      procedureName: this.procedureName,
+      pageNumber: pageNumber,
+      pageSize: actualRowsToLoad,
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : 
+                  (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
+      searchTerm: this.globalSearchTerm || undefined
+    };
+    
+    this.gridService.executeGridProcedure(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const newRows = response.rows || [];
+          console.log(`✅ Loaded ${newRows.length} previous rows`);
+          
+          if (newRows.length > 0) {
+            this.prependRowsWithWindowManagement(newRows);
+          }
+          
+          this.isLoadingPrevious = false;
+        },
+        error: (error) => {
+          console.error('❌ Error loading previous batch:', error);
+          this.isLoadingPrevious = false;
+        }
+      });
+  }
+
 
   private appendRowsWithWindowManagement(newRows: any[]): void {
     // Add new rows
@@ -1327,6 +1472,30 @@ export class DynamicGrid implements OnInit, OnDestroy {
 
     this.rowData = this.currentWindowRows;
   }
+
+  private prependRowsWithWindowManagement(newRows: any[]): void {
+    // Prepend new rows at the beginning
+    this.currentWindowRows = [...newRows, ...this.currentWindowRows];
+    this.virtualRowStart = Math.max(0, this.virtualRowStart - newRows.length);
+    
+    // Remove rows from the end if window size exceeded
+    if (this.currentWindowRows.length > this.infiniteScrollWindowSize) {
+      const rowsToRemove = this.currentWindowRows.length - this.infiniteScrollWindowSize;
+      this.currentWindowRows = this.currentWindowRows.slice(0, -rowsToRemove);
+      this.virtualRowEnd -= rowsToRemove;
+      
+      console.log(`🪟 Window managed (backward): removed ${rowsToRemove} rows from end, showing ${this.virtualRowStart}-${this.virtualRowEnd}`);
+    } else {
+      this.virtualRowEnd = this.virtualRowStart + this.currentWindowRows.length;
+    }
+    
+    this.rowData = this.currentWindowRows;
+    
+    if (this.gridApi) {
+      this.gridApi.setGridOption('rowData', this.rowData);
+    }
+  }
+
 
   togglePaginationMode(): void {
     this.paginationMode = this.paginationMode === 'traditional' ? 'infinite' : 'traditional';
@@ -1598,11 +1767,14 @@ export class DynamicGrid implements OnInit, OnDestroy {
       let dataToExport: any[];
       
       if (this.isServerSidePagination) {
-        // For server-side pagination, fetch all data first
+        // For server-side pagination, fetch all data first with current filters
         dataToExport = await this.fetchAllDataForExport();
       } else {
-        // For client-side pagination, use current data
-        dataToExport = this.rowData;
+        // For client-side pagination, get filtered rows from AG Grid
+        dataToExport = [];
+        this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+          dataToExport.push(node.data);
+        });
       }
       
       // Use xlsx library to create Excel file
@@ -1680,12 +1852,16 @@ export class DynamicGrid implements OnInit, OnDestroy {
   }
 
   private async fetchAllDataForExport(): Promise<any[]> {
-    // Fetch all data without pagination, sorting, or filtering
-    // Use a very large page size to ensure we get ALL records
+    // Fetch all data with current filters, sorting, and search applied
+    // Use a very large page size to ensure we get ALL filtered records
     const request: GridDataRequest = {
       procedureName: this.procedureName,
       pageNumber: 1,
-      pageSize: 999999999 // Very large number to get all records from database
+      pageSize: 999999999, // Very large number to get all records from database
+      sortColumn: this.currentSortColumn || undefined,
+      sortDirection: this.currentSortDirection,
+      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
+      searchTerm: this.globalSearchTerm || undefined
     };
     
     const response = await this.gridService.executeGridProcedure(request).toPromise();
