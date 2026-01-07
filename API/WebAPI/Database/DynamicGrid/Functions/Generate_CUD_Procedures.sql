@@ -1,10 +1,10 @@
 -- =============================================
--- CRUD Procedure Generator with Full Type Casting
+-- CUD Procedure Generator with Full Type Casting
 -- =============================================
--- Generates UPDATE and DELETE procedures with proper type handling
+-- Generates INSERT, UPDATE and DELETE procedures with proper type handling
 -- =============================================
 
-CREATE OR REPLACE FUNCTION Generate_CRUD_Procedures(
+CREATE OR REPLACE FUNCTION Generate_CUD_Procedures(
     p_table_name TEXT,
     p_entity_name TEXT,
     p_primary_key_cols TEXT[],
@@ -459,9 +459,9 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION Generate_CRUD_Procedures TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Generate_CUD_Procedures TO PUBLIC;
 
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Unified CRUD Generator created! Now generates INSERT, UPDATE, and DELETE procedures.';
+    RAISE NOTICE '✅ Unified CUD Generator created! Now generates INSERT, UPDATE, and DELETE procedures.';
 END $$;

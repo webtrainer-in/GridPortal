@@ -17,11 +17,28 @@ CREATE TABLE IF NOT EXISTS "ColumnMetadata" (
     "LabelField" VARCHAR(255), -- Column name for label
     "FilterCondition" TEXT, -- WHERE clause with placeholders
     "DependsOnJson" TEXT, -- JSON array of column names this dropdown depends on
+    "LinkConfig" JSONB, -- Configuration for clickable column links
     "IsActive" BOOLEAN DEFAULT true,
     "CreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "UQ_ColumnMetadata_Proc_Column" UNIQUE ("ProcedureName", "ColumnName")
 );
+
+-- Add column comment for LinkConfig
+COMMENT ON COLUMN "ColumnMetadata"."LinkConfig" IS 
+'Configuration for clickable column links. JSON structure:
+{
+  "enabled": boolean,
+  "routePath": string,
+  "openInNewTab": boolean,
+  "params": [
+    {
+      "name": string,
+      "fields": string[],
+      "separator": string (optional)
+    }
+  ]
+}';
 
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS "IDX_ColumnMetadata_Procedure" 

@@ -1,7 +1,7 @@
 -- =============================================
 -- Grid Procedure Scaffolder (Procedures Only)
 -- =============================================
--- Generates selected CRUD procedures and returns registration SQL
+-- Generates selected CUD procedures and returns registration SQL
 -- to run in the main database separately
 --
 -- 🔍 Auto-detects primary keys, display columns, and editable columns from schema!
@@ -9,15 +9,15 @@
 -- Minimal Usage (auto-detect everything, all operations):
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
---       p_entity_name := 'Buses',
---       p_display_name := 'Buses'
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus'
 --   );
 --
 -- Generate only specific operations:
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
---       p_entity_name := 'Buses',
---       p_display_name := 'Buses',
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus',
 --       p_operations := ARRAY['fetch', 'insert']  -- Only fetch and insert
 --   );
 --
@@ -164,22 +164,22 @@ BEGIN
     
     -- ========================================
     -- 2. Generate INSERT, UPDATE & DELETE procedures (if requested)
-    -- Note: Generate_CRUD_Procedures creates all three procedures together
+    -- Note: Generate_CUD_Procedures creates all three procedures together
     -- ========================================
     IF 'insert' = ANY(p_operations) OR 'update' = ANY(p_operations) OR 'delete' = ANY(p_operations) THEN
         DECLARE
-            v_crud_result TEXT;
+            v_cud_result TEXT;
         BEGIN
-            -- Call Generate_CRUD_Procedures and capture result
-            SELECT Generate_CRUD_Procedures(
+            -- Call Generate_CUD_Procedures and capture result
+            SELECT Generate_CUD_Procedures(
                 p_table_name,
                 p_entity_name,
                 v_primary_keys,
                 v_editable_columns
-            ) INTO v_crud_result;
+            ) INTO v_cud_result;
             
-            -- Show what Generate_CRUD_Procedures returned
-            v_result := v_result || format('🔧 CRUD Generator Result: %s%s', v_crud_result, E'\n');
+            -- Show what Generate_CUD_Procedures returned
+            v_result := v_result || format('🔧 CUD Generator Result: %s%s', v_cud_result, E'\n');
             
             -- All three procedures are always created together
             v_result := v_result || format('✅ Created: %s%s', v_insert_proc_name, E'\n');
