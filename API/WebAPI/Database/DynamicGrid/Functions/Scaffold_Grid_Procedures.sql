@@ -10,7 +10,8 @@
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
 --       p_entity_name := 'Bus',
---       p_display_name := 'Bus'
+--       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem'
 --   );
 --
 -- Generate only specific operations:
@@ -18,7 +19,16 @@
 --       p_table_name := 'Bus',
 --       p_entity_name := 'Bus',
 --       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem',
 --       p_operations := ARRAY['fetch', 'insert']  -- Only fetch and insert
+--   );
+--
+-- Specify database name (REQUIRED):
+--   SELECT Scaffold_Grid_Procedures(
+--       p_table_name := 'Bus',
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem'  -- REQUIRED parameter
 --   );
 --
 -- Full Usage (explicit columns and operations):
@@ -29,7 +39,8 @@
 --       p_display_columns := ARRAY['acctap', 'casenumber', 'adjthr', 'mxswim'],
 --       p_editable_columns := ARRAY['adjthr', 'mxswim'],
 --       p_allowed_roles := ARRAY['Admin', 'Manager', 'User'],
---       p_operations := ARRAY['fetch', 'insert']  -- Skip update and delete
+--       p_operations := ARRAY['fetch', 'insert'],  -- Skip update and delete
+--       p_database_name := 'PowerSystem'
 --   );
 --
 -- Available operations: 'fetch', 'insert', 'update', 'delete'
@@ -45,6 +56,7 @@ CREATE OR REPLACE FUNCTION Scaffold_Grid_Procedures(
     p_table_name TEXT,              -- Database table name
     p_entity_name TEXT,             -- Entity name for procedures (e.g., 'Bus_Adjusts')
     p_display_name TEXT,            -- Display name for UI (e.g., 'Bus Adjustments')
+    p_database_name TEXT,           -- REQUIRED: Database name for StoredProcedureRegistry
     p_display_columns TEXT[] DEFAULT NULL,   -- Optional: All columns to display (NULL = all columns)
     p_editable_columns TEXT[] DEFAULT NULL,  -- Optional: Columns that can be edited (NULL = all non-system columns)
     p_allowed_roles TEXT[] DEFAULT ARRAY['Admin', 'Manager', 'User'],  -- Roles with access
@@ -239,7 +251,8 @@ BEGIN
             v_update_proc_name,
             v_delete_proc_name,
             p_display_name,
-            p_allowed_roles
+            p_allowed_roles,
+            p_database_name
         )
     );
     
@@ -266,7 +279,8 @@ CREATE OR REPLACE FUNCTION Generate_Registration_SQL(
     p_update_proc_name TEXT,
     p_delete_proc_name TEXT,
     p_display_name TEXT,
-    p_allowed_roles TEXT[]
+    p_allowed_roles TEXT[],
+    p_database_name TEXT
 )
 RETURNS TEXT AS $$
 DECLARE
@@ -290,19 +304,19 @@ INSERT INTO "StoredProcedureRegistry" (
 )
 VALUES
     -- Fetch procedure
-    ('%s', '%s', 'Displays %s data', 'Grid', 'PowerSystem', 
+    ('%s', '%s', 'Displays %s data', 'Grid', '%s', 
      true, true, '%s', 15, 100, 0, NOW()),
     
     -- Insert procedure (Admin/Manager only)
-    ('%s', 'Insert %s', 'Inserts a new %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Insert %s', 'Inserts a new %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW()),
     
     -- Update procedure (Admin/Manager only)
-    ('%s', 'Update %s', 'Updates a single %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Update %s', 'Updates a single %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW()),
     
     -- Delete procedure (Admin/Manager only)
-    ('%s', 'Delete %s', 'Deletes a single %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Delete %s', 'Deletes a single %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW())
 ON CONFLICT ("ProcedureName")
 DO UPDATE SET
@@ -318,10 +332,10 @@ FROM "StoredProcedureRegistry"
 WHERE "ProcedureName" IN ('%s', '%s', '%s', '%s');
 $SQL$,
         p_fetch_proc_name, p_insert_proc_name, p_update_proc_name, p_delete_proc_name,  -- DELETE
-        p_fetch_proc_name, p_display_name, p_display_name, v_roles_json,  -- Fetch (now JSON)
-        p_insert_proc_name, p_display_name, p_display_name,  -- Insert
-        p_update_proc_name, p_display_name, p_display_name,  -- Update
-        p_delete_proc_name, p_display_name, p_display_name,  -- Delete
+        p_fetch_proc_name, p_display_name, p_display_name, p_database_name, v_roles_json,  -- Fetch
+        p_insert_proc_name, p_display_name, p_display_name, p_database_name,  -- Insert
+        p_update_proc_name, p_display_name, p_display_name, p_database_name,  -- Update
+        p_delete_proc_name, p_display_name, p_display_name, p_database_name,  -- Delete
         p_fetch_proc_name, p_insert_proc_name, p_update_proc_name, p_delete_proc_name  -- Verify
     );
 END;
