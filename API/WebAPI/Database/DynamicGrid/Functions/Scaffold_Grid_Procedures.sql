@@ -1,7 +1,7 @@
 -- =============================================
 -- Grid Procedure Scaffolder (Procedures Only)
 -- =============================================
--- Generates selected CRUD procedures and returns registration SQL
+-- Generates selected CUD procedures and returns registration SQL
 -- to run in the main database separately
 --
 -- 🔍 Auto-detects primary keys, display columns, and editable columns from schema!
@@ -9,16 +9,26 @@
 -- Minimal Usage (auto-detect everything, all operations):
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
---       p_entity_name := 'Buses',
---       p_display_name := 'Buses'
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem'
 --   );
 --
 -- Generate only specific operations:
 --   SELECT Scaffold_Grid_Procedures(
 --       p_table_name := 'Bus',
---       p_entity_name := 'Buses',
---       p_display_name := 'Buses',
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem',
 --       p_operations := ARRAY['fetch', 'insert']  -- Only fetch and insert
+--   );
+--
+-- Specify database name (REQUIRED):
+--   SELECT Scaffold_Grid_Procedures(
+--       p_table_name := 'Bus',
+--       p_entity_name := 'Bus',
+--       p_display_name := 'Bus',
+--       p_database_name := 'PowerSystem'  -- REQUIRED parameter
 --   );
 --
 -- Full Usage (explicit columns and operations):
@@ -29,7 +39,8 @@
 --       p_display_columns := ARRAY['acctap', 'casenumber', 'adjthr', 'mxswim'],
 --       p_editable_columns := ARRAY['adjthr', 'mxswim'],
 --       p_allowed_roles := ARRAY['Admin', 'Manager', 'User'],
---       p_operations := ARRAY['fetch', 'insert']  -- Skip update and delete
+--       p_operations := ARRAY['fetch', 'insert'],  -- Skip update and delete
+--       p_database_name := 'PowerSystem'
 --   );
 --
 -- Available operations: 'fetch', 'insert', 'update', 'delete'
@@ -45,6 +56,7 @@ CREATE OR REPLACE FUNCTION Scaffold_Grid_Procedures(
     p_table_name TEXT,              -- Database table name
     p_entity_name TEXT,             -- Entity name for procedures (e.g., 'Bus_Adjusts')
     p_display_name TEXT,            -- Display name for UI (e.g., 'Bus Adjustments')
+    p_database_name TEXT,           -- REQUIRED: Database name for StoredProcedureRegistry
     p_display_columns TEXT[] DEFAULT NULL,   -- Optional: All columns to display (NULL = all columns)
     p_editable_columns TEXT[] DEFAULT NULL,  -- Optional: Columns that can be edited (NULL = all non-system columns)
     p_allowed_roles TEXT[] DEFAULT ARRAY['Admin', 'Manager', 'User'],  -- Roles with access
@@ -164,22 +176,22 @@ BEGIN
     
     -- ========================================
     -- 2. Generate INSERT, UPDATE & DELETE procedures (if requested)
-    -- Note: Generate_CRUD_Procedures creates all three procedures together
+    -- Note: Generate_CUD_Procedures creates all three procedures together
     -- ========================================
     IF 'insert' = ANY(p_operations) OR 'update' = ANY(p_operations) OR 'delete' = ANY(p_operations) THEN
         DECLARE
-            v_crud_result TEXT;
+            v_cud_result TEXT;
         BEGIN
-            -- Call Generate_CRUD_Procedures and capture result
-            SELECT Generate_CRUD_Procedures(
+            -- Call Generate_CUD_Procedures and capture result
+            SELECT Generate_CUD_Procedures(
                 p_table_name,
                 p_entity_name,
                 v_primary_keys,
                 v_editable_columns
-            ) INTO v_crud_result;
+            ) INTO v_cud_result;
             
-            -- Show what Generate_CRUD_Procedures returned
-            v_result := v_result || format('🔧 CRUD Generator Result: %s%s', v_crud_result, E'\n');
+            -- Show what Generate_CUD_Procedures returned
+            v_result := v_result || format('🔧 CUD Generator Result: %s%s', v_cud_result, E'\n');
             
             -- All three procedures are always created together
             v_result := v_result || format('✅ Created: %s%s', v_insert_proc_name, E'\n');
@@ -239,7 +251,8 @@ BEGIN
             v_update_proc_name,
             v_delete_proc_name,
             p_display_name,
-            p_allowed_roles
+            p_allowed_roles,
+            p_database_name
         )
     );
     
@@ -266,7 +279,8 @@ CREATE OR REPLACE FUNCTION Generate_Registration_SQL(
     p_update_proc_name TEXT,
     p_delete_proc_name TEXT,
     p_display_name TEXT,
-    p_allowed_roles TEXT[]
+    p_allowed_roles TEXT[],
+    p_database_name TEXT
 )
 RETURNS TEXT AS $$
 DECLARE
@@ -290,19 +304,19 @@ INSERT INTO "StoredProcedureRegistry" (
 )
 VALUES
     -- Fetch procedure
-    ('%s', '%s', 'Displays %s data', 'Grid', 'PowerSystem', 
+    ('%s', '%s', 'Displays %s data', 'Grid', '%s', 
      true, true, '%s', 15, 100, 0, NOW()),
     
     -- Insert procedure (Admin/Manager only)
-    ('%s', 'Insert %s', 'Inserts a new %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Insert %s', 'Inserts a new %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW()),
     
     -- Update procedure (Admin/Manager only)
-    ('%s', 'Update %s', 'Updates a single %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Update %s', 'Updates a single %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW()),
     
     -- Delete procedure (Admin/Manager only)
-    ('%s', 'Delete %s', 'Deletes a single %s record', 'Grid', 'PowerSystem',
+    ('%s', 'Delete %s', 'Deletes a single %s record', 'Grid', '%s',
      true, true, '["Admin","Manager"]', 15, 100, 0, NOW())
 ON CONFLICT ("ProcedureName")
 DO UPDATE SET
@@ -318,10 +332,10 @@ FROM "StoredProcedureRegistry"
 WHERE "ProcedureName" IN ('%s', '%s', '%s', '%s');
 $SQL$,
         p_fetch_proc_name, p_insert_proc_name, p_update_proc_name, p_delete_proc_name,  -- DELETE
-        p_fetch_proc_name, p_display_name, p_display_name, v_roles_json,  -- Fetch (now JSON)
-        p_insert_proc_name, p_display_name, p_display_name,  -- Insert
-        p_update_proc_name, p_display_name, p_display_name,  -- Update
-        p_delete_proc_name, p_display_name, p_display_name,  -- Delete
+        p_fetch_proc_name, p_display_name, p_display_name, p_database_name, v_roles_json,  -- Fetch
+        p_insert_proc_name, p_display_name, p_display_name, p_database_name,  -- Insert
+        p_update_proc_name, p_display_name, p_display_name, p_database_name,  -- Update
+        p_delete_proc_name, p_display_name, p_display_name, p_database_name,  -- Delete
         p_fetch_proc_name, p_insert_proc_name, p_update_proc_name, p_delete_proc_name  -- Verify
     );
 END;
