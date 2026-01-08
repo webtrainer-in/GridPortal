@@ -16,5 +16,6 @@ public class GridDataRequest
     public string? SortColumn { get; set; }
     public string? SortDirection { get; set; } = "ASC";
     public string? FilterJson { get; set; }
+    public string? DrillDownJson { get; set; }
     public string? SearchTerm { get; set; }
 }

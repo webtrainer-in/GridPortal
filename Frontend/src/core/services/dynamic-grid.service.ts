@@ -13,6 +13,7 @@ export interface GridDataRequest {
   sortColumn?: string;
   sortDirection?: 'ASC' | 'DESC';
   filterJson?: string;
+  drillDownJson?: string;
   searchTerm?: string;
 }
 

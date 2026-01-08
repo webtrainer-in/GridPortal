@@ -45,6 +45,16 @@ DECLARE
     v_filter_number NUMERIC;
     v_col_type TEXT;
     v_ag_grid_type TEXT;
+    -- Drill-down filter variables
+    v_drilldown_configs JSONB;
+    v_drilldown_count INT := 0;
+    v_target_column TEXT;
+    v_filter_var_declarations TEXT := '';
+    v_filter_extractions TEXT := '';
+    v_filter_where_conditions TEXT := '';
+    v_filter_using_params TEXT := '';
+    v_param_position INT := 2;
+    v_sanitized_col_name TEXT;
     -- Template-related variables
     v_filter_parser_template TEXT;
     v_column_type_map TEXT := '';
@@ -191,6 +201,129 @@ BEGIN
         v_search_conditions := '1=1';
     END IF;
     
+    -- =============================================
+    -- DRILL-DOWN FILTER GENERATION
+    -- =============================================
+    -- Query ColumnMetadata for drill-down configurations (LinkConfig with drillDown enabled)
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'targetColumn', (config->'drillDown'->'filterParams'->0->>'targetColumn'),
+            'columnName', cm."ColumnName"
+        )
+    )
+    INTO v_drilldown_configs
+    FROM "ColumnMetadata" cm,
+         LATERAL jsonb_array_elements(
+             CASE 
+                 WHEN cm."LinkConfig" IS NOT NULL 
+                 THEN jsonb_build_array(cm."LinkConfig")
+                 ELSE '[]'::jsonb
+             END
+         ) AS config
+    WHERE cm."ProcedureName" = v_proc_name
+      AND cm."IsActive" = true
+      AND (config->'drillDown'->>'enabled')::boolean = true
+      AND config->'drillDown'->'filterParams' IS NOT NULL
+      AND jsonb_array_length(config->'drillDown'->'filterParams') > 0;
+    
+    -- Generate drill-down filter variable declarations, extractions, and WHERE conditions
+    IF v_drilldown_configs IS NOT NULL THEN
+        FOR v_target_column IN 
+            SELECT DISTINCT elem->>'targetColumn'
+            FROM jsonb_array_elements(v_drilldown_configs) elem
+            WHERE elem->>'targetColumn' IS NOT NULL
+        LOOP
+            -- Sanitize column name for variable naming (remove special characters)
+            v_sanitized_col_name := regexp_replace(v_target_column, '[^a-zA-Z0-9_]', '', 'g');
+            
+            -- Get column data type from schema
+            SELECT data_type INTO v_col_type
+            FROM information_schema.columns
+            WHERE table_name = p_table_name
+              AND table_schema = 'public'
+              AND lower(column_name) = lower(v_target_column)
+            LIMIT 1;
+            
+            IF v_col_type IS NULL THEN
+                RAISE WARNING 'Drill-down target column % not found in table %, skipping', v_target_column, p_table_name;
+                CONTINUE;
+            END IF;
+            
+            -- Map PostgreSQL data type to PL/pgSQL type
+            IF v_col_type IN ('integer', 'bigint', 'smallint') THEN
+                v_col_type := 'INT';
+            ELSIF v_col_type IN ('numeric', 'decimal', 'real', 'double precision') THEN
+                v_col_type := 'NUMERIC';
+            ELSIF v_col_type IN ('character varying', 'varchar', 'text', 'char', 'character') THEN
+                v_col_type := 'TEXT';
+            ELSIF v_col_type IN ('boolean') THEN
+                v_col_type := 'BOOLEAN';
+            ELSIF v_col_type IN ('date') THEN
+                v_col_type := 'DATE';
+            ELSIF v_col_type IN ('timestamp without time zone', 'timestamp with time zone', 'timestamp') THEN
+                v_col_type := 'TIMESTAMP';
+            ELSE
+                v_col_type := 'TEXT';  -- Default to TEXT for unknown types
+            END IF;
+            
+            -- Generate variable declaration
+            v_filter_var_declarations := v_filter_var_declarations || format('    v_%s %s;%s', 
+                v_sanitized_col_name, 
+                v_col_type, 
+                E'\n'
+            );
+            
+            -- Generate extraction from p_DrillDownJson
+            v_filter_extractions := v_filter_extractions || format('        IF p_DrillDownJson IS NOT NULL AND p_DrillDownJson != '''' THEN%s', E'\n');
+            v_filter_extractions := v_filter_extractions || format('            v_%s := (p_DrillDownJson::jsonb->>%L)::%s;%s', 
+                v_sanitized_col_name,
+                v_target_column,
+                v_col_type,
+                E'\n'
+            );
+            v_filter_extractions := v_filter_extractions || format('        END IF;%s', E'\n');
+            
+            -- Get actual column name with correct casing
+            SELECT column_name, column_name != lower(column_name)
+            INTO v_actual_col_name, v_needs_quotes
+            FROM information_schema.columns
+            WHERE table_name = p_table_name
+              AND table_schema = 'public'
+              AND lower(column_name) = lower(v_target_column)
+            LIMIT 1;
+            
+            -- Generate WHERE condition using positional parameters
+            IF v_drilldown_count > 0 THEN
+                v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
+            ELSE
+                v_filter_where_conditions := v_filter_where_conditions || E'\n            ';
+            END IF;
+            
+            IF v_needs_quotes THEN
+                v_filter_where_conditions := v_filter_where_conditions || format('(v_%s IS NULL OR a."%s" = $%s)', 
+                    v_sanitized_col_name,
+                    v_actual_col_name,
+                    v_param_position
+                );
+            ELSE
+                v_filter_where_conditions := v_filter_where_conditions || format('(v_%s IS NULL OR a.%s = $%s)', 
+                    v_sanitized_col_name,
+                    v_actual_col_name,
+                    v_param_position
+                );
+            END IF;
+            
+            -- Add to USING clause parameters
+            IF v_drilldown_count > 0 THEN
+                v_filter_using_params := v_filter_using_params || ', ';
+            END IF;
+            v_filter_using_params := v_filter_using_params || 'v_' || v_sanitized_col_name;
+            
+            v_param_position := v_param_position + 1;
+            v_drilldown_count := v_drilldown_count + 1;
+        END LOOP;
+    END IF;
+    
     -- Load AG Grid filter parser template (embedded)
     v_filter_parser_template := $TEMPLATE$
     -- Parse filter JSON if provided
@@ -304,6 +437,9 @@ $TEMPLATE$;
 -- CUSTOMIZE: Add JOINs, filters, and adjust column definitions as needed
 -- NOTE: Column names have been auto-detected with correct casing from database schema
 -- ✨ INCLUDES: Generic global search across all text and number columns
+-- ✨ INCLUDES: Auto-generated drill-down filter support via p_DrillDownJson
+-- 📝 p_FilterJson: Reserved for column-level filters (AG Grid filters)
+-- 📝 p_DrillDownJson: For drill-down filters from URL parameters
 CREATE OR REPLACE FUNCTION public.%s(
     p_PageNumber INTEGER DEFAULT 1,
     p_PageSize INTEGER DEFAULT 15,
@@ -312,7 +448,8 @@ CREATE OR REPLACE FUNCTION public.%s(
     p_SortColumn VARCHAR DEFAULT NULL,
     p_SortDirection VARCHAR DEFAULT 'ASC',
     p_FilterJson TEXT DEFAULT NULL,
-    p_SearchTerm VARCHAR DEFAULT NULL
+    p_SearchTerm VARCHAR DEFAULT NULL,
+    p_DrillDownJson TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE 'plpgsql'
@@ -336,6 +473,8 @@ DECLARE
     v_Condition TEXT;
     v_FilterText TEXT;
     v_FilterNumber NUMERIC;
+    -- Drill-down filter variables (auto-generated)
+%s
 BEGIN
     -- Determine offset and fetch size
     IF p_StartRow IS NOT NULL AND p_EndRow IS NOT NULL THEN
@@ -345,6 +484,9 @@ BEGIN
         v_Offset := (p_PageNumber - 1) * p_PageSize;
         v_FetchSize := p_PageSize;
     END IF;
+    
+    -- Extract drill-down filter values from p_DrillDownJson (auto-generated)
+%s
     
 %s
     

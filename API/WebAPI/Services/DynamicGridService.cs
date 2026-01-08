@@ -80,8 +80,38 @@ public class DynamicGridService : IDynamicGridService
                 new NpgsqlParameter("p_SortColumn", (object?)request.SortColumn ?? DBNull.Value),
                 new NpgsqlParameter("p_SortDirection", request.SortDirection ?? "ASC"),
                 new NpgsqlParameter("p_FilterJson", (object?)request.FilterJson ?? DBNull.Value),
+                new NpgsqlParameter("p_DrillDownJson", (object?)request.DrillDownJson ?? DBNull.Value),
                 new NpgsqlParameter("p_SearchTerm", (object?)request.SearchTerm ?? DBNull.Value)
             };
+
+            // TEMPORARY: Merge DrillDownJson into FilterJson for backward compatibility
+            // Once all procedures are regenerated with p_DrillDownJson parameter, remove this
+            string? mergedFilterJson = request.FilterJson;
+            if (!string.IsNullOrEmpty(request.DrillDownJson))
+            {
+                if (string.IsNullOrEmpty(mergedFilterJson))
+                {
+                    mergedFilterJson = request.DrillDownJson;
+                }
+                else
+                {
+                    // Merge both JSON objects
+                    var filterObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(mergedFilterJson);
+                    var drillDownObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(request.DrillDownJson);
+                    
+                    if (filterObj != null && drillDownObj != null)
+                    {
+                        foreach (var kvp in drillDownObj)
+                        {
+                            filterObj[kvp.Key] = kvp.Value;
+                        }
+                        mergedFilterJson = System.Text.Json.JsonSerializer.Serialize(filterObj);
+                    }
+                }
+            }
+            
+            // Update the FilterJson parameter with merged value
+            parameters[6] = new NpgsqlParameter("p_FilterJson", (object?)mergedFilterJson ?? DBNull.Value);
 
             // Execute PostgreSQL function and get JSON result
             var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
@@ -508,9 +538,13 @@ public class DynamicGridService : IDynamicGridService
         foreach (var proc in procedures)
         {
             // Skip CRUD helper procedures (Insert, Update, Delete) - only show grid data procedures
-            if (proc.ProcedureName.Contains("_Insert_", StringComparison.OrdinalIgnoreCase) || 
-                proc.ProcedureName.Contains("_Update_", StringComparison.OrdinalIgnoreCase) || 
-                proc.ProcedureName.Contains("_Delete_", StringComparison.OrdinalIgnoreCase))
+            var procName = proc.ProcedureName.ToLower();
+            if (procName.StartsWith("insert ") || 
+                procName.Contains("_insert_") ||
+                procName.StartsWith("update ") ||
+                procName.Contains("_update_") || 
+                procName.StartsWith("delete ") ||
+                procName.Contains("_delete_"))
             {
                 continue;
             }
