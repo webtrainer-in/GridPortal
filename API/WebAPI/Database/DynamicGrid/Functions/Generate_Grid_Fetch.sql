@@ -205,9 +205,11 @@ BEGIN
     -- DRILL-DOWN FILTER GENERATION
     -- =============================================
     -- Query ColumnMetadata for drill-down configurations (LinkConfig with drillDown enabled)
+    -- NOTE: Filters by targetProcedure (where this procedure is the drill-down target)
+    -- This allows multiple source procedures to drill down into the same target
     SELECT jsonb_agg(
         jsonb_build_object(
-            'targetColumn', (config->'drillDown'->'filterParams'->0->>'targetColumn'),
+            'targetColumn', (filter_param->>'targetColumn'),
             'columnName', cm."ColumnName"
         )
     )
@@ -219,15 +221,21 @@ BEGIN
                  THEN jsonb_build_array(cm."LinkConfig")
                  ELSE '[]'::jsonb
              END
-         ) AS config
-    WHERE cm."ProcedureName" = v_proc_name
-      AND cm."IsActive" = true
+         ) AS config,
+         LATERAL jsonb_array_elements(config->'drillDown'->'filterParams') AS filter_param
+    WHERE cm."IsActive" = true
       AND (config->'drillDown'->>'enabled')::boolean = true
+      AND (config->'drillDown'->>'targetProcedure') = v_proc_name
       AND config->'drillDown'->'filterParams' IS NOT NULL
       AND jsonb_array_length(config->'drillDown'->'filterParams') > 0;
     
+    -- DEBUG: Show what was found
+    RAISE NOTICE '🔍 DEBUG: v_proc_name = %, v_drilldown_configs = %', v_proc_name, v_drilldown_configs;
+    
     -- Generate drill-down filter variable declarations, extractions, and WHERE conditions
     IF v_drilldown_configs IS NOT NULL THEN
+        RAISE NOTICE '✅ DEBUG: Found drill-down configs, generating filters...';
+
         FOR v_target_column IN 
             SELECT DISTINCT elem->>'targetColumn'
             FROM jsonb_array_elements(v_drilldown_configs) elem
@@ -293,21 +301,22 @@ BEGIN
             LIMIT 1;
             
             -- Generate WHERE condition using positional parameters
+            -- Always add AND because drill-down filters come after search condition
             IF v_drilldown_count > 0 THEN
                 v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
             ELSE
-                v_filter_where_conditions := v_filter_where_conditions || E'\n            ';
+                v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
             END IF;
             
             IF v_needs_quotes THEN
-                v_filter_where_conditions := v_filter_where_conditions || format('(v_%s IS NULL OR a."%s" = $%s)', 
-                    v_sanitized_col_name,
+                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR a."%s" = $%s)', 
+                    v_param_position,
                     v_actual_col_name,
                     v_param_position
                 );
             ELSE
-                v_filter_where_conditions := v_filter_where_conditions || format('(v_%s IS NULL OR a.%s = $%s)', 
-                    v_sanitized_col_name,
+                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR a.%s = $%s)', 
+                    v_param_position,
                     v_actual_col_name,
                     v_param_position
                 );
@@ -496,10 +505,10 @@ BEGIN
         FROM "%s" a
         WHERE ($1 IS NULL OR (
             %s
-        ))
+        ))%s
         %%s',
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
-    ) INTO v_TotalCount USING p_SearchTerm;
+    ) INTO v_TotalCount USING p_SearchTerm%s;
     
     -- Get data rows with search
     EXECUTE format('
@@ -513,14 +522,14 @@ BEGIN
             -- LEFT JOIN "OtherTable" ot ON ot.id = a.other_id
             WHERE ($1 IS NULL OR (
                 %s
-            ))
+            ))%s
             %%s
             -- TODO: Add JOIN clauses here
             ORDER BY a.%s
-            LIMIT $2 OFFSET $3
+            LIMIT $%s OFFSET $%s
         ) t',
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
-    ) INTO v_Data USING p_SearchTerm, v_FetchSize, v_Offset;
+    ) INTO v_Data USING p_SearchTerm%s, v_FetchSize, v_Offset;
     
     -- Define base columns
     -- TODO: Customize column types, widths, and editability
@@ -607,18 +616,26 @@ GRANT EXECUTE ON FUNCTION %s TO PUBLIC;
 $PROC$,
         p_table_name,                    -- 1. Entity name (comment)
         v_proc_name,                     -- 2. Function name
-        v_filter_parser_template,        -- 3. AG Grid filter parser logic
-        p_table_name,                    -- 4. Table name for COUNT
-        v_search_conditions,             -- 5. Search conditions for COUNT
-        v_id_construction,               -- 6. ID construction
-        v_select_fields,                 -- 7. SELECT fields
-        p_table_name,                    -- 8. Table name for SELECT
-        v_search_conditions,             -- 9. Search conditions for SELECT
-        CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- 10. ORDER BY
-        v_column_defs,                   -- 11. Column definitions
-        v_proc_name,                     -- 12. Dropdown config ProcedureName
-        v_proc_name,                     -- 13. Link config ProcedureName
-        v_proc_name                      -- 14. GRANT statement
+        v_filter_var_declarations,       -- 3. Drill-down filter variable declarations
+        v_filter_extractions,            -- 4. Drill-down filter extractions
+        v_filter_parser_template,        -- 5. AG Grid filter parser logic
+        p_table_name,                    -- 6. Table name for COUNT
+        v_search_conditions,             -- 7. Search conditions for COUNT
+        v_filter_where_conditions,       -- 8. Drill-down WHERE conditions for COUNT
+        CASE WHEN v_filter_using_params != '' THEN ', ' || v_filter_using_params ELSE '' END,  -- 9. USING params for COUNT
+        v_id_construction,               -- 10. ID construction
+        v_select_fields,                 -- 11. SELECT fields
+        p_table_name,                    -- 12. Table name for SELECT
+        v_search_conditions,             -- 13. Search conditions for SELECT
+        v_filter_where_conditions,       -- 14. Drill-down WHERE conditions for SELECT
+        CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- 15. ORDER BY
+        v_param_position::TEXT,          -- 16. LIMIT positional parameter number
+        (v_param_position + 1)::TEXT,    -- 17. OFFSET positional parameter number
+        CASE WHEN v_filter_using_params != '' THEN ', ' || v_filter_using_params ELSE '' END,  -- 18. USING params for SELECT
+        v_column_defs,                   -- 19. Column definitions
+        v_proc_name,                     -- 20. Dropdown config ProcedureName
+        v_proc_name,                     -- 21. Link config ProcedureName
+        v_proc_name                      -- 22. GRANT statement
     );
 END;
 $$ LANGUAGE plpgsql;
@@ -633,6 +650,7 @@ BEGIN
     RAISE NOTICE '╔══════════════════════════════════════════════════════════════╗';
     RAISE NOTICE '║     Enhanced Grid Fetch Procedure Generator Ready!          ║';
     RAISE NOTICE '╠══════════════════════════════════════════════════════════════╣';
+    RAISE NOTICE '║  ✨ NEW: Auto-generates drill-down filters from LinkConfig   ║';
     RAISE NOTICE '║  ✨ NEW: Generic global search (p_SearchTerm)                ║';
     RAISE NOTICE '║  ✨ NEW: Dynamic column filters (p_FilterJson)               ║';
     RAISE NOTICE '║  ✨ Auto-detects searchable columns (text + numbers)         ║';
@@ -648,6 +666,7 @@ BEGIN
     RAISE NOTICE '  );';
     RAISE NOTICE '';
     RAISE NOTICE '🔍 Generated procedure includes:';
+    RAISE NOTICE '   - Auto-generated drill-down filters from ColumnMetadata';
     RAISE NOTICE '   - Global search across all text and number columns';
     RAISE NOTICE '   - Correct column name casing from database schema';
     RAISE NOTICE '   - Ready-to-customize template with TODO markers';

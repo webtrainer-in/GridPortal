@@ -84,46 +84,72 @@ public class DynamicGridService : IDynamicGridService
                 new NpgsqlParameter("p_SearchTerm", (object?)request.SearchTerm ?? DBNull.Value)
             };
 
-            // TEMPORARY: Merge DrillDownJson into FilterJson for backward compatibility
-            // Once all procedures are regenerated with p_DrillDownJson parameter, remove this
-            string? mergedFilterJson = request.FilterJson;
-            if (!string.IsNullOrEmpty(request.DrillDownJson))
-            {
-                if (string.IsNullOrEmpty(mergedFilterJson))
-                {
-                    mergedFilterJson = request.DrillDownJson;
-                }
-                else
-                {
-                    // Merge both JSON objects
-                    var filterObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(mergedFilterJson);
-                    var drillDownObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(request.DrillDownJson);
-                    
-                    if (filterObj != null && drillDownObj != null)
-                    {
-                        foreach (var kvp in drillDownObj)
-                        {
-                            filterObj[kvp.Key] = kvp.Value;
-                        }
-                        mergedFilterJson = System.Text.Json.JsonSerializer.Serialize(filterObj);
-                    }
-                }
-            }
-            
-            // Update the FilterJson parameter with merged value
-            parameters[6] = new NpgsqlParameter("p_FilterJson", (object?)mergedFilterJson ?? DBNull.Value);
-
-            // Execute PostgreSQL function and get JSON result
-            var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
-            
             // Create connection to target database using factory
             var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
+            object? jsonResult = null;
 
-            using var command = connection.CreateCommand();
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            try
+            {
+                // Try NEW signature with p_DrillDownJson parameter (9 params)
+                var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm, @p_DrillDownJson)";
+                
+                // DEBUG: Log the SQL and DrillDownJson value
+                _logger.LogInformation("🔍 Executing SQL: {Sql}", sql);
+                _logger.LogInformation("🔍 DrillDownJson: {DrillDownJson}", request.DrillDownJson ?? "NULL");
+                
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
-            var jsonResult = await command.ExecuteScalarAsync();
+                jsonResult = await command.ExecuteScalarAsync();
+            }
+            catch (Npgsql.PostgresException ex) when (ex.Message.Contains("function") && ex.Message.Contains("does not exist"))
+            {
+                // Fallback to OLD signature without p_DrillDownJson (8 params)
+                // Merge DrillDownJson into FilterJson for backward compatibility
+                string? mergedFilterJson = request.FilterJson;
+                if (!string.IsNullOrEmpty(request.DrillDownJson))
+                {
+                    if (string.IsNullOrEmpty(mergedFilterJson))
+                    {
+                        mergedFilterJson = request.DrillDownJson;
+                    }
+                    else
+                    {
+                        var filterObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(mergedFilterJson);
+                        var drillDownObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(request.DrillDownJson);
+                        
+                        if (filterObj != null && drillDownObj != null)
+                        {
+                            foreach (var kvp in drillDownObj)
+                            {
+                                filterObj[kvp.Key] = kvp.Value;
+                            }
+                            mergedFilterJson = System.Text.Json.JsonSerializer.Serialize(filterObj);
+                        }
+                    }
+                }
+
+                var oldParams = new NpgsqlParameter[]
+                {
+                    new NpgsqlParameter("p_PageNumber", request.PageNumber),
+                    new NpgsqlParameter("p_PageSize", request.PageSize),
+                    new NpgsqlParameter("p_StartRow", (object?)request.StartRow ?? DBNull.Value),
+                    new NpgsqlParameter("p_EndRow", (object?)request.EndRow ?? DBNull.Value),
+                    new NpgsqlParameter("p_SortColumn", (object?)request.SortColumn ?? DBNull.Value),
+                    new NpgsqlParameter("p_SortDirection", request.SortDirection ?? "ASC"),
+                    new NpgsqlParameter("p_FilterJson", (object?)mergedFilterJson ?? DBNull.Value),
+                    new NpgsqlParameter("p_SearchTerm", (object?)request.SearchTerm ?? DBNull.Value)
+                };
+
+                var oldSql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
+                
+                using var oldCommand = connection.CreateCommand();
+                oldCommand.CommandText = oldSql;
+                oldCommand.Parameters.AddRange(oldParams);
+
+                jsonResult = await oldCommand.ExecuteScalarAsync();
+            }
             
             // Close connection
             await connection.DisposeAsync();
