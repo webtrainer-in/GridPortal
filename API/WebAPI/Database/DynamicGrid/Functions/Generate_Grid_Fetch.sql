@@ -210,6 +210,7 @@ BEGIN
     SELECT jsonb_agg(
         jsonb_build_object(
             'targetColumn', (filter_param->>'targetColumn'),
+            'alternateColumns', (filter_param->>'alternateColumns'),
             'columnName', cm."ColumnName"
         )
     )
@@ -308,19 +309,81 @@ BEGIN
                 v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
             END IF;
             
-            IF v_needs_quotes THEN
-                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR a."%s" = $%s)', 
+            -- Check if there are alternate columns for OR condition
+            DECLARE
+                v_alternate_columns TEXT;
+                v_alternate_cols TEXT[];
+                v_alt_col TEXT;
+                v_alt_col_name TEXT;
+                v_alt_needs_quotes BOOLEAN;
+                v_or_conditions TEXT := '';
+            BEGIN
+                -- Get alternateColumns from config (comma-separated string)
+                SELECT elem->>'alternateColumns'
+                INTO v_alternate_columns
+                FROM jsonb_array_elements(v_drilldown_configs) elem
+                WHERE elem->>'targetColumn' = v_target_column
+                LIMIT 1;
+                
+                -- Build primary column condition
+                IF v_needs_quotes THEN
+                    v_or_conditions := format('a."%s" = $%s', v_actual_col_name, v_param_position);
+                ELSE
+                    v_or_conditions := format('a.%s = $%s', v_actual_col_name, v_param_position);
+                END IF;
+                
+                -- Add alternate columns if provided
+                IF v_alternate_columns IS NOT NULL AND v_alternate_columns != '' THEN
+                    -- Split comma-separated alternate columns
+                    v_alternate_cols := string_to_array(v_alternate_columns, ',');
+                    
+                    FOREACH v_alt_col IN ARRAY v_alternate_cols
+                    LOOP
+                        -- Trim whitespace
+                        v_alt_col := trim(v_alt_col);
+                        
+                        -- Get actual column name, casing, and data type
+                        DECLARE
+                            v_alt_col_type TEXT;
+                        BEGIN
+                            SELECT column_name, 
+                                   column_name != lower(column_name),
+                                   data_type
+                            INTO v_alt_col_name, v_alt_needs_quotes, v_alt_col_type
+                            FROM information_schema.columns
+                            WHERE table_name = p_table_name
+                              AND table_schema = 'public'
+                              AND lower(column_name) = lower(v_alt_col)
+                            LIMIT 1;
+                            
+                            -- Add OR condition with type casting if needed
+                            IF v_alt_col_name IS NOT NULL THEN
+                                -- If column is TEXT but parameter is numeric, cast parameter to TEXT
+                                IF v_alt_col_type IN ('character varying', 'text', 'character') THEN
+                                    IF v_alt_needs_quotes THEN
+                                        v_or_conditions := v_or_conditions || format(' OR a."%s" = $%s::TEXT', v_alt_col_name, v_param_position);
+                                    ELSE
+                                        v_or_conditions := v_or_conditions || format(' OR a.%s = $%s::TEXT', v_alt_col_name, v_param_position);
+                                    END IF;
+                                ELSE
+                                    -- Numeric column, no casting needed
+                                    IF v_alt_needs_quotes THEN
+                                        v_or_conditions := v_or_conditions || format(' OR a."%s" = $%s', v_alt_col_name, v_param_position);
+                                    ELSE
+                                        v_or_conditions := v_or_conditions || format(' OR a.%s = $%s', v_alt_col_name, v_param_position);
+                                    END IF;
+                                END IF;
+                            END IF;
+                        END;
+                    END LOOP;
+                END IF;
+                
+                -- Wrap in NULL check and parentheses
+                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR (%s))', 
                     v_param_position,
-                    v_actual_col_name,
-                    v_param_position
+                    v_or_conditions
                 );
-            ELSE
-                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR a.%s = $%s)', 
-                    v_param_position,
-                    v_actual_col_name,
-                    v_param_position
-                );
-            END IF;
+            END;
             
             -- Add to USING clause parameters
             IF v_drilldown_count > 0 THEN
