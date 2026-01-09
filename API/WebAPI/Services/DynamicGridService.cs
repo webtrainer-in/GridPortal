@@ -877,16 +877,16 @@ public class DynamicGridService : IDynamicGridService
         var entityName = parts[parts.Length - 1];
         
         // Simple singularization: remove trailing 's' if present
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct update procedure name
         return $"sp_Grid_Update_{entityName}";
@@ -914,17 +914,17 @@ public class DynamicGridService : IDynamicGridService
         
         // Simple singularization: remove trailing 's' if present
         // For more complex cases, this could be enhanced
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            // But not: Address -> Addres
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     // But not: Address -> Addres
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct insert procedure name
         return $"sp_Grid_Insert_{entityName}";
@@ -950,17 +950,17 @@ public class DynamicGridService : IDynamicGridService
         
         // Simple singularization: remove trailing 's' if present
         // For more complex cases, this could be enhanced
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            // But not: Address -> Addres
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     // But not: Address -> Addres
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct delete procedure name
         return $"sp_Grid_Delete_{entityName}";
