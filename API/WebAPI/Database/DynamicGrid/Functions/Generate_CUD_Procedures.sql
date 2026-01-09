@@ -182,8 +182,8 @@ $CHK$, lower(v_col), initcap(replace(v_col, '_', ' ')));
         
         -- Declare new variable for updated primary key value
         v_declare_vars := v_declare_vars || format('    v_New_%s TEXT;%s', v_pk_col, E'\n');
-        -- Extract new primary key value from changes JSON
-        v_extract_vars := v_extract_vars || format('        v_New_%s := (p_ChangesJson::jsonb)->''%s'';%s', v_pk_col, v_pk_col, E'\n');
+        -- Extract new primary key value from changes JSON (use ->> to get TEXT without quotes)
+        v_extract_vars := v_extract_vars || format('        v_New_%s := (p_ChangesJson::jsonb)->>''%s'';%s', v_pk_col, v_pk_col, E'\n');
         
         IF v_update_sets != '' THEN
             v_update_sets := v_update_sets || ',' || E'\n        ';
@@ -218,7 +218,7 @@ $CHK$, lower(v_col), initcap(replace(v_col, '_', ' ')));
         
         v_declare_vars := v_declare_vars || format('    v_%s TEXT;%s', v_col, E'\n');
         -- FIX: Use ->> instead of -> to extract as TEXT (removes quotes)
-        v_extract_vars := v_extract_vars || format('        v_%s := (p_ChangesJson::jsonb)->''%s'';%s', v_col, v_col, E'\n');
+        v_extract_vars := v_extract_vars || format('        v_%s := (p_ChangesJson::jsonb)->>''%s'';%s', v_col, v_col, E'\n');
         
         IF v_update_sets != '' THEN
             v_update_sets := v_update_sets || ',' || E'\n        ';
