@@ -45,6 +45,16 @@ DECLARE
     v_filter_number NUMERIC;
     v_col_type TEXT;
     v_ag_grid_type TEXT;
+    -- Drill-down filter variables
+    v_drilldown_configs JSONB;
+    v_drilldown_count INT := 0;
+    v_target_column TEXT;
+    v_filter_var_declarations TEXT := '';
+    v_filter_extractions TEXT := '';
+    v_filter_where_conditions TEXT := '';
+    v_filter_using_params TEXT := '';
+    v_param_position INT := 2;
+    v_sanitized_col_name TEXT;
     -- Template-related variables
     v_filter_parser_template TEXT;
     v_column_type_map TEXT := '';
@@ -191,6 +201,201 @@ BEGIN
         v_search_conditions := '1=1';
     END IF;
     
+    -- =============================================
+    -- DRILL-DOWN FILTER GENERATION
+    -- =============================================
+    -- Query ColumnMetadata for drill-down configurations (LinkConfig with drillDown enabled)
+    -- NOTE: Filters by targetProcedure (where this procedure is the drill-down target)
+    -- This allows multiple source procedures to drill down into the same target
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'targetColumn', (filter_param->>'targetColumn'),
+            'alternateColumns', (filter_param->>'alternateColumns'),
+            'columnName', cm."ColumnName"
+        )
+    )
+    INTO v_drilldown_configs
+    FROM "ColumnMetadata" cm,
+         LATERAL jsonb_array_elements(
+             CASE 
+                 WHEN cm."LinkConfig" IS NOT NULL 
+                 THEN jsonb_build_array(cm."LinkConfig")
+                 ELSE '[]'::jsonb
+             END
+         ) AS config,
+         LATERAL jsonb_array_elements(config->'drillDown'->'filterParams') AS filter_param
+    WHERE cm."IsActive" = true
+      AND (config->'drillDown'->>'enabled')::boolean = true
+      AND (config->'drillDown'->>'targetProcedure') = v_proc_name
+      AND config->'drillDown'->'filterParams' IS NOT NULL
+      AND jsonb_array_length(config->'drillDown'->'filterParams') > 0;
+    
+    -- DEBUG: Show what was found
+    RAISE NOTICE '🔍 DEBUG: v_proc_name = %, v_drilldown_configs = %', v_proc_name, v_drilldown_configs;
+    
+    -- Generate drill-down filter variable declarations, extractions, and WHERE conditions
+    IF v_drilldown_configs IS NOT NULL THEN
+        RAISE NOTICE '✅ DEBUG: Found drill-down configs, generating filters...';
+
+        FOR v_target_column IN 
+            SELECT DISTINCT elem->>'targetColumn'
+            FROM jsonb_array_elements(v_drilldown_configs) elem
+            WHERE elem->>'targetColumn' IS NOT NULL
+        LOOP
+            -- Sanitize column name for variable naming (remove special characters)
+            v_sanitized_col_name := regexp_replace(v_target_column, '[^a-zA-Z0-9_]', '', 'g');
+            
+            -- Get column data type from schema
+            SELECT data_type INTO v_col_type
+            FROM information_schema.columns
+            WHERE table_name = p_table_name
+              AND table_schema = 'public'
+              AND lower(column_name) = lower(v_target_column)
+            LIMIT 1;
+            
+            IF v_col_type IS NULL THEN
+                RAISE WARNING 'Drill-down target column % not found in table %, skipping', v_target_column, p_table_name;
+                CONTINUE;
+            END IF;
+            
+            -- Map PostgreSQL data type to PL/pgSQL type
+            IF v_col_type IN ('integer', 'bigint', 'smallint') THEN
+                v_col_type := 'INT';
+            ELSIF v_col_type IN ('numeric', 'decimal', 'real', 'double precision') THEN
+                v_col_type := 'NUMERIC';
+            ELSIF v_col_type IN ('character varying', 'varchar', 'text', 'char', 'character') THEN
+                v_col_type := 'TEXT';
+            ELSIF v_col_type IN ('boolean') THEN
+                v_col_type := 'BOOLEAN';
+            ELSIF v_col_type IN ('date') THEN
+                v_col_type := 'DATE';
+            ELSIF v_col_type IN ('timestamp without time zone', 'timestamp with time zone', 'timestamp') THEN
+                v_col_type := 'TIMESTAMP';
+            ELSE
+                v_col_type := 'TEXT';  -- Default to TEXT for unknown types
+            END IF;
+            
+            -- Generate variable declaration
+            v_filter_var_declarations := v_filter_var_declarations || format('    v_%s %s;%s', 
+                v_sanitized_col_name, 
+                v_col_type, 
+                E'\n'
+            );
+            
+            -- Generate extraction from p_DrillDownJson
+            v_filter_extractions := v_filter_extractions || format('        IF p_DrillDownJson IS NOT NULL AND p_DrillDownJson != '''' THEN%s', E'\n');
+            v_filter_extractions := v_filter_extractions || format('            v_%s := (p_DrillDownJson::jsonb->>%L)::%s;%s', 
+                v_sanitized_col_name,
+                v_target_column,
+                v_col_type,
+                E'\n'
+            );
+            v_filter_extractions := v_filter_extractions || format('        END IF;%s', E'\n');
+            
+            -- Get actual column name with correct casing
+            SELECT column_name, column_name != lower(column_name)
+            INTO v_actual_col_name, v_needs_quotes
+            FROM information_schema.columns
+            WHERE table_name = p_table_name
+              AND table_schema = 'public'
+              AND lower(column_name) = lower(v_target_column)
+            LIMIT 1;
+            
+            -- Generate WHERE condition using positional parameters
+            -- Always add AND because drill-down filters come after search condition
+            IF v_drilldown_count > 0 THEN
+                v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
+            ELSE
+                v_filter_where_conditions := v_filter_where_conditions || E'\n            AND ';
+            END IF;
+            
+            -- Check if there are alternate columns for OR condition
+            DECLARE
+                v_alternate_columns TEXT;
+                v_alternate_cols TEXT[];
+                v_alt_col TEXT;
+                v_alt_col_name TEXT;
+                v_alt_needs_quotes BOOLEAN;
+                v_or_conditions TEXT := '';
+            BEGIN
+                -- Get alternateColumns from config (comma-separated string)
+                SELECT elem->>'alternateColumns'
+                INTO v_alternate_columns
+                FROM jsonb_array_elements(v_drilldown_configs) elem
+                WHERE elem->>'targetColumn' = v_target_column
+                LIMIT 1;
+                
+                -- Build primary column condition
+                IF v_needs_quotes THEN
+                    v_or_conditions := format('a."%s" = $%s', v_actual_col_name, v_param_position);
+                ELSE
+                    v_or_conditions := format('a.%s = $%s', v_actual_col_name, v_param_position);
+                END IF;
+                
+                -- Add alternate columns if provided
+                IF v_alternate_columns IS NOT NULL AND v_alternate_columns != '' THEN
+                    -- Split comma-separated alternate columns
+                    v_alternate_cols := string_to_array(v_alternate_columns, ',');
+                    
+                    FOREACH v_alt_col IN ARRAY v_alternate_cols
+                    LOOP
+                        -- Trim whitespace
+                        v_alt_col := trim(v_alt_col);
+                        
+                        -- Get actual column name, casing, and data type
+                        DECLARE
+                            v_alt_col_type TEXT;
+                        BEGIN
+                            SELECT column_name, 
+                                   column_name != lower(column_name),
+                                   data_type
+                            INTO v_alt_col_name, v_alt_needs_quotes, v_alt_col_type
+                            FROM information_schema.columns
+                            WHERE table_name = p_table_name
+                              AND table_schema = 'public'
+                              AND lower(column_name) = lower(v_alt_col)
+                            LIMIT 1;
+                            
+                            -- Add OR condition with type casting if needed
+                            IF v_alt_col_name IS NOT NULL THEN
+                                -- If column is TEXT but parameter is numeric, cast parameter to TEXT
+                                IF v_alt_col_type IN ('character varying', 'text', 'character') THEN
+                                    IF v_alt_needs_quotes THEN
+                                        v_or_conditions := v_or_conditions || format(' OR a."%s" = $%s::TEXT', v_alt_col_name, v_param_position);
+                                    ELSE
+                                        v_or_conditions := v_or_conditions || format(' OR a.%s = $%s::TEXT', v_alt_col_name, v_param_position);
+                                    END IF;
+                                ELSE
+                                    -- Numeric column, no casting needed
+                                    IF v_alt_needs_quotes THEN
+                                        v_or_conditions := v_or_conditions || format(' OR a."%s" = $%s', v_alt_col_name, v_param_position);
+                                    ELSE
+                                        v_or_conditions := v_or_conditions || format(' OR a.%s = $%s', v_alt_col_name, v_param_position);
+                                    END IF;
+                                END IF;
+                            END IF;
+                        END;
+                    END LOOP;
+                END IF;
+                
+                -- Wrap in NULL check and parentheses
+                v_filter_where_conditions := v_filter_where_conditions || format('($%s IS NULL OR (%s))', 
+                    v_param_position,
+                    v_or_conditions
+                );
+            END;
+            
+            -- Add to USING clause parameters
+            IF v_drilldown_count > 0 THEN
+                v_filter_using_params := v_filter_using_params || ', ';
+            END IF;
+            v_filter_using_params := v_filter_using_params || 'v_' || v_sanitized_col_name;
+            
+            v_param_position := v_param_position + 1;
+            v_drilldown_count := v_drilldown_count + 1;
+        END LOOP;
+    END IF;
+    
     -- Load AG Grid filter parser template (embedded)
     v_filter_parser_template := $TEMPLATE$
     -- Parse filter JSON if provided
@@ -304,6 +509,9 @@ $TEMPLATE$;
 -- CUSTOMIZE: Add JOINs, filters, and adjust column definitions as needed
 -- NOTE: Column names have been auto-detected with correct casing from database schema
 -- ✨ INCLUDES: Generic global search across all text and number columns
+-- ✨ INCLUDES: Auto-generated drill-down filter support via p_DrillDownJson
+-- 📝 p_FilterJson: Reserved for column-level filters (AG Grid filters)
+-- 📝 p_DrillDownJson: For drill-down filters from URL parameters
 CREATE OR REPLACE FUNCTION public.%s(
     p_PageNumber INTEGER DEFAULT 1,
     p_PageSize INTEGER DEFAULT 15,
@@ -312,7 +520,8 @@ CREATE OR REPLACE FUNCTION public.%s(
     p_SortColumn VARCHAR DEFAULT NULL,
     p_SortDirection VARCHAR DEFAULT 'ASC',
     p_FilterJson TEXT DEFAULT NULL,
-    p_SearchTerm VARCHAR DEFAULT NULL
+    p_SearchTerm VARCHAR DEFAULT NULL,
+    p_DrillDownJson TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE 'plpgsql'
@@ -336,6 +545,8 @@ DECLARE
     v_Condition TEXT;
     v_FilterText TEXT;
     v_FilterNumber NUMERIC;
+    -- Drill-down filter variables (auto-generated)
+%s
 BEGIN
     -- Determine offset and fetch size
     IF p_StartRow IS NOT NULL AND p_EndRow IS NOT NULL THEN
@@ -346,6 +557,9 @@ BEGIN
         v_FetchSize := p_PageSize;
     END IF;
     
+    -- Extract drill-down filter values from p_DrillDownJson (auto-generated)
+%s
+    
 %s
     
     -- Get total count with search and filters
@@ -354,10 +568,10 @@ BEGIN
         FROM "%s" a
         WHERE ($1 IS NULL OR (
             %s
-        ))
+        ))%s
         %%s',
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
-    ) INTO v_TotalCount USING p_SearchTerm;
+    ) INTO v_TotalCount USING p_SearchTerm%s;
     
     -- Get data rows with search
     EXECUTE format('
@@ -371,14 +585,14 @@ BEGIN
             -- LEFT JOIN "OtherTable" ot ON ot.id = a.other_id
             WHERE ($1 IS NULL OR (
                 %s
-            ))
+            ))%s
             %%s
             -- TODO: Add JOIN clauses here
             ORDER BY a.%s
-            LIMIT $2 OFFSET $3
+            LIMIT $%s OFFSET $%s
         ) t',
         CASE WHEN v_FilterWhere != '' THEN 'AND ' || v_FilterWhere ELSE '' END
-    ) INTO v_Data USING p_SearchTerm, v_FetchSize, v_Offset;
+    ) INTO v_Data USING p_SearchTerm%s, v_FetchSize, v_Offset;
     
     -- Define base columns
     -- TODO: Customize column types, widths, and editability
@@ -465,18 +679,26 @@ GRANT EXECUTE ON FUNCTION %s TO PUBLIC;
 $PROC$,
         p_table_name,                    -- 1. Entity name (comment)
         v_proc_name,                     -- 2. Function name
-        v_filter_parser_template,        -- 3. AG Grid filter parser logic
-        p_table_name,                    -- 4. Table name for COUNT
-        v_search_conditions,             -- 5. Search conditions for COUNT
-        v_id_construction,               -- 6. ID construction
-        v_select_fields,                 -- 7. SELECT fields
-        p_table_name,                    -- 8. Table name for SELECT
-        v_search_conditions,             -- 9. Search conditions for SELECT
-        CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- 10. ORDER BY
-        v_column_defs,                   -- 11. Column definitions
-        v_proc_name,                     -- 12. Dropdown config ProcedureName
-        v_proc_name,                     -- 13. Link config ProcedureName
-        v_proc_name                      -- 14. GRANT statement
+        v_filter_var_declarations,       -- 3. Drill-down filter variable declarations
+        v_filter_extractions,            -- 4. Drill-down filter extractions
+        v_filter_parser_template,        -- 5. AG Grid filter parser logic
+        p_table_name,                    -- 6. Table name for COUNT
+        v_search_conditions,             -- 7. Search conditions for COUNT
+        v_filter_where_conditions,       -- 8. Drill-down WHERE conditions for COUNT
+        CASE WHEN v_filter_using_params != '' THEN ', ' || v_filter_using_params ELSE '' END,  -- 9. USING params for COUNT
+        v_id_construction,               -- 10. ID construction
+        v_select_fields,                 -- 11. SELECT fields
+        p_table_name,                    -- 12. Table name for SELECT
+        v_search_conditions,             -- 13. Search conditions for SELECT
+        v_filter_where_conditions,       -- 14. Drill-down WHERE conditions for SELECT
+        CASE WHEN v_needs_quotes THEN '"' || v_actual_col_name || '"' ELSE v_actual_col_name END,  -- 15. ORDER BY
+        v_param_position::TEXT,          -- 16. LIMIT positional parameter number
+        (v_param_position + 1)::TEXT,    -- 17. OFFSET positional parameter number
+        CASE WHEN v_filter_using_params != '' THEN ', ' || v_filter_using_params ELSE '' END,  -- 18. USING params for SELECT
+        v_column_defs,                   -- 19. Column definitions
+        v_proc_name,                     -- 20. Dropdown config ProcedureName
+        v_proc_name,                     -- 21. Link config ProcedureName
+        v_proc_name                      -- 22. GRANT statement
     );
 END;
 $$ LANGUAGE plpgsql;
@@ -491,6 +713,7 @@ BEGIN
     RAISE NOTICE '╔══════════════════════════════════════════════════════════════╗';
     RAISE NOTICE '║     Enhanced Grid Fetch Procedure Generator Ready!          ║';
     RAISE NOTICE '╠══════════════════════════════════════════════════════════════╣';
+    RAISE NOTICE '║  ✨ NEW: Auto-generates drill-down filters from LinkConfig   ║';
     RAISE NOTICE '║  ✨ NEW: Generic global search (p_SearchTerm)                ║';
     RAISE NOTICE '║  ✨ NEW: Dynamic column filters (p_FilterJson)               ║';
     RAISE NOTICE '║  ✨ Auto-detects searchable columns (text + numbers)         ║';
@@ -506,6 +729,7 @@ BEGIN
     RAISE NOTICE '  );';
     RAISE NOTICE '';
     RAISE NOTICE '🔍 Generated procedure includes:';
+    RAISE NOTICE '   - Auto-generated drill-down filters from ColumnMetadata';
     RAISE NOTICE '   - Global search across all text and number columns';
     RAISE NOTICE '   - Correct column name casing from database schema';
     RAISE NOTICE '   - Ready-to-customize template with TODO markers';

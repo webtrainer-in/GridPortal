@@ -474,7 +474,8 @@ export class DynamicGrid implements OnInit, OnDestroy {
       pageSize: this.pageSize,
       sortColumn: this.currentSortColumn || undefined,
       sortDirection: this.currentSortDirection,
-      filterJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : (this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined),
+      filterJson: this.currentFilterModel ? JSON.stringify(this.currentFilterModel) : undefined,
+      drillDownJson: this.drillDownFilters ? JSON.stringify(this.drillDownFilters) : undefined,
       searchTerm: this.globalSearchTerm || undefined // Add global search term
     };
 
@@ -526,7 +527,7 @@ export class DynamicGrid implements OnInit, OnDestroy {
       procedureName: level.procedureName,
       pageNumber: 1,
       pageSize: this.pageSize,
-      filterJson: JSON.stringify(level.filters)
+      drillDownJson: JSON.stringify(level.filters)
     };
 
     this.gridService.executeGridProcedure(request)

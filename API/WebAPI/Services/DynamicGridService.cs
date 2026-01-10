@@ -80,20 +80,76 @@ public class DynamicGridService : IDynamicGridService
                 new NpgsqlParameter("p_SortColumn", (object?)request.SortColumn ?? DBNull.Value),
                 new NpgsqlParameter("p_SortDirection", request.SortDirection ?? "ASC"),
                 new NpgsqlParameter("p_FilterJson", (object?)request.FilterJson ?? DBNull.Value),
+                new NpgsqlParameter("p_DrillDownJson", (object?)request.DrillDownJson ?? DBNull.Value),
                 new NpgsqlParameter("p_SearchTerm", (object?)request.SearchTerm ?? DBNull.Value)
             };
 
-            // Execute PostgreSQL function and get JSON result
-            var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
-            
             // Create connection to target database using factory
             var connection = await _dbContextFactory.CreateConnectionAsync(databaseName);
+            object? jsonResult = null;
 
-            using var command = connection.CreateCommand();
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            try
+            {
+                // Try NEW signature with p_DrillDownJson parameter (9 params)
+                var sql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm, @p_DrillDownJson)";
+                
+                // DEBUG: Log the SQL and DrillDownJson value
+                _logger.LogInformation("🔍 Executing SQL: {Sql}", sql);
+                _logger.LogInformation("🔍 DrillDownJson: {DrillDownJson}", request.DrillDownJson ?? "NULL");
+                
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
-            var jsonResult = await command.ExecuteScalarAsync();
+                jsonResult = await command.ExecuteScalarAsync();
+            }
+            catch (Npgsql.PostgresException ex) when (ex.Message.Contains("function") && ex.Message.Contains("does not exist"))
+            {
+                // Fallback to OLD signature without p_DrillDownJson (8 params)
+                // Merge DrillDownJson into FilterJson for backward compatibility
+                string? mergedFilterJson = request.FilterJson;
+                if (!string.IsNullOrEmpty(request.DrillDownJson))
+                {
+                    if (string.IsNullOrEmpty(mergedFilterJson))
+                    {
+                        mergedFilterJson = request.DrillDownJson;
+                    }
+                    else
+                    {
+                        var filterObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(mergedFilterJson);
+                        var drillDownObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(request.DrillDownJson);
+                        
+                        if (filterObj != null && drillDownObj != null)
+                        {
+                            foreach (var kvp in drillDownObj)
+                            {
+                                filterObj[kvp.Key] = kvp.Value;
+                            }
+                            mergedFilterJson = System.Text.Json.JsonSerializer.Serialize(filterObj);
+                        }
+                    }
+                }
+
+                var oldParams = new NpgsqlParameter[]
+                {
+                    new NpgsqlParameter("p_PageNumber", request.PageNumber),
+                    new NpgsqlParameter("p_PageSize", request.PageSize),
+                    new NpgsqlParameter("p_StartRow", (object?)request.StartRow ?? DBNull.Value),
+                    new NpgsqlParameter("p_EndRow", (object?)request.EndRow ?? DBNull.Value),
+                    new NpgsqlParameter("p_SortColumn", (object?)request.SortColumn ?? DBNull.Value),
+                    new NpgsqlParameter("p_SortDirection", request.SortDirection ?? "ASC"),
+                    new NpgsqlParameter("p_FilterJson", (object?)mergedFilterJson ?? DBNull.Value),
+                    new NpgsqlParameter("p_SearchTerm", (object?)request.SearchTerm ?? DBNull.Value)
+                };
+
+                var oldSql = $"SELECT {request.ProcedureName}(@p_PageNumber, @p_PageSize, @p_StartRow, @p_EndRow, @p_SortColumn, @p_SortDirection, @p_FilterJson, @p_SearchTerm)";
+                
+                using var oldCommand = connection.CreateCommand();
+                oldCommand.CommandText = oldSql;
+                oldCommand.Parameters.AddRange(oldParams);
+
+                jsonResult = await oldCommand.ExecuteScalarAsync();
+            }
             
             // Close connection
             await connection.DisposeAsync();
@@ -508,9 +564,13 @@ public class DynamicGridService : IDynamicGridService
         foreach (var proc in procedures)
         {
             // Skip CRUD helper procedures (Insert, Update, Delete) - only show grid data procedures
-            if (proc.ProcedureName.Contains("_Insert_", StringComparison.OrdinalIgnoreCase) || 
-                proc.ProcedureName.Contains("_Update_", StringComparison.OrdinalIgnoreCase) || 
-                proc.ProcedureName.Contains("_Delete_", StringComparison.OrdinalIgnoreCase))
+            var procName = proc.ProcedureName.ToLower();
+            if (procName.StartsWith("insert ") || 
+                procName.Contains("_insert_") ||
+                procName.StartsWith("update ") ||
+                procName.Contains("_update_") || 
+                procName.StartsWith("delete ") ||
+                procName.Contains("_delete_"))
             {
                 continue;
             }
@@ -817,16 +877,16 @@ public class DynamicGridService : IDynamicGridService
         var entityName = parts[parts.Length - 1];
         
         // Simple singularization: remove trailing 's' if present
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct update procedure name
         return $"sp_Grid_Update_{entityName}";
@@ -854,17 +914,17 @@ public class DynamicGridService : IDynamicGridService
         
         // Simple singularization: remove trailing 's' if present
         // For more complex cases, this could be enhanced
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            // But not: Address -> Addres
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     // But not: Address -> Addres
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct insert procedure name
         return $"sp_Grid_Insert_{entityName}";
@@ -890,17 +950,17 @@ public class DynamicGridService : IDynamicGridService
         
         // Simple singularization: remove trailing 's' if present
         // For more complex cases, this could be enhanced
-        if (entityName.EndsWith("es"))
-        {
-            // Buses -> Bus
-            entityName = entityName.Substring(0, entityName.Length - 2);
-        }
-        else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
-        {
-            // Employees -> Employee, Products -> Product
-            // But not: Address -> Addres
-            entityName = entityName.Substring(0, entityName.Length - 1);
-        }
+        // if (entityName.EndsWith("es"))
+        // {
+        //     // Buses -> Bus
+        //     entityName = entityName.Substring(0, entityName.Length - 2);
+        // }
+        // else if (entityName.EndsWith("s") && !entityName.EndsWith("ss"))
+        // {
+        //     // Employees -> Employee, Products -> Product
+        //     // But not: Address -> Addres
+        //     entityName = entityName.Substring(0, entityName.Length - 1);
+        // }
         
         // Construct delete procedure name
         return $"sp_Grid_Delete_{entityName}";
